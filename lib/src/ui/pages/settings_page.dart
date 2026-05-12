@@ -81,11 +81,10 @@ class SettingsPage extends StatelessWidget {
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () {
-                state.nightRule = state.nightRule.copyWith(
+                state.updateNightRule(state.nightRule.copyWith(
                   startMinute: (int.tryParse(start.text) ?? 22) * 60,
                   endMinute: (int.tryParse(end.text) ?? 6) * 60,
-                );
-                state.notifyListeners();
+                ));
                 Navigator.pop(context);
               },
               child: const Text('保存'),

@@ -260,14 +260,14 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
             TextField(controller: _break, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '休息分钟')),
             const SizedBox(height: 10),
             DropdownButtonFormField<EntryType>(
-              value: _type,
+              initialValue: _type,
               decoration: const InputDecoration(labelText: '类型'),
               items: EntryType.values.map((type) => DropdownMenuItem(value: type, child: Text(type.label))).toList(),
               onChanged: (value) => setState(() => _type = value ?? _type),
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<PayRule>(
-              value: _rule,
+              initialValue: _rule,
               decoration: const InputDecoration(labelText: '计薪规则'),
               items: widget.rules.map((rule) => DropdownMenuItem(value: rule, child: Text('${rule.name} · ${rule.amountLabel}'))).toList(),
               onChanged: (value) => setState(() => _rule = value ?? _rule),

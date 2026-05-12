@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../app/ledger_state.dart';
 import '../services/local_ledger_repository.dart';
 import 'edit_entry_sheet.dart';
 import 'pages/calendar_page.dart';

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../domain/models.dart';
@@ -26,7 +24,7 @@ class PageFrame extends StatelessWidget {
               Expanded(
                 child: Text(title, style: Theme.of(context).textTheme.headlineLarge),
               ),
-              if (trailing != null) trailing!,
+              ?trailing,
             ],
           ),
           const SizedBox(height: 16),

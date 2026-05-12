@@ -199,6 +199,11 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateNightRule(NightRule rule) {
+    nightRule = rule;
+    notifyListeners();
+  }
+
   void updateWebDavConfig(WebDavConfig config) {
     webDavConfig = config;
     notifyListeners();
