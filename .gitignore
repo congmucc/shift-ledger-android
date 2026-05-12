@@ -1,0 +1,50 @@
+# System
+.DS_Store
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+build/
+coverage/
+
+# Android / Gradle
+.gradle/
+android/.gradle/
+android/app/build/
+local.properties
+
+# iOS / macOS generated files
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner.xcworkspace/xcuserdata/
+ios/Runner.xcodeproj/xcuserdata/
+macos/Flutter/ephemeral/
+
+# Desktop generated files
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# App packages
+*.apk
+*.aab
+*.ipa
+
+# Secrets / signing
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+.env
+
+# Local validation artifacts
+artifacts/
