@@ -104,10 +104,22 @@ class LedgerState extends ChangeNotifier {
 
   DateRange get currentMonth => DateRange.month(now.year, now.month);
   DateRange get currentPayPeriod => payPeriod.rangeFor(now);
-  PayRule get defaultRule => payRules.firstWhere(
+  PayRule get defaultRule => payRules.lastWhere(
         (rule) => rule.isDefault,
         orElse: () => payRules.first,
       );
+
+  PayRule ruleForDate(DateTime day, {String? preferredRuleId}) {
+    final activeRules = payRules.where((rule) => rule.activeOn(day)).toList();
+    if (preferredRuleId != null) {
+      final preferred = activeRules.where((rule) => rule.id == preferredRuleId).toList();
+      if (preferred.isNotEmpty) return preferred.last;
+    }
+    final activeDefaults = activeRules.where((rule) => rule.isDefault).toList();
+    if (activeDefaults.isNotEmpty) return activeDefaults.last;
+    if (activeRules.isNotEmpty) return activeRules.last;
+    return defaultRule;
+  }
 
   LedgerSummary summaryFor(DateRange range) => PayCalculator().summarize(
         entries: entries,
@@ -145,10 +157,7 @@ class LedgerState extends ChangeNotifier {
       tpl.endMinute % 60,
     );
     if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
-    final rule = payRules.firstWhere(
-      (r) => r.id == tpl.defaultPayRuleId,
-      orElse: () => defaultRule,
-    );
+    final rule = ruleForDate(targetDay, preferredRuleId: tpl.defaultPayRuleId);
     return WorkEntry.create(
       workDate: targetDay,
       startDateTime: start,
@@ -192,9 +201,28 @@ class LedgerState extends ChangeNotifier {
   void savePayRule(PayRule rule) {
     final index = payRules.indexWhere((item) => item.id == rule.id);
     if (index >= 0) {
-      payRules = [...payRules]..[index] = rule;
+      final existing = payRules[index];
+      final previousVersion = existing.copyWith(
+        isDefault: false,
+        effectiveTo: rule.effectiveFrom.subtract(const Duration(days: 1)),
+      );
+      final newVersion = rule.copyWith(
+        id: newId('rule'),
+        isDefault: true,
+      );
+      payRules = [
+        for (var i = 0; i < payRules.length; i++)
+          if (i == index)
+            previousVersion
+          else
+            payRules[i].isDefault ? payRules[i].copyWith(isDefault: false) : payRules[i],
+        newVersion,
+      ];
     } else {
-      payRules = [...payRules, rule];
+      payRules = [
+        for (final item in payRules) rule.isDefault ? item.copyWith(isDefault: false) : item,
+        rule,
+      ];
     }
     notifyListeners();
   }

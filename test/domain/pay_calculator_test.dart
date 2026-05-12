@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
 import 'package:shift_ledger/src/services/pay_calculator.dart';
 
@@ -186,6 +187,29 @@ void main() {
 
       expect(entry.payRuleSnapshot.hourlyRate, 35);
       expect(summary.baseIncome, 280);
+    });
+
+
+    test('ledger state chooses active default rule by work date and versions edited rules', () {
+      final oldRule = PayRule.defaultHourly(hourlyRate: 30).copyWith(
+        effectiveFrom: DateTime(2026, 5, 1),
+        isDefault: true,
+      );
+      final state = LedgerState.empty(now: DateTime(2026, 5, 20));
+      state.payRules = [oldRule];
+      final newRule = oldRule.copyWith(
+        hourlyRate: 50,
+        effectiveFrom: DateTime(2026, 5, 16),
+        version: 2,
+      );
+
+      state.savePayRule(newRule);
+
+      final before = state.createTemplateEntry(day: DateTime(2026, 5, 15));
+      final after = state.createTemplateEntry(day: DateTime(2026, 5, 20));
+      expect(before.payRuleSnapshot.hourlyRate, 30);
+      expect(after.payRuleSnapshot.hourlyRate, 50);
+      expect(state.payRules.length, 2);
     });
   });
 }
