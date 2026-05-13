@@ -129,11 +129,11 @@ class _SummaryPageState extends State<SummaryPage> {
               SettingTile(
                 title: '备注天数',
                 subtitle: '${summary.noteDays}天',
-                trailing: '查看记录',
-                onTap: () => _showDrillDown(
-                  '含备注记录',
+                trailing: '查看日期',
+                onTap: () => _showDayDrillDown(
+                  '含备注日期',
                   summary,
-                  (calc) => calc.entry.hasNote,
+                  (entries) => entries.any((entry) => entry.hasNote),
                 ),
               ),
               SettingTile(
@@ -261,6 +261,97 @@ class _SummaryPageState extends State<SummaryPage> {
       for (final item in totalsByDay.entries)
         if (item.value > 12) item.key,
     };
+  }
+
+  void _showDayDrillDown(
+    String title,
+    LedgerSummary summary,
+    bool Function(List<WorkEntry> entries) filter,
+  ) {
+    final entriesByDay = <String, List<WorkEntry>>{};
+    for (final calc in summary.calculations) {
+      entriesByDay
+          .putIfAbsent(ymd(calc.entry.workDate), () => [])
+          .add(calc.entry);
+    }
+    final rows = entriesByDay.entries
+        .where((item) => filter(item.value))
+        .toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: LedgerColors.paper,
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.82,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('关闭'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (rows.isEmpty) const LedgerCard(child: Text('没有匹配日期')),
+                for (final row in rows) ...[
+                  LedgerCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${cnDateText(row.value.first.workDate)} · ${row.value.length} 段',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          row.value
+                              .where((entry) => entry.hasNote)
+                              .map((entry) => '${entry.timeRangeLabel}：${entry.note}')
+                              .join('；'),
+                          style: const TextStyle(color: LedgerColors.muted),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              showEditWorkEntrySheet(
+                                context,
+                                widget.state,
+                                day: row.value.first.workDate,
+                              );
+                            },
+                            child: const Text('查看/编辑这一天'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showDrillDown(
