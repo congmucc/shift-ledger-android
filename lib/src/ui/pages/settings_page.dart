@@ -738,7 +738,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 ],
               ),
               const Text(
-                '只在手动点击时上传/下载备份文件；应用授权密码不会写入普通备份。',
+                '手动备份即时执行；可选择开启省流量自动云备份。应用授权密码不会写入普通备份。',
                 style: TextStyle(color: LedgerColors.muted),
               ),
               const SizedBox(height: 12),
@@ -762,6 +762,8 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 controller: _remotePath,
                 decoration: const InputDecoration(labelText: '远端备份文件名'),
               ),
+              const SizedBox(height: 12),
+              _buildAutoBackupSection(context),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -805,6 +807,74 @@ class _WebDavSheetState extends State<WebDavSheet> {
         ? 'shift-ledger-backup.json'
         : _remotePath.text.trim(),
   );
+
+  Widget _buildAutoBackupSection(BuildContext context) {
+    final autoConfig = widget.state.autoBackupConfig;
+    final displayStatus = _displayAutoBackupStatus();
+    return Container(
+      decoration: BoxDecoration(
+        color: LedgerColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: LedgerColors.hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            value: autoConfig.enabled,
+            title: const Text('自动云备份'),
+            subtitle: const Text('推荐 · 最小间隔 1 小时 · 每天最多 6 次'),
+            onChanged: (value) {
+              final configured = _config().isConfigured;
+              setState(() {
+                widget.state.updateAutoBackupConfig(
+                  autoConfig.copyWith(
+                    enabled: value,
+                    lastStatus: value
+                        ? configured
+                              ? AutoBackupStatus.waiting
+                              : AutoBackupStatus.configIncomplete
+                        : AutoBackupStatus.idle,
+                    lastError: value && !configured ? '需重新授权或配置不完整' : '',
+                  ),
+                );
+              });
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _StatusLine(
+                  label: '云端文件',
+                  value: widget.state.autoBackupConfig.remotePath,
+                ),
+                _StatusLine(
+                  label: '上次自动备份',
+                  value: autoConfig.lastSuccessAt == null
+                      ? '尚未自动备份'
+                      : dateTimeText(autoConfig.lastSuccessAt!),
+                ),
+                _StatusLine(label: '最近状态', value: displayStatus.label),
+                if (autoConfig.lastStatus == AutoBackupStatus.failed &&
+                    autoConfig.lastError.isNotEmpty)
+                  _StatusLine(label: '失败原因', value: autoConfig.lastError),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  AutoBackupStatus _displayAutoBackupStatus() {
+    final autoConfig = widget.state.autoBackupConfig;
+    if (autoConfig.enabled && !_config().isConfigured) {
+      return AutoBackupStatus.configIncomplete;
+    }
+    return autoConfig.lastStatus;
+  }
 
   void _save({bool showMessage = true}) {
     widget.state.updateWebDavConfig(_config());
@@ -898,4 +968,31 @@ class _WebDavSheetState extends State<WebDavSheet> {
   void _snack(String message) => ScaffoldMessenger.of(
     context,
   ).showSnackBar(SnackBar(content: Text(message)));
+}
+
+class _StatusLine extends StatelessWidget {
+  const _StatusLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: const TextStyle(color: LedgerColors.muted),
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
 }

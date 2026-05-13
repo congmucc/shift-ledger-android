@@ -116,6 +116,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('坚果云 WebDAV'));
       await tester.pumpAndSettle();
+      expect(find.text('自动云备份'), findsOneWidget);
+      expect(find.textContaining('最小间隔 1 小时'), findsOneWidget);
+      expect(find.textContaining('每天最多 6 次'), findsOneWidget);
+      final autoSwitch = tester.widget<Switch>(
+        find.descendant(
+          of: find.byType(SwitchListTile),
+          matching: find.byType(Switch),
+        ),
+      );
+      expect(autoSwitch.value, isFalse);
+      await tester.tap(find.text('自动云备份'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('需重新授权'), findsWidgets);
       await tester.tap(find.text('从坚果云恢复'));
       await tester.pumpAndSettle();
       expect(find.text('从坚果云恢复？'), findsOneWidget);
