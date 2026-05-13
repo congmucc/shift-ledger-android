@@ -172,7 +172,7 @@ class LedgerState extends ChangeNotifier {
       breakMinutes: tpl.breakMinutes,
       type: type ?? tpl.type,
       templateId: tpl.id,
-      locationName: '门店 A',
+      locationName: '',
       payRule: rule,
       adjustments: tpl.defaultAdjustments,
     );
