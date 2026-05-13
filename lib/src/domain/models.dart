@@ -475,7 +475,7 @@ class ShiftTemplate {
 
   factory ShiftTemplate.standard({String? payRuleId}) => ShiftTemplate(
     id: 'tpl_standard',
-    name: '早班模板',
+    name: '标准班次',
     startMinute: 9 * 60,
     endMinute: 18 * 60,
     breakMinutes: 60,
@@ -520,6 +520,28 @@ class ShiftTemplate {
   final String colorToken;
   final String? defaultPayRuleId;
   final List<Adjustment> defaultAdjustments;
+
+  ShiftTemplate copyWith({
+    String? id,
+    String? name,
+    int? startMinute,
+    int? endMinute,
+    int? breakMinutes,
+    EntryType? type,
+    String? colorToken,
+    String? defaultPayRuleId,
+    List<Adjustment>? defaultAdjustments,
+  }) => ShiftTemplate(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    startMinute: startMinute ?? this.startMinute,
+    endMinute: endMinute ?? this.endMinute,
+    breakMinutes: breakMinutes ?? this.breakMinutes,
+    type: type ?? this.type,
+    colorToken: colorToken ?? this.colorToken,
+    defaultPayRuleId: defaultPayRuleId ?? this.defaultPayRuleId,
+    defaultAdjustments: defaultAdjustments ?? this.defaultAdjustments,
+  );
 
   Map<String, Object?> toJson() => {
     'id': id,

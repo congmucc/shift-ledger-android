@@ -70,6 +70,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('CSV'));
     await tester.pumpAndSettle();
+    expect(find.text('导出 CSV？'), findsOneWidget);
+    await tester.tap(find.text('确认导出'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('CSV 已生成'), findsOneWidget);
 
     await tester.tap(find.text('设置'));
@@ -86,9 +89,8 @@ void main() {
   testWidgets(
     'calendar list and settings sheets expose review-critical details',
     (tester) async {
-      await tester.pumpWidget(
-        ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
-      );
+      final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
 
       await tester.tap(find.text('日历'));
       await tester.pumpAndSettle();
@@ -100,6 +102,17 @@ void main() {
 
       await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
+      expect(find.text('班次模板'), findsOneWidget);
+      expect(find.text('早班模板'), findsNothing);
+      await tester.tap(find.text('班次模板'));
+      await tester.pumpAndSettle();
+      expect(find.text('保存模板'), findsOneWidget);
+      expect(find.text('模板名称'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, '模板名称'), '白班');
+      await tester.tap(find.text('保存模板'));
+      await tester.pumpAndSettle();
+      expect(state.templates.first.name, '白班');
+
       await tester.tap(find.text('计薪规则'));
       await tester.pumpAndSettle();
       expect(find.text('按小时'), findsWidgets);

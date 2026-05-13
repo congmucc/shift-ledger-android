@@ -19,6 +19,7 @@ class SummaryPage extends StatefulWidget {
 
 class _SummaryPageState extends State<SummaryPage> {
   String _mode = '本月';
+  bool _exporting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +28,8 @@ class _SummaryPageState extends State<SummaryPage> {
     return PageFrame(
       title: '工时汇总',
       trailing: FilledButton.tonal(
-        onPressed: () => _exportCsv(range),
-        child: const Text('CSV'),
+        onPressed: _exporting ? null : () => _exportCsv(range),
+        child: Text(_exporting ? '导出中' : 'CSV'),
       ),
       children: [
         Wrap(
@@ -111,8 +112,8 @@ class _SummaryPageState extends State<SummaryPage> {
               SettingTile(
                 title: '导出 CSV',
                 subtitle: '含计薪规则、收入拆分、跨天标记',
-                trailing: '导出',
-                onTap: () => _exportCsv(range),
+                trailing: _exporting ? '导出中' : '导出',
+                onTap: _exporting ? null : () => _exportCsv(range),
               ),
               SettingTile(
                 title: '时长偏长',
@@ -185,6 +186,27 @@ class _SummaryPageState extends State<SummaryPage> {
   };
 
   Future<void> _exportCsv(DateRange range) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('导出 CSV？'),
+        content: const Text(
+          '会在手机 Downloads/Shift Ledger 目录创建一个带时间戳的新 CSV 文件，避免覆盖已有导出。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认导出'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || _exporting) return;
+    setState(() => _exporting = true);
     final csv = CsvExporter().exportEntries(
       entries: widget.state.entries,
       rules: widget.state.payRules,
@@ -200,6 +222,8 @@ class _SummaryPageState extends State<SummaryPage> {
       _snack('CSV 已导出：$path');
     } catch (_) {
       _snack('CSV 已生成：${csv.length} 字符；当前预览环境不支持写入文件');
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 

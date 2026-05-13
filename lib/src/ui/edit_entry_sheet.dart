@@ -29,12 +29,14 @@ class EditWorkEntrySheet extends StatefulWidget {
 
 class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   late DateTime _day;
+  late DateTime _originalDay;
   late List<WorkEntry> _segments;
 
   @override
   void initState() {
     super.initState();
     _day = dateOnly(widget.day ?? widget.state.now);
+    _originalDay = _day;
     final existing = widget.state.entriesForDay(_day);
     _segments = existing.isNotEmpty
         ? [...existing]
@@ -93,6 +95,11 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                         TextButton(
                           onPressed: () => _moveDay(1),
                           child: const Text('明天'),
+                        ),
+                        IconButton(
+                          tooltip: '选择日期',
+                          onPressed: _pickDay,
+                          icon: const Icon(Icons.calendar_month_outlined),
                         ),
                       ],
                     ),
@@ -157,7 +164,22 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   void _moveDay(int offset) {
-    final nextDay = _day.add(Duration(days: offset));
+    _setDay(_day.add(Duration(days: offset)));
+  }
+
+  Future<void> _pickDay() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _day,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    _setDay(picked);
+  }
+
+  void _setDay(DateTime day) {
+    final nextDay = dateOnly(day);
     setState(() {
       _day = nextDay;
       _segments = _segments
@@ -287,10 +309,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       );
       if (confirmed != true || !mounted) return;
     }
-    widget.state.deleteDay(_day);
-    for (final entry in _segments) {
-      widget.state.addEntry(entry);
-    }
+    widget.state.replaceDayEntries(_originalDay, _day, _segments);
     Navigator.pop(context);
   }
 
@@ -376,14 +395,30 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
                 Expanded(
                   child: TextField(
                     controller: _start,
-                    decoration: const InputDecoration(labelText: '开始 HH:mm'),
+                    keyboardType: TextInputType.datetime,
+                    decoration: InputDecoration(
+                      labelText: '开始 HH:mm',
+                      suffixIcon: IconButton(
+                        tooltip: '选择开始时间',
+                        onPressed: () => _pickTime(_start),
+                        icon: const Icon(Icons.schedule_outlined),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _end,
-                    decoration: const InputDecoration(labelText: '结束 HH:mm'),
+                    keyboardType: TextInputType.datetime,
+                    decoration: InputDecoration(
+                      labelText: '结束 HH:mm',
+                      suffixIcon: IconButton(
+                        tooltip: '选择结束时间',
+                        onPressed: () => _pickTime(_end),
+                        icon: const Icon(Icons.schedule_outlined),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -499,6 +534,20 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
         payRuleSnapshot: _rule,
       ),
     );
+  }
+
+  Future<void> _pickTime(TextEditingController controller) async {
+    final current = _parseTime(controller.text);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: current?[0] ?? widget.entry.startDateTime.hour,
+        minute: current?[1] ?? widget.entry.startDateTime.minute,
+      ),
+    );
+    if (picked == null) return;
+    controller.text =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
   }
 
   List<int>? _parseTime(String value) {

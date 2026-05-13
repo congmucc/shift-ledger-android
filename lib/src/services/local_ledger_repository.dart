@@ -92,10 +92,23 @@ class LocalLedgerRepository {
       _directory ?? getApplicationDocumentsDirectory();
   Future<File> _dataFile() async =>
       File('${(await _root()).path}/$_dataFileName');
-  Future<Directory> _exportsDirectory() async =>
-      Directory('${(await _root()).path}/exports');
-  Future<Directory> _backupsDirectory() async =>
-      Directory('${(await _root()).path}/backups');
+  Future<Directory> _exportsDirectory() async => _directory == null
+      ? _downloadsAppDirectory()
+      : Directory('${(await _root()).path}/exports');
+  Future<Directory> _backupsDirectory() async => _directory == null
+      ? _downloadsAppDirectory()
+      : Directory('${(await _root()).path}/backups');
+
+  Future<Directory> _downloadsAppDirectory() async {
+    final downloads = await getDownloadsDirectory();
+    if (downloads != null) {
+      return Directory('${downloads.path}/Shift Ledger');
+    }
+    if (Platform.isAndroid) {
+      return Directory('/storage/emulated/0/Download/Shift Ledger');
+    }
+    return Directory('${(await _root()).path}/Shift Ledger');
+  }
 
   String _timestamp() {
     final now = DateTime.now();

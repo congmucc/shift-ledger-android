@@ -28,8 +28,13 @@ class SettingsPage extends StatelessWidget {
           child: Column(
             children: [
               SettingTile(
-                title: '早班模板',
-                subtitle: '09:00-18:00 · 休 60 分钟',
+                title: '班次模板',
+                subtitle: state.templates
+                    .map(
+                      (tpl) =>
+                          '${tpl.name} ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
+                    )
+                    .join(' · '),
                 trailing: '编辑',
                 onTap: () => _showTemplateInfo(context),
               ),
@@ -103,27 +108,9 @@ class SettingsPage extends StatelessWidget {
   void _showTemplateInfo(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('班次模板', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 12),
-              for (final tpl in state.templates)
-                SettingTile(
-                  title: tpl.name,
-                  subtitle:
-                      '${_time(tpl.startMinute)}-${_time(tpl.endMinute)} · 休 ${tpl.breakMinutes} 分钟',
-                  trailing: tpl.type.label,
-                ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context) => ShiftTemplateSheet(state: state),
     );
   }
 
@@ -136,60 +123,68 @@ class SettingsPage extends StatelessWidget {
     );
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '夜班规则',
-                      style: Theme.of(context).textTheme.headlineMedium,
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '夜班规则',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('关闭'),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: start,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '开始小时'),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('关闭'),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: end,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '结束小时'),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: start,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '开始小时'),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () {
-                  state.updateNightRule(
-                    state.nightRule.copyWith(
-                      startMinute: (int.tryParse(start.text) ?? 22) * 60,
-                      endMinute: (int.tryParse(end.text) ?? 6) * 60,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: end,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '结束小时'),
+                      ),
                     ),
-                  );
-                  Navigator.pop(context);
-                },
-                child: const Text('保存'),
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: () {
+                    state.updateNightRule(
+                      state.nightRule.copyWith(
+                        startMinute: (int.tryParse(start.text) ?? 22) * 60,
+                        endMinute: (int.tryParse(end.text) ?? 6) * 60,
+                      ),
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('保存'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -207,83 +202,97 @@ class SettingsPage extends StatelessWidget {
     var mode = state.payPeriod.mode == PayPeriodMode.customRange
         ? PayPeriodMode.monthlyStartDay
         : state.payPeriod.mode;
-    final startDay = TextEditingController(
-      text: state.payPeriod.monthStartDay.toString(),
-    );
+    var monthStartDay = state.payPeriod.monthStartDay.clamp(1, 28);
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) => SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '发薪周期',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('取消'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<PayPeriodMode>(
-                  selected: {mode},
-                  segments: const [
-                    ButtonSegment(
-                      value: PayPeriodMode.naturalMonth,
-                      label: Text('自然月'),
-                    ),
-                    ButtonSegment(
-                      value: PayPeriodMode.monthlyStartDay,
-                      label: Text('固定日'),
-                    ),
-                  ],
-                  onSelectionChanged: (values) =>
-                      setSheetState(() => mode = values.first),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: startDay,
-                  enabled: mode == PayPeriodMode.monthlyStartDay,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '每月起始日（1-28）'),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () {
-                    state.updatePayPeriod(
-                      PayPeriod(
-                        mode: mode,
-                        monthStartDay: (int.tryParse(startDay.text) ?? 1).clamp(
-                          1,
-                          28,
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '发薪周期',
+                          style: Theme.of(context).textTheme.headlineMedium,
                         ),
                       ),
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: const Text('保存'),
-                ),
-              ],
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('取消'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<PayPeriodMode>(
+                    selected: {mode},
+                    segments: const [
+                      ButtonSegment(
+                        value: PayPeriodMode.naturalMonth,
+                        label: Text('自然月'),
+                      ),
+                      ButtonSegment(
+                        value: PayPeriodMode.monthlyStartDay,
+                        label: Text('固定日'),
+                      ),
+                    ],
+                    onSelectionChanged: (values) =>
+                        setSheetState(() => mode = values.first),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: monthStartDay,
+                    decoration: const InputDecoration(labelText: '每月起始日'),
+                    items: [
+                      for (var day = 1; day <= 28; day++)
+                        DropdownMenuItem(value: day, child: Text('$day 日')),
+                    ],
+                    onChanged: mode == PayPeriodMode.monthlyStartDay
+                        ? (value) => setSheetState(
+                            () => monthStartDay = value ?? monthStartDay,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () {
+                      state.updatePayPeriod(
+                        PayPeriod(mode: mode, monthStartDay: monthStartDay),
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text('保存'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
-    startDay.dispose();
   }
 
   Future<void> _exportCsv(BuildContext context) async {
+    final confirmed = await _confirm(
+      context,
+      title: '导出 CSV？',
+      content: '会在手机 Downloads/Shift Ledger 目录创建一个带时间戳的新 CSV 文件，避免覆盖已有导出。',
+      confirmText: '确认导出',
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
     final range = state.currentMonth;
     final csv = CsvExporter().exportEntries(
       entries: state.entries,
@@ -355,6 +364,15 @@ class SettingsPage extends StatelessWidget {
   }
 
   Future<void> _writeBackup(BuildContext context) async {
+    final confirmed = await _confirm(
+      context,
+      title: '创建本地备份？',
+      content:
+          '会在手机 Downloads/Shift Ledger 目录创建一个带时间戳的 JSON 备份，包含记录、班次模板、计薪规则、发薪周期和自动备份设置，但不包含 WebDAV 应用授权密码。',
+      confirmText: '确认备份',
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
     try {
       final path = await repository!.writeBackup(state.toSnapshot());
       if (context.mounted) {
@@ -412,6 +430,257 @@ class SettingsPage extends StatelessWidget {
         ).showSnackBar(const SnackBar(content: Text('当前预览环境不支持读取本地备份')));
       }
     }
+  }
+
+  String _time(int minutes) =>
+      '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
+
+  Future<bool?> _confirm(
+    BuildContext context, {
+    required String title,
+    required String content,
+    required String confirmText,
+  }) => showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(content),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(confirmText),
+        ),
+      ],
+    ),
+  );
+}
+
+class ShiftTemplateSheet extends StatefulWidget {
+  const ShiftTemplateSheet({super.key, required this.state});
+
+  final LedgerState state;
+
+  @override
+  State<ShiftTemplateSheet> createState() => _ShiftTemplateSheetState();
+}
+
+class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
+  late ShiftTemplate _template;
+  late final TextEditingController _name;
+  late final TextEditingController _start;
+  late final TextEditingController _end;
+  late final TextEditingController _break;
+  late EntryType _type;
+
+  @override
+  void initState() {
+    super.initState();
+    _template = widget.state.templates.first;
+    _name = TextEditingController();
+    _start = TextEditingController();
+    _end = TextEditingController();
+    _break = TextEditingController();
+    _load(_template);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _start.dispose();
+    _end.dispose();
+    _break.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '班次模板',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('关闭'),
+                  ),
+                ],
+              ),
+              const Text(
+                '常用班次会用于新增工时记录；修改后不会回写已经保存的历史记录。',
+                style: TextStyle(color: LedgerColors.muted),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<ShiftTemplate>(
+                initialValue: _template,
+                decoration: const InputDecoration(labelText: '选择模板'),
+                items: widget.state.templates
+                    .map(
+                      (tpl) => DropdownMenuItem(
+                        value: tpl,
+                        child: Text(
+                          '${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _template = value;
+                    _load(value);
+                  });
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _name,
+                decoration: const InputDecoration(labelText: '模板名称'),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _start,
+                      keyboardType: TextInputType.datetime,
+                      decoration: InputDecoration(
+                        labelText: '开始 HH:mm',
+                        suffixIcon: IconButton(
+                          tooltip: '选择开始时间',
+                          onPressed: () => _pickTime(_start),
+                          icon: const Icon(Icons.schedule_outlined),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _end,
+                      keyboardType: TextInputType.datetime,
+                      decoration: InputDecoration(
+                        labelText: '结束 HH:mm',
+                        suffixIcon: IconButton(
+                          tooltip: '选择结束时间',
+                          onPressed: () => _pickTime(_end),
+                          icon: const Icon(Icons.schedule_outlined),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _break,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: '休息分钟'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<EntryType>(
+                      initialValue: _type,
+                      decoration: const InputDecoration(labelText: '班次类型'),
+                      items: EntryType.values
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => _type = value ?? _type),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _save,
+                  child: const Text('保存模板'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _load(ShiftTemplate template) {
+    _name.text = template.name;
+    _start.text = _time(template.startMinute);
+    _end.text = _time(template.endMinute);
+    _break.text = template.breakMinutes.toString();
+    _type = template.type;
+  }
+
+  void _save() {
+    final start = _parseTime(_start.text) ?? _template.startMinute;
+    final end = _parseTime(_end.text) ?? _template.endMinute;
+    widget.state.updateShiftTemplate(
+      _template.copyWith(
+        name: _name.text.trim().isEmpty ? _template.name : _name.text.trim(),
+        startMinute: start,
+        endMinute: end,
+        breakMinutes: int.tryParse(_break.text) ?? _template.breakMinutes,
+        type: _type,
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _pickTime(TextEditingController controller) async {
+    final minute = _parseTime(controller.text) ?? _template.startMinute;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: minute ~/ 60, minute: minute % 60),
+    );
+    if (picked == null) return;
+    controller.text = _time(picked.hour * 60 + picked.minute);
+  }
+
+  int? _parseTime(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null ||
+        minute == null ||
+        hour < 0 ||
+        hour > 23 ||
+        minute < 0 ||
+        minute > 59) {
+      return null;
+    }
+    return hour * 60 + minute;
   }
 
   String _time(int minutes) =>
@@ -542,7 +811,15 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
               const SizedBox(height: 10),
               TextField(
                 controller: _effective,
-                decoration: const InputDecoration(labelText: '生效日期 YYYY-MM-DD'),
+                keyboardType: TextInputType.datetime,
+                decoration: InputDecoration(
+                  labelText: '生效日期 YYYY-MM-DD',
+                  suffixIcon: IconButton(
+                    tooltip: '选择生效日期',
+                    onPressed: _pickEffectiveDate,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                  ),
+                ),
               ),
               const SizedBox(height: 10),
               if (_type == PayBaseType.hourly)
@@ -660,6 +937,18 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
     );
     widget.state.savePayRule(rule);
     Navigator.pop(context);
+  }
+
+  Future<void> _pickEffectiveDate() async {
+    final current = DateTime.tryParse(_effective.text);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? widget.initialRule.effectiveFrom,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    _effective.text = ymd(picked);
   }
 }
 
@@ -883,6 +1172,24 @@ class _WebDavSheetState extends State<WebDavSheet> {
   }
 
   Future<void> _backup() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('备份到坚果云？'),
+        content: const Text('会把当前记录、班次模板、计薪规则和非敏感设置上传到远端备份文件。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认备份'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     await _run(() async {
       final config = _config().copyWith(lastBackupAt: DateTime.now());
       await WebDavClient().uploadBackup(

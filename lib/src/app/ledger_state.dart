@@ -206,6 +206,23 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void replaceDayEntries(
+    DateTime originalDay,
+    DateTime targetDay,
+    List<WorkEntry> replacements,
+  ) {
+    final originalKey = ymd(originalDay);
+    final targetKey = ymd(targetDay);
+    entries = [
+      for (final entry in entries)
+        if (ymd(entry.workDate) != originalKey &&
+            ymd(entry.workDate) != targetKey)
+          entry,
+      ...replacements,
+    ]..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    notifyListeners();
+  }
+
   void savePayRule(PayRule rule) {
     final index = payRules.indexWhere((item) => item.id == rule.id);
     if (index >= 0) {
@@ -237,6 +254,16 @@ class LedgerState extends ChangeNotifier {
 
   void updateNightRule(NightRule rule) {
     nightRule = rule;
+    notifyListeners();
+  }
+
+  void updateShiftTemplate(ShiftTemplate template) {
+    final index = templates.indexWhere((item) => item.id == template.id);
+    if (index >= 0) {
+      templates = [...templates]..[index] = template;
+    } else {
+      templates = [...templates, template];
+    }
     notifyListeners();
   }
 
