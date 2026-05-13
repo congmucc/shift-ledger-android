@@ -26,16 +26,4 @@ Phone install artifacts for this handoff are committed at:
 - Universal APK size: about 50.5 MB
 - Signing certificate SHA-256: `cc689600d205573a0fe81b9af7a9c5ee72faac1e02d2e9b7051ae14d84b467e9`
 
-The APK artifacts are committed intentionally for this phone-install handoff. Do not commit `android/keystore.properties` or the keystore file.
-
-## APK size note
-
-The committed APK is a universal APK. It includes native Flutter runtime and app libraries for `arm64-v8a`, `armeabi-v7a`, and `x86_64`, so the file is about 50.5 MB even though the app feature set is small.
-
-For a smaller phone-specific package, build split APKs:
-
-```bash
-flutter build apk --release --split-per-abi
-```
-
-On this machine the split outputs were about 17.6 MB for `app-arm64-v8a-release.apk`, 15.1 MB for `app-armeabi-v7a-release.apk`, and 19.0 MB for `app-x86_64-release.apk`. Most modern Android phones should use the committed `arm64-v8a` APK; use the universal APK only when unsure or when the split APK is incompatible.
+The APK artifacts are committed intentionally for this phone-install handoff. Use the arm64 APK for most modern Android phones; use the universal APK only if the arm64 APK is incompatible. Do not commit `android/keystore.properties` or the keystore file.
