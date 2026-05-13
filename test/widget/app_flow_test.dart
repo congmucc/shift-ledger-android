@@ -150,4 +150,29 @@ void main() {
       expect(find.text('从坚果云恢复？'), findsOneWidget);
     },
   );
+
+  testWidgets('calendar exposes today jump and survives large text scale', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+        child: ShiftLedgerApp(state: state),
+      ),
+    );
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    expect(find.text('今天'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('下个月'));
+    await tester.pumpAndSettle();
+    expect(find.text('2026 年 6 月'), findsOneWidget);
+
+    await tester.tap(find.text('今天'));
+    await tester.pumpAndSettle();
+    expect(find.text('2026 年 5 月'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -9,10 +9,13 @@ class PayCalculator {
     required NightRule nightRule,
     required DateRange range,
   }) {
-    final visible = entries
-        .where((entry) => range.overlaps(entry.startDateTime, entry.endDateTime))
-        .toList()
-      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    final visible =
+        entries
+            .where(
+              (entry) => range.overlaps(entry.startDateTime, entry.endDateTime),
+            )
+            .toList()
+          ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
     final byDay = <String, List<WorkEntry>>{};
     for (final entry in visible) {
@@ -72,10 +75,19 @@ class PayCalculator {
         final entryNightHours = _nightHours(entry, nightRule, range);
         final entryAllowance = entry.allowanceTotal;
         final entryDeduction = entry.deductionTotal;
-        final entryOvertimeIncome = entryOvertime *
+        final entryOvertimeIncome =
+            entryOvertime *
             rule.overtimeHourlyBase(range: range) *
-            (entry.isRestDayOvertime ? rule.restDayMultiplier : rule.overtimeMultiplier);
-        final entryNightIncome = _nightIncome(entryNightHours, entry, rule, nightRule, range);
+            (entry.isRestDayOvertime
+                ? rule.restDayMultiplier
+                : rule.overtimeMultiplier);
+        final entryNightIncome = _nightIncome(
+          entryNightHours,
+          entry,
+          rule,
+          nightRule,
+          range,
+        );
         var entryBaseIncome = 0.0;
         switch (rule.baseType) {
           case PayBaseType.hourly:
@@ -106,25 +118,32 @@ class PayCalculator {
         if (entryOvertime > 0) overtimeDays.add(dayKey);
         if (entryNightHours > 0) nightShiftCount++;
 
-        calculations.add(EntryCalculation(
-          entry: entry,
-          regularHours: _round2(entryRegular),
-          overtimeHours: _round2(entryOvertime),
-          nightHours: _round2(entryNightHours),
-          baseIncome: _round2(entryBaseIncome),
-          overtimeIncome: _round2(entryOvertimeIncome),
-          nightIncome: _round2(entryNightIncome),
-        ));
+        calculations.add(
+          EntryCalculation(
+            entry: entry,
+            regularHours: _round2(entryRegular),
+            overtimeHours: _round2(entryOvertime),
+            nightHours: _round2(entryNightHours),
+            baseIncome: _round2(entryBaseIncome),
+            overtimeIncome: _round2(entryOvertimeIncome),
+            nightIncome: _round2(entryNightIncome),
+          ),
+        );
       }
 
-      final dayTotal = dayEntries.fold(0.0, (sum, entry) => sum + _entryHoursInRange(entry, range));
+      final dayTotal = dayEntries.fold(
+        0.0,
+        (sum, entry) => sum + _entryHoursInRange(entry, range),
+      );
       if (dayTotal > 12) longDays.add(dayKey);
     }
 
     for (final ruleId in monthlyRuleIds) {
       final rule = rules.firstWhere(
         (item) => item.id == ruleId,
-        orElse: () => visible.firstWhere((e) => e.payRuleSnapshot.id == ruleId).payRuleSnapshot,
+        orElse: () => visible
+            .firstWhere((e) => e.payRuleSnapshot.id == ruleId)
+            .payRuleSnapshot,
       );
       baseIncome += _monthlyBaseIncome(rule, range);
     }
@@ -149,31 +168,45 @@ class PayCalculator {
     );
   }
 
-  PayRule _ruleFor(WorkEntry entry, List<PayRule> rules) => entry.payRuleSnapshot;
+  PayRule _ruleFor(WorkEntry entry, List<PayRule> rules) =>
+      entry.payRuleSnapshot;
 
   double _entryHoursInRange(WorkEntry entry, DateRange range) {
-    final start = entry.startDateTime.isBefore(range.start) ? range.start : entry.startDateTime;
-    final end = entry.endDateTime.isAfter(range.endExclusive) ? range.endExclusive : entry.endDateTime;
+    final start = entry.startDateTime.isBefore(range.start)
+        ? range.start
+        : entry.startDateTime;
+    final end = entry.endDateTime.isAfter(range.endExclusive)
+        ? range.endExclusive
+        : entry.endDateTime;
     if (!end.isAfter(start)) return 0;
-    final grossTotalMinutes = entry.endDateTime.difference(entry.startDateTime).inMinutes;
+    final grossTotalMinutes = entry.endDateTime
+        .difference(entry.startDateTime)
+        .inMinutes;
     if (grossTotalMinutes <= 0) return 0;
     final overlapMinutes = end.difference(start).inMinutes;
-    final breakInOverlap = entry.breakMinutes * overlapMinutes / grossTotalMinutes;
+    final breakInOverlap =
+        entry.breakMinutes * overlapMinutes / grossTotalMinutes;
     return max(0, overlapMinutes / 60 - breakInOverlap / 60);
   }
 
   double _nightHours(WorkEntry entry, NightRule rule, DateRange range) {
     final net = _entryHoursInRange(entry, range);
     if (entry.type == EntryType.night) return net;
-    final grossMinutes = entry.endDateTime.difference(entry.startDateTime).inMinutes;
+    final grossMinutes = entry.endDateTime
+        .difference(entry.startDateTime)
+        .inMinutes;
     if (grossMinutes <= 0) return 0;
     var overlap = 0;
-    var cursor = dateOnly(entry.startDateTime).subtract(const Duration(days: 1));
+    var cursor = dateOnly(
+      entry.startDateTime,
+    ).subtract(const Duration(days: 1));
     final limit = dateOnly(entry.endDateTime).add(const Duration(days: 2));
     while (cursor.isBefore(limit)) {
       final windowStart = cursor.add(Duration(minutes: rule.startMinute));
       final windowEnd = rule.endMinute <= rule.startMinute
-          ? cursor.add(const Duration(days: 1, minutes: 0)).add(Duration(minutes: rule.endMinute))
+          ? cursor
+                .add(const Duration(days: 1, minutes: 0))
+                .add(Duration(minutes: rule.endMinute))
           : cursor.add(Duration(minutes: rule.endMinute));
       final start = _latest([entry.startDateTime, range.start, windowStart]);
       final end = _earliest([entry.endDateTime, range.endExclusive, windowEnd]);
@@ -196,7 +229,9 @@ class PayCalculator {
       NightAllowanceMode.fixed => nightRule.fixedAmount,
       NightAllowanceMode.hourly => nightHours * nightRule.hourlyAmount,
       NightAllowanceMode.multiplier =>
-        nightHours * rule.overtimeHourlyBase(range: range) * max(0, nightRule.multiplier - 1),
+        nightHours *
+            rule.overtimeHourlyBase(range: range) *
+            max(0, nightRule.multiplier - 1),
     };
   }
 
@@ -206,18 +241,23 @@ class PayCalculator {
         : range.start;
     final effectiveToExclusive = rule.effectiveTo == null
         ? range.endExclusive
-        : dateOnly(rule.effectiveTo!).add(const Duration(days: 1)).isBefore(range.endExclusive)
-            ? dateOnly(rule.effectiveTo!).add(const Duration(days: 1))
-            : range.endExclusive;
+        : dateOnly(
+            rule.effectiveTo!,
+          ).add(const Duration(days: 1)).isBefore(range.endExclusive)
+        ? dateOnly(rule.effectiveTo!).add(const Duration(days: 1))
+        : range.endExclusive;
     if (!effectiveToExclusive.isAfter(effectiveStart)) return 0;
-    final monthDays = DateTime(range.start.year, range.start.month + 1)
-        .difference(DateTime(range.start.year, range.start.month))
-        .inDays;
+    final monthDays = DateTime(
+      range.start.year,
+      range.start.month + 1,
+    ).difference(DateTime(range.start.year, range.start.month)).inDays;
     final coveredDays = effectiveToExclusive.difference(effectiveStart).inDays;
     return rule.monthlyRate * coveredDays / monthDays;
   }
 
-  DateTime _latest(List<DateTime> values) => values.reduce((a, b) => a.isAfter(b) ? a : b);
-  DateTime _earliest(List<DateTime> values) => values.reduce((a, b) => a.isBefore(b) ? a : b);
+  DateTime _latest(List<DateTime> values) =>
+      values.reduce((a, b) => a.isAfter(b) ? a : b);
+  DateTime _earliest(List<DateTime> values) =>
+      values.reduce((a, b) => a.isBefore(b) ? a : b);
   double _round2(double value) => (value * 100).roundToDouble() / 100;
 }

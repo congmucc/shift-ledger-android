@@ -6,6 +6,7 @@ import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
 import 'package:shift_ledger/src/services/backup_service.dart';
 import 'package:shift_ledger/src/services/csv_exporter.dart';
+import 'package:shift_ledger/src/services/local_ledger_repository.dart';
 
 void main() {
   test('CSV export contains required audit columns', () {
@@ -70,4 +71,24 @@ void main() {
     ).readAsStringSync();
     expect(manifest, contains('android.permission.INTERNET'));
   });
+
+  test(
+    'repository uses injected external saver for production exports',
+    () async {
+      final calls = <ExternalSaveRequest>[];
+      final repository = LocalLedgerRepository(
+        externalSaver: (request) async {
+          calls.add(request);
+          return '/picked/${request.fileName}';
+        },
+      );
+
+      final path = await repository.writeCsv('a,b\n1,2');
+
+      expect(path, startsWith('/picked/shift-ledger-'));
+      expect(calls.single.mimeType, 'text/csv');
+      expect(calls.single.fileName, endsWith('.csv'));
+      expect(utf8.decode(calls.single.bytes), 'a,b\n1,2');
+    },
+  );
 }

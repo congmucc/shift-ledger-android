@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
@@ -7,15 +10,33 @@ import 'package:path_provider/path_provider.dart';
 import '../domain/models.dart';
 import 'backup_service.dart';
 
+class ExternalSaveRequest {
+  const ExternalSaveRequest({
+    required this.bytes,
+    required this.fileName,
+    required this.mimeType,
+  });
+
+  final Uint8List bytes;
+  final String fileName;
+  final String mimeType;
+}
+
+typedef ExternalFileSaver =
+    Future<String?> Function(ExternalSaveRequest request);
+
 class LocalLedgerRepository {
   LocalLedgerRepository({
     Directory? directory,
     FlutterSecureStorage? secureStorage,
+    ExternalFileSaver? externalSaver,
   }) : _directory = directory,
-       _secureStorage = secureStorage ?? const FlutterSecureStorage();
+       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+       _externalSaver = externalSaver ?? _saveWithSystemDialog;
 
   final Directory? _directory;
   final FlutterSecureStorage _secureStorage;
+  final ExternalFileSaver _externalSaver;
 
   static const _secretKey = 'shift_ledger_webdav_app_password';
   static const _dataFileName = 'shift_ledger_data.json';
@@ -54,20 +75,40 @@ class LocalLedgerRepository {
     }
   }
 
-  Future<String> writeCsv(String csv) async {
-    final dir = await _exportsDirectory();
-    await dir.create(recursive: true);
-    final file = File('${dir.path}/shift-ledger-${_timestamp()}.csv');
-    await file.writeAsString(csv, flush: true);
-    return file.path;
+  Future<String?> writeCsv(String csv) async {
+    final fileName = 'shift-ledger-${_timestamp()}.csv';
+    if (_directory != null) {
+      final dir = await _exportsDirectory();
+      await dir.create(recursive: true);
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsString(csv, flush: true);
+      return file.path;
+    }
+    return _externalSaver(
+      ExternalSaveRequest(
+        bytes: Uint8List.fromList(utf8.encode(csv)),
+        fileName: fileName,
+        mimeType: 'text/csv',
+      ),
+    );
   }
 
-  Future<String> writeBackup(LedgerSnapshot snapshot) async {
+  Future<String?> writeBackup(LedgerSnapshot snapshot) async {
+    final fileName = 'shift-ledger-backup-${_timestamp()}.json';
+    final payload = BackupService().encode(snapshot);
     final dir = await _backupsDirectory();
     await dir.create(recursive: true);
-    final file = File('${dir.path}/shift-ledger-backup-${_timestamp()}.json');
-    await file.writeAsString(BackupService().encode(snapshot), flush: true);
-    return file.path;
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsString(payload, flush: true);
+    if (_directory != null) return file.path;
+    final externalPath = await _externalSaver(
+      ExternalSaveRequest(
+        bytes: Uint8List.fromList(utf8.encode(payload)),
+        fileName: fileName,
+        mimeType: 'application/json',
+      ),
+    );
+    return externalPath ?? file.path;
   }
 
   Future<String?> latestBackupPath() async {
@@ -115,4 +156,15 @@ class LocalLedgerRepository {
     String two(int value) => value.toString().padLeft(2, '0');
     return '${now.year}${two(now.month)}${two(now.day)}-${two(now.hour)}${two(now.minute)}${two(now.second)}';
   }
+}
+
+Future<String?> _saveWithSystemDialog(ExternalSaveRequest request) {
+  return FlutterFileDialog.saveFile(
+    params: SaveFileDialogParams(
+      data: request.bytes,
+      fileName: request.fileName,
+      mimeTypesFilter: [request.mimeType],
+      localOnly: false,
+    ),
+  );
 }

@@ -38,7 +38,10 @@ class CsvExporter {
       ],
       for (final calc in summary.calculations) _row(calc),
       [],
-      ['汇总区间', range.label ?? '${ymd(range.start)} — ${ymd(range.endInclusive)}'],
+      [
+        '汇总区间',
+        range.label ?? '${ymd(range.start)} — ${ymd(range.endInclusive)}',
+      ],
       ['总工时', summary.totalHours],
       ['普通工时', summary.regularHours],
       ['加班工时', summary.overtimeHours],

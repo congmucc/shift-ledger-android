@@ -78,15 +78,18 @@ class MetricCard extends StatelessWidget {
     required this.value,
     this.subtext,
     this.onTap,
+    this.compact = false,
   });
   final String label;
   final String value;
   final String? subtext;
   final VoidCallback? onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final content = LedgerCard(
+      padding: EdgeInsets.all(compact ? 12 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -94,17 +97,24 @@ class MetricCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 34,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: compact ? 24 : 34,
               fontWeight: FontWeight.w800,
-              letterSpacing: -1.2,
+              letterSpacing: compact ? -0.6 : -1.2,
               color: LedgerColors.ink,
-              fontFeatures: [FontFeature.tabularFigures()],
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           if (subtext != null) ...[
             const SizedBox(height: 4),
-            Text(subtext!, style: const TextStyle(color: LedgerColors.muted)),
+            Text(
+              subtext!,
+              maxLines: compact ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: LedgerColors.muted),
+            ),
           ],
         ],
       ),

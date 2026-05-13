@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/ledger_state.dart';
 import '../domain/models.dart';
+import 'pickers.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -168,12 +169,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _pickDay() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _day,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
+    final picked = await showLedgerDatePicker(context, initialDate: _day);
     if (picked == null) return;
     _setDay(picked);
   }
@@ -538,16 +534,15 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
 
   Future<void> _pickTime(TextEditingController controller) async {
     final current = _parseTime(controller.text);
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: current?[0] ?? widget.entry.startDateTime.hour,
-        minute: current?[1] ?? widget.entry.startDateTime.minute,
-      ),
+    final picked = await showLedgerTimePicker(
+      context,
+      initialMinute:
+          (current?[0] ?? widget.entry.startDateTime.hour) * 60 +
+          (current?[1] ?? widget.entry.startDateTime.minute),
     );
     if (picked == null) return;
     controller.text =
-        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+        '${(picked ~/ 60).toString().padLeft(2, '0')}:${(picked % 60).toString().padLeft(2, '0')}';
   }
 
   List<int>? _parseTime(String value) {

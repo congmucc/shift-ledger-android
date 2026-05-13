@@ -10,5 +10,6 @@ class BackupService {
     return encoder.convert(snapshot.sanitizedForBackup().toJson());
   }
 
-  LedgerSnapshot decode(Map<String, Object?> json) => LedgerSnapshot.fromJson(json);
+  LedgerSnapshot decode(Map<String, Object?> json) =>
+      LedgerSnapshot.fromJson(json);
 }

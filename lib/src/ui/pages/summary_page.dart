@@ -190,9 +190,7 @@ class _SummaryPageState extends State<SummaryPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('导出 CSV？'),
-        content: const Text(
-          '会在手机 Downloads/Shift Ledger 目录创建一个带时间戳的新 CSV 文件，避免覆盖已有导出。',
-        ),
+        content: const Text('会打开系统保存面板，请选择 CSV 保存位置；取消保存不会改动账本。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -219,9 +217,9 @@ class _SummaryPageState extends State<SummaryPage> {
         return;
       }
       final path = await widget.repository!.writeCsv(csv);
-      _snack('CSV 已导出：$path');
+      _snack(path == null ? '已取消保存 CSV' : 'CSV 已保存：$path');
     } catch (_) {
-      _snack('CSV 已生成：${csv.length} 字符；当前预览环境不支持写入文件');
+      _snack('CSV 已生成但保存失败，请重试或更换保存位置');
     } finally {
       if (mounted) setState(() => _exporting = false);
     }

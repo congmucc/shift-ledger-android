@@ -8,6 +8,7 @@ import '../../services/backup_service.dart';
 import '../../services/csv_exporter.dart';
 import '../../services/local_ledger_repository.dart';
 import '../../services/webdav_client.dart';
+import '../pickers.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -202,7 +203,7 @@ class SettingsPage extends StatelessWidget {
     var mode = state.payPeriod.mode == PayPeriodMode.customRange
         ? PayPeriodMode.monthlyStartDay
         : state.payPeriod.mode;
-    var monthStartDay = state.payPeriod.monthStartDay.clamp(1, 28);
+    var monthStartDay = state.payPeriod.monthStartDay.clamp(1, 31);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -252,17 +253,25 @@ class SettingsPage extends StatelessWidget {
                         setSheetState(() => mode = values.first),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    initialValue: monthStartDay,
-                    decoration: const InputDecoration(labelText: '每月起始日'),
-                    items: [
-                      for (var day = 1; day <= 28; day++)
-                        DropdownMenuItem(value: day, child: Text('$day 日')),
-                    ],
-                    onChanged: mode == PayPeriodMode.monthlyStartDay
-                        ? (value) => setSheetState(
-                            () => monthStartDay = value ?? monthStartDay,
-                          )
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    enabled: mode == PayPeriodMode.monthlyStartDay,
+                    title: const Text('每月起始日'),
+                    subtitle: Text(
+                      '$monthStartDay 日；短月会自动落到当月最后一天',
+                      style: const TextStyle(color: LedgerColors.muted),
+                    ),
+                    trailing: const Icon(Icons.keyboard_arrow_up_outlined),
+                    onTap: mode == PayPeriodMode.monthlyStartDay
+                        ? () async {
+                            final picked = await showLedgerMonthDayPicker(
+                              context,
+                              initialDay: monthStartDay,
+                            );
+                            if (picked != null) {
+                              setSheetState(() => monthStartDay = picked);
+                            }
+                          }
                         : null,
                   ),
                   const SizedBox(height: 12),
@@ -288,7 +297,7 @@ class SettingsPage extends StatelessWidget {
     final confirmed = await _confirm(
       context,
       title: '导出 CSV？',
-      content: '会在手机 Downloads/Shift Ledger 目录创建一个带时间戳的新 CSV 文件，避免覆盖已有导出。',
+      content: '会打开系统保存面板，请选择 CSV 保存位置；取消保存不会改动账本。',
       confirmText: '确认导出',
     );
     if (confirmed != true) return;
@@ -309,15 +318,15 @@ class SettingsPage extends StatelessWidget {
       }
       final path = await repository!.writeCsv(csv);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('CSV 已导出：$path')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(path == null ? '已取消保存 CSV' : 'CSV 已保存：$path')),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('CSV 已生成：${csv.length} 字符；当前预览环境不支持写入文件')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('CSV 已生成但保存失败，请重试或更换保存位置')));
       }
     }
   }
@@ -368,7 +377,7 @@ class SettingsPage extends StatelessWidget {
       context,
       title: '创建本地备份？',
       content:
-          '会在手机 Downloads/Shift Ledger 目录创建一个带时间戳的 JSON 备份，包含记录、班次模板、计薪规则、发薪周期和自动备份设置，但不包含 WebDAV 应用授权密码。',
+          '会打开系统保存面板，请选择 JSON 备份保存位置；同时保留一份 App 私有备份用于“最近本地备份恢复”。备份不包含 WebDAV 应用授权密码。',
       confirmText: '确认备份',
     );
     if (confirmed != true) return;
@@ -376,15 +385,19 @@ class SettingsPage extends StatelessWidget {
     try {
       final path = await repository!.writeBackup(state.toSnapshot());
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('本地备份已创建：$path')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              path == null ? '已创建 App 私有备份；外部保存已取消' : '本地备份已保存：$path',
+            ),
+          ),
+        );
       }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('当前预览环境不支持写入本地备份')));
+        ).showSnackBar(const SnackBar(content: Text('本地备份创建失败，请重试或更换保存位置')));
       }
     }
   }
@@ -659,12 +672,9 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
 
   Future<void> _pickTime(TextEditingController controller) async {
     final minute = _parseTime(controller.text) ?? _template.startMinute;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: minute ~/ 60, minute: minute % 60),
-    );
+    final picked = await showLedgerTimePicker(context, initialMinute: minute);
     if (picked == null) return;
-    controller.text = _time(picked.hour * 60 + picked.minute);
+    controller.text = _time(picked);
   }
 
   int? _parseTime(String value) {
@@ -941,11 +951,9 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
 
   Future<void> _pickEffectiveDate() async {
     final current = DateTime.tryParse(_effective.text);
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showLedgerDatePicker(
+      context,
       initialDate: current ?? widget.initialRule.effectiveFrom,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
     );
     if (picked == null) return;
     _effective.text = ymd(picked);

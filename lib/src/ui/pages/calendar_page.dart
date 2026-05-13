@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import '../../app/ledger_state.dart';
 import '../../domain/models.dart';
@@ -42,6 +43,7 @@ class _CalendarPageState extends State<CalendarPage> {
         Row(
           children: [
             IconButton(
+              tooltip: '上个月',
               onPressed: () => setState(
                 () => _month = DateTime(_month.year, _month.month - 1),
               ),
@@ -56,16 +58,13 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
               ),
             ),
-            TextButton(
-              onPressed: () => setState(
-                () => _month = DateTime(
-                  widget.state.now.year,
-                  widget.state.now.month,
-                ),
-              ),
-              child: const Text('本月'),
+            TextButton.icon(
+              onPressed: _jumpToToday,
+              icon: const Icon(Icons.today_outlined, size: 18),
+              label: const Text('今天'),
             ),
             IconButton(
+              tooltip: '下个月',
               onPressed: () => setState(
                 () => _month = DateTime(_month.year, _month.month + 1),
               ),
@@ -79,6 +78,7 @@ class _CalendarPageState extends State<CalendarPage> {
               child: MetricCard(
                 label: '总工时',
                 value: hoursText(summary.totalHours),
+                compact: true,
               ),
             ),
             const SizedBox(width: 10),
@@ -86,6 +86,7 @@ class _CalendarPageState extends State<CalendarPage> {
               child: MetricCard(
                 label: '出勤',
                 value: '${summary.attendanceDays}天',
+                compact: true,
               ),
             ),
           ],
@@ -98,6 +99,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 label: '加班',
                 value: hoursText(summary.overtimeHours),
                 subtext: '${summary.overtimeDays}天',
+                compact: true,
               ),
             ),
             const SizedBox(width: 10),
@@ -106,6 +108,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 label: '夜班',
                 value: '${summary.nightShiftCount}次',
                 subtext: hoursText(summary.nightHours),
+                compact: true,
               ),
             ),
           ],
@@ -131,7 +134,8 @@ class _CalendarPageState extends State<CalendarPage> {
             onSelect: _selectDay,
           ),
         SectionHeader(
-          title: '${_selectedDay.month} 月 ${_selectedDay.day} 日详情',
+          title:
+              '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情',
           actionLabel: '补一段',
           onAction: () =>
               showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
@@ -141,7 +145,15 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
-  void _selectDay(DateTime day) => setState(() => _selectedDay = dateOnly(day));
+  void _selectDay(DateTime day) => setState(() {
+    _selectedDay = dateOnly(day);
+    _month = DateTime(day.year, day.month);
+  });
+
+  void _jumpToToday() => setState(() {
+    _selectedDay = widget.state.now;
+    _month = DateTime(widget.state.now.year, widget.state.now.month);
+  });
 
   Future<void> _showMonthPicker() async {
     var pickerYear = _month.year;
@@ -237,166 +249,175 @@ class _MonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final first = DateTime(month.year, month.month);
-    final start = first.subtract(Duration(days: first.weekday - 1));
     return LedgerCard(
       padding: const EdgeInsets.all(10),
       child: Column(
         children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Center(
-                  child: Text('一', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('二', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('三', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('四', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('五', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('六', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('日', style: TextStyle(color: LedgerColors.muted)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          GridView.count(
-            crossAxisCount: 7,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: .86,
-            children: [
-              for (var i = 0; i < 42; i++)
-                _DayCell(
-                  day: start.add(Duration(days: i)),
-                  month: month,
-                  selected:
-                      ymd(start.add(Duration(days: i))) == ymd(selectedDay),
-                  state: state,
-                  onTap: onSelect,
-                ),
-            ],
+          TableCalendar<void>(
+            firstDay: DateTime(2000),
+            lastDay: DateTime(2100, 12, 31),
+            focusedDay: month,
+            currentDay: state.now,
+            headerVisible: false,
+            sixWeekMonthsEnforced: true,
+            availableGestures: AvailableGestures.horizontalSwipe,
+            rowHeight: 64,
+            daysOfWeekHeight: 26,
+            selectedDayPredicate: (day) => ymd(day) == ymd(selectedDay),
+            onDaySelected: (selected, focused) => onSelect(selected),
+            onPageChanged: (focused) => onSelect(focused),
+            calendarStyle: const CalendarStyle(outsideDaysVisible: true),
+            daysOfWeekStyle: const DaysOfWeekStyle(
+              weekdayStyle: TextStyle(color: LedgerColors.muted),
+              weekendStyle: TextStyle(color: LedgerColors.muted),
+            ),
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: _buildCell,
+              todayBuilder: _buildCell,
+              selectedBuilder: _buildCell,
+              outsideBuilder: _buildCell,
+            ),
           ),
           const SizedBox(height: 8),
           const Wrap(
             spacing: 10,
+            runSpacing: 6,
             children: [
-              Text('普通', style: TextStyle(color: LedgerColors.workAmber)),
-              Text('加班', style: TextStyle(color: LedgerColors.overtimeMoss)),
-              Text('夜班', style: TextStyle(color: LedgerColors.nightSlate)),
-              Text('备注', style: TextStyle(color: LedgerColors.muted)),
+              _LegendMark(color: LedgerColors.workAmber, label: '有工时'),
+              _LegendMark(color: LedgerColors.overtimeMoss, label: '加班'),
+              _LegendMark(color: LedgerColors.nightSlate, label: '夜班'),
+              _LegendMark(color: LedgerColors.warningCopper, label: '备注'),
+              _LegendMark(color: LedgerColors.infoBlue, label: '今日'),
             ],
           ),
         ],
       ),
     );
   }
-}
 
-class _DayCell extends StatelessWidget {
-  const _DayCell({
-    required this.day,
-    required this.month,
-    required this.selected,
-    required this.state,
-    required this.onTap,
-  });
-  final DateTime day;
-  final DateTime month;
-  final bool selected;
-  final LedgerState state;
-  final ValueChanged<DateTime> onTap;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget? _buildCell(BuildContext context, DateTime day, DateTime focusedDay) {
     final entries = state.entriesForDay(day);
     final summary = state.summaryFor(DateRange.custom(day, day));
     final inMonth = day.month == month.month;
-    final hasNight = summary.nightShiftCount > 0;
+    final selected = ymd(day) == ymd(selectedDay);
+    final today = ymd(day) == ymd(state.now);
+    final hasNote = entries.any((entry) => entry.hasNote);
     final hasOvertime = summary.overtimeHours > 0;
-    final color = !inMonth
+    final hasNight = summary.nightHours > 0;
+    final hasWork = entries.isNotEmpty;
+    final fill = !inMonth
         ? LedgerColors.surface
-        : hasNight
-        ? LedgerColors.nightSlateSoft
-        : hasOvertime
-        ? LedgerColors.overtimeMossSoft
-        : entries.isNotEmpty
-        ? LedgerColors.workAmberSoft
+        : hasWork
+        ? LedgerColors.workAmberSoft.withValues(alpha: .55)
         : LedgerColors.surfaceRaised;
-    return Padding(
-      padding: const EdgeInsets.all(3),
-      child: Semantics(
-        button: true,
-        label:
-            '${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${entries.any((e) => e.hasNote) ? '，有备注' : ''}',
-        child: InkWell(
-          onTap: () => onTap(day),
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: inMonth ? 1 : .45),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: selected
-                    ? LedgerColors.warningCopper
-                    : LedgerColors.hairline,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label:
+          '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasNote ? '，有备注' : ''}',
+      child: Container(
+        margin: const EdgeInsets.all(3),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+        decoration: BoxDecoration(
+          color: fill.withValues(alpha: inMonth ? 1 : .42),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            width: selected || today ? 1.8 : 1,
+            color: selected
+                ? LedgerColors.warningCopper
+                : today
+                ? LedgerColors.infoBlue
+                : LedgerColors.hairline,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  '${day.day}',
-                  style: TextStyle(
-                    color: inMonth ? LedgerColors.ink : LedgerColors.stone,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                if (summary.totalHours > 0)
-                  Text(
-                    hasNight ? '夜' : hoursText(summary.totalHours),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    '${day.day}',
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    textScaler: TextScaler.noScaling,
+                    style: TextStyle(
+                      color: inMonth ? LedgerColors.ink : LedgerColors.stone,
+                      fontWeight: today ? FontWeight.w900 : FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
-                if (entries.any((e) => e.hasNote))
+                ),
+                if (today)
                   const Text(
-                    '•',
-                    style: TextStyle(color: LedgerColors.warningCopper),
+                    '今',
+                    textScaler: TextScaler.noScaling,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: LedgerColors.infoBlue,
+                    ),
                   ),
               ],
             ),
-          ),
+            const Spacer(),
+            if (summary.totalHours > 0)
+              Text(
+                hoursText(summary.totalHours),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textScaler: TextScaler.noScaling,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            Wrap(
+              spacing: 3,
+              runSpacing: 2,
+              children: [
+                if (hasWork) const _Dot(color: LedgerColors.workAmber),
+                if (hasOvertime) const _Dot(color: LedgerColors.overtimeMoss),
+                if (hasNight) const _Dot(color: LedgerColors.nightSlate),
+                if (hasNote) const _Dot(color: LedgerColors.warningCopper),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 6,
+    height: 6,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
+class _LegendMark extends StatelessWidget {
+  const _LegendMark({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      _Dot(color: color),
+      const SizedBox(width: 4),
+      Text(
+        label,
+        style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
+      ),
+    ],
+  );
 }
 
 class _MonthList extends StatelessWidget {

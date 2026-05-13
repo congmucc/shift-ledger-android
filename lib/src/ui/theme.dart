@@ -82,7 +82,10 @@ ThemeData buildLedgerTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: LedgerColors.warningCopper, width: 2),
+        borderSide: const BorderSide(
+          color: LedgerColors.warningCopper,
+          width: 2,
+        ),
       ),
     ),
     snackBarTheme: const SnackBarThemeData(
