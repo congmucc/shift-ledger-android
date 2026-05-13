@@ -52,6 +52,11 @@ void main() {
     );
     expect(decoded.entries, isNotEmpty);
     expect(decoded.webDavConfig.appPassword, isEmpty);
+    expect(decoded.autoBackupConfig.enabled, isFalse);
+    expect(
+      decoded.autoBackupConfig.remotePath,
+      'shift-ledger-auto-latest.json',
+    );
 
     state.restore(decoded);
     expect(state.webDavConfig.username, 'user@example.com');

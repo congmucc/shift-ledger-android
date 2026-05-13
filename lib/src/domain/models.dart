@@ -1,6 +1,7 @@
 import 'dart:math';
 
-DateTime dateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
+DateTime dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
 String ymd(DateTime value) =>
     '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 String hm(DateTime value) =>
@@ -18,57 +19,71 @@ String newId(String prefix) =>
     '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(99999)}';
 
 enum EntryType { regular, overtime, night, temporary }
+
 enum PayBaseType { hourly, daily, monthly }
+
 enum DailyPayMode { attendanceDay, shiftCount }
+
 enum NightAllowanceMode { fixed, hourly, multiplier }
+
 enum AdjustmentType { allowance, deduction }
+
 enum PayPeriodMode { naturalMonth, monthlyStartDay, customRange }
+
+enum AutoBackupStatus {
+  idle,
+  success,
+  skipped,
+  waiting,
+  configIncomplete,
+  failed,
+}
 
 extension EntryTypeX on EntryType {
   String get label => switch (this) {
-        EntryType.regular => '普通',
-        EntryType.overtime => '加班',
-        EntryType.night => '夜班',
-        EntryType.temporary => '临时班',
-      };
+    EntryType.regular => '普通',
+    EntryType.overtime => '加班',
+    EntryType.night => '夜班',
+    EntryType.temporary => '临时班',
+  };
 
   static EntryType fromName(String? value) => EntryType.values.firstWhere(
-        (item) => item.name == value,
-        orElse: () => EntryType.regular,
-      );
+    (item) => item.name == value,
+    orElse: () => EntryType.regular,
+  );
 }
 
 extension PayBaseTypeX on PayBaseType {
   String get label => switch (this) {
-        PayBaseType.hourly => '按小时',
-        PayBaseType.daily => '按天',
-        PayBaseType.monthly => '按月',
-      };
+    PayBaseType.hourly => '按小时',
+    PayBaseType.daily => '按天',
+    PayBaseType.monthly => '按月',
+  };
 
   static PayBaseType fromName(String? value) => PayBaseType.values.firstWhere(
-        (item) => item.name == value,
-        orElse: () => PayBaseType.hourly,
-      );
+    (item) => item.name == value,
+    orElse: () => PayBaseType.hourly,
+  );
 }
 
 extension DailyPayModeX on DailyPayMode {
   String get label => switch (this) {
-        DailyPayMode.attendanceDay => '按出勤日',
-        DailyPayMode.shiftCount => '按班次数',
-      };
+    DailyPayMode.attendanceDay => '按出勤日',
+    DailyPayMode.shiftCount => '按班次数',
+  };
 
   static DailyPayMode fromName(String? value) => DailyPayMode.values.firstWhere(
-        (item) => item.name == value,
-        orElse: () => DailyPayMode.attendanceDay,
-      );
+    (item) => item.name == value,
+    orElse: () => DailyPayMode.attendanceDay,
+  );
 }
 
 extension NightAllowanceModeX on NightAllowanceMode {
   String get label => switch (this) {
-        NightAllowanceMode.fixed => '每次固定补贴',
-        NightAllowanceMode.hourly => '按夜班小时补贴',
-        NightAllowanceMode.multiplier => '夜班倍率',
-      };
+    NightAllowanceMode.fixed => '每次固定补贴',
+    NightAllowanceMode.hourly => '按夜班小时补贴',
+    NightAllowanceMode.multiplier => '夜班倍率',
+  };
 
   static NightAllowanceMode fromName(String? value) =>
       NightAllowanceMode.values.firstWhere(
@@ -79,25 +94,48 @@ extension NightAllowanceModeX on NightAllowanceMode {
 
 extension AdjustmentTypeX on AdjustmentType {
   String get label => switch (this) {
-        AdjustmentType.allowance => '补贴',
-        AdjustmentType.deduction => '扣款',
-      };
+    AdjustmentType.allowance => '补贴',
+    AdjustmentType.deduction => '扣款',
+  };
 
-  static AdjustmentType fromName(String? value) => AdjustmentType.values.firstWhere(
+  static AdjustmentType fromName(String? value) =>
+      AdjustmentType.values.firstWhere(
         (item) => item.name == value,
         orElse: () => AdjustmentType.allowance,
       );
 }
 
 extension PayPeriodModeX on PayPeriodMode {
-  static PayPeriodMode fromName(String? value) => PayPeriodMode.values.firstWhere(
+  static PayPeriodMode fromName(String? value) =>
+      PayPeriodMode.values.firstWhere(
         (item) => item.name == value,
         orElse: () => PayPeriodMode.naturalMonth,
       );
 }
 
+extension AutoBackupStatusX on AutoBackupStatus {
+  String get label => switch (this) {
+    AutoBackupStatus.idle => '尚未自动备份',
+    AutoBackupStatus.success => '自动备份成功',
+    AutoBackupStatus.skipped => '内容未变化，已跳过',
+    AutoBackupStatus.waiting => '等待下次自动备份',
+    AutoBackupStatus.configIncomplete => '需重新授权或配置不完整',
+    AutoBackupStatus.failed => '自动备份失败',
+  };
+
+  static AutoBackupStatus fromName(String? value) =>
+      AutoBackupStatus.values.firstWhere(
+        (item) => item.name == value,
+        orElse: () => AutoBackupStatus.idle,
+      );
+}
+
 class DateRange {
-  const DateRange({required this.start, required this.endExclusive, this.label});
+  const DateRange({
+    required this.start,
+    required this.endExclusive,
+    this.label,
+  });
 
   final DateTime start;
   final DateTime endExclusive;
@@ -113,10 +151,10 @@ class DateRange {
   }
 
   factory DateRange.year(int year) => DateRange(
-        start: DateTime(year),
-        endExclusive: DateTime(year + 1),
-        label: '$year年',
-      );
+    start: DateTime(year),
+    endExclusive: DateTime(year + 1),
+    label: '$year年',
+  );
 
   factory DateRange.week(DateTime day) {
     final base = dateOnly(day);
@@ -128,12 +166,15 @@ class DateRange {
     );
   }
 
-  factory DateRange.custom(DateTime start, DateTime endInclusive, {String? label}) =>
-      DateRange(
-        start: dateOnly(start),
-        endExclusive: dateOnly(endInclusive).add(const Duration(days: 1)),
-        label: label ?? '${ymd(start)} — ${ymd(endInclusive)}',
-      );
+  factory DateRange.custom(
+    DateTime start,
+    DateTime endInclusive, {
+    String? label,
+  }) => DateRange(
+    start: dateOnly(start),
+    endExclusive: dateOnly(endInclusive).add(const Duration(days: 1)),
+    label: label ?? '${ymd(start)} — ${ymd(endInclusive)}',
+  );
 
   int get dayCount => endExclusive.difference(start).inDays;
   DateTime get endInclusive => endExclusive.subtract(const Duration(days: 1));
@@ -177,18 +218,18 @@ class Adjustment {
   final AdjustmentType type;
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'name': name,
-        'amount': amount,
-        'type': type.name,
-      };
+    'id': id,
+    'name': name,
+    'amount': amount,
+    'type': type.name,
+  };
 
   factory Adjustment.fromJson(Map<String, Object?> json) => Adjustment(
-        id: json['id'] as String? ?? newId('adj'),
-        name: json['name'] as String? ?? '补贴',
-        amount: asDouble(json['amount']),
-        type: AdjustmentTypeX.fromName(json['type'] as String?),
-      );
+    id: json['id'] as String? ?? newId('adj'),
+    name: json['name'] as String? ?? '补贴',
+    amount: asDouble(json['amount']),
+    type: AdjustmentTypeX.fromName(json['type'] as String?),
+  );
 }
 
 class PayRule {
@@ -212,29 +253,29 @@ class PayRule {
   });
 
   factory PayRule.defaultHourly({double hourlyRate = 35}) => PayRule(
-        id: 'rule_hourly_default',
-        name: '默认按小时',
-        baseType: PayBaseType.hourly,
-        hourlyRate: hourlyRate,
-        effectiveFrom: DateTime(2026, 5, 1),
-        isDefault: true,
-      );
+    id: 'rule_hourly_default',
+    name: '默认按小时',
+    baseType: PayBaseType.hourly,
+    hourlyRate: hourlyRate,
+    effectiveFrom: DateTime(2026, 5, 1),
+    isDefault: true,
+  );
 
   factory PayRule.defaultDaily({double dailyRate = 280}) => PayRule(
-        id: 'rule_daily_default',
-        name: '按天规则',
-        baseType: PayBaseType.daily,
-        dailyRate: dailyRate,
-        effectiveFrom: DateTime(2026, 5, 1),
-      );
+    id: 'rule_daily_default',
+    name: '按天规则',
+    baseType: PayBaseType.daily,
+    dailyRate: dailyRate,
+    effectiveFrom: DateTime(2026, 5, 1),
+  );
 
   factory PayRule.defaultMonthly({double monthlyRate = 8500}) => PayRule(
-        id: 'rule_monthly_default',
-        name: '月薪规则',
-        baseType: PayBaseType.monthly,
-        monthlyRate: monthlyRate,
-        effectiveFrom: DateTime(2026, 5, 1),
-      );
+    id: 'rule_monthly_default',
+    name: '月薪规则',
+    baseType: PayBaseType.monthly,
+    monthlyRate: monthlyRate,
+    effectiveFrom: DateTime(2026, 5, 1),
+  );
 
   final String id;
   final String name;
@@ -263,22 +304,24 @@ class PayRule {
     if (overtimeBaseHourlyRate > 0) return overtimeBaseHourlyRate;
     return switch (baseType) {
       PayBaseType.hourly => hourlyRate,
-      PayBaseType.daily => standardHoursPerDay <= 0 ? 0 : dailyRate / standardHoursPerDay,
+      PayBaseType.daily =>
+        standardHoursPerDay <= 0 ? 0 : dailyRate / standardHoursPerDay,
       PayBaseType.monthly => _monthlyHourlyBase(range),
     };
   }
 
   double _monthlyHourlyBase(DateRange? range) {
-    final monthRange = range ?? DateRange.month(effectiveFrom.year, effectiveFrom.month);
+    final monthRange =
+        range ?? DateRange.month(effectiveFrom.year, effectiveFrom.month);
     final hours = max(1, monthRange.dayCount * standardHoursPerDay);
     return monthlyRate / hours;
   }
 
   String get amountLabel => switch (baseType) {
-        PayBaseType.hourly => '¥${hourlyRate.toStringAsFixed(0)}/h',
-        PayBaseType.daily => '¥${dailyRate.toStringAsFixed(0)}/天',
-        PayBaseType.monthly => '¥${monthlyRate.toStringAsFixed(0)}/月',
-      };
+    PayBaseType.hourly => '¥${hourlyRate.toStringAsFixed(0)}/h',
+    PayBaseType.daily => '¥${dailyRate.toStringAsFixed(0)}/天',
+    PayBaseType.monthly => '¥${monthlyRate.toStringAsFixed(0)}/月',
+  };
 
   String get snapshotSummary =>
       '$name · ${baseType.label} · $amountLabel · v$version · ${ymd(effectiveFrom)}起';
@@ -300,63 +343,64 @@ class PayRule {
     double? overtimeMultiplier,
     double? restDayMultiplier,
     bool? isDefault,
-  }) =>
-      PayRule(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        baseType: baseType ?? this.baseType,
-        hourlyRate: hourlyRate ?? this.hourlyRate,
-        dailyRate: dailyRate ?? this.dailyRate,
-        monthlyRate: monthlyRate ?? this.monthlyRate,
-        dailyPayMode: dailyPayMode ?? this.dailyPayMode,
-        effectiveFrom: effectiveFrom ?? this.effectiveFrom,
-        effectiveTo: effectiveTo ?? this.effectiveTo,
-        version: version ?? this.version,
-        standardHoursPerDay: standardHoursPerDay ?? this.standardHoursPerDay,
-        overtimeBaseHourlyRate: overtimeBaseHourlyRate ?? this.overtimeBaseHourlyRate,
-        overtimeThresholdHours: overtimeThresholdHours ?? this.overtimeThresholdHours,
-        overtimeMultiplier: overtimeMultiplier ?? this.overtimeMultiplier,
-        restDayMultiplier: restDayMultiplier ?? this.restDayMultiplier,
-        isDefault: isDefault ?? this.isDefault,
-      );
+  }) => PayRule(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    baseType: baseType ?? this.baseType,
+    hourlyRate: hourlyRate ?? this.hourlyRate,
+    dailyRate: dailyRate ?? this.dailyRate,
+    monthlyRate: monthlyRate ?? this.monthlyRate,
+    dailyPayMode: dailyPayMode ?? this.dailyPayMode,
+    effectiveFrom: effectiveFrom ?? this.effectiveFrom,
+    effectiveTo: effectiveTo ?? this.effectiveTo,
+    version: version ?? this.version,
+    standardHoursPerDay: standardHoursPerDay ?? this.standardHoursPerDay,
+    overtimeBaseHourlyRate:
+        overtimeBaseHourlyRate ?? this.overtimeBaseHourlyRate,
+    overtimeThresholdHours:
+        overtimeThresholdHours ?? this.overtimeThresholdHours,
+    overtimeMultiplier: overtimeMultiplier ?? this.overtimeMultiplier,
+    restDayMultiplier: restDayMultiplier ?? this.restDayMultiplier,
+    isDefault: isDefault ?? this.isDefault,
+  );
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'name': name,
-        'baseType': baseType.name,
-        'hourlyRate': hourlyRate,
-        'dailyRate': dailyRate,
-        'monthlyRate': monthlyRate,
-        'dailyPayMode': dailyPayMode.name,
-        'effectiveFrom': ymd(effectiveFrom),
-        'effectiveTo': effectiveTo == null ? null : ymd(effectiveTo!),
-        'version': version,
-        'standardHoursPerDay': standardHoursPerDay,
-        'overtimeBaseHourlyRate': overtimeBaseHourlyRate,
-        'overtimeThresholdHours': overtimeThresholdHours,
-        'overtimeMultiplier': overtimeMultiplier,
-        'restDayMultiplier': restDayMultiplier,
-        'isDefault': isDefault,
-      };
+    'id': id,
+    'name': name,
+    'baseType': baseType.name,
+    'hourlyRate': hourlyRate,
+    'dailyRate': dailyRate,
+    'monthlyRate': monthlyRate,
+    'dailyPayMode': dailyPayMode.name,
+    'effectiveFrom': ymd(effectiveFrom),
+    'effectiveTo': effectiveTo == null ? null : ymd(effectiveTo!),
+    'version': version,
+    'standardHoursPerDay': standardHoursPerDay,
+    'overtimeBaseHourlyRate': overtimeBaseHourlyRate,
+    'overtimeThresholdHours': overtimeThresholdHours,
+    'overtimeMultiplier': overtimeMultiplier,
+    'restDayMultiplier': restDayMultiplier,
+    'isDefault': isDefault,
+  };
 
   factory PayRule.fromJson(Map<String, Object?> json) => PayRule(
-        id: json['id'] as String? ?? newId('rule'),
-        name: json['name'] as String? ?? '计薪规则',
-        baseType: PayBaseTypeX.fromName(json['baseType'] as String?),
-        hourlyRate: asDouble(json['hourlyRate']),
-        dailyRate: asDouble(json['dailyRate']),
-        monthlyRate: asDouble(json['monthlyRate']),
-        dailyPayMode: DailyPayModeX.fromName(json['dailyPayMode'] as String?),
-        effectiveFrom: parseDate(json['effectiveFrom'] ?? ymd(DateTime.now())),
-        effectiveTo: parseOptionalDate(json['effectiveTo']),
-        version: asInt(json['version'], 1),
-        standardHoursPerDay: asDouble(json['standardHoursPerDay'], 8),
-        overtimeBaseHourlyRate: asDouble(json['overtimeBaseHourlyRate']),
-        overtimeThresholdHours: asDouble(json['overtimeThresholdHours'], 8),
-        overtimeMultiplier: asDouble(json['overtimeMultiplier'], 1.5),
-        restDayMultiplier: asDouble(json['restDayMultiplier'], 2),
-        isDefault: json['isDefault'] == true,
-      );
+    id: json['id'] as String? ?? newId('rule'),
+    name: json['name'] as String? ?? '计薪规则',
+    baseType: PayBaseTypeX.fromName(json['baseType'] as String?),
+    hourlyRate: asDouble(json['hourlyRate']),
+    dailyRate: asDouble(json['dailyRate']),
+    monthlyRate: asDouble(json['monthlyRate']),
+    dailyPayMode: DailyPayModeX.fromName(json['dailyPayMode'] as String?),
+    effectiveFrom: parseDate(json['effectiveFrom'] ?? ymd(DateTime.now())),
+    effectiveTo: parseOptionalDate(json['effectiveTo']),
+    version: asInt(json['version'], 1),
+    standardHoursPerDay: asDouble(json['standardHoursPerDay'], 8),
+    overtimeBaseHourlyRate: asDouble(json['overtimeBaseHourlyRate']),
+    overtimeThresholdHours: asDouble(json['overtimeThresholdHours'], 8),
+    overtimeMultiplier: asDouble(json['overtimeMultiplier'], 1.5),
+    restDayMultiplier: asDouble(json['restDayMultiplier'], 2),
+    isDefault: json['isDefault'] == true,
+  );
 }
 
 class NightRule {
@@ -385,36 +429,35 @@ class NightRule {
     double? fixedAmount,
     double? hourlyAmount,
     double? multiplier,
-  }) =>
-      NightRule(
-        startMinute: startMinute ?? this.startMinute,
-        endMinute: endMinute ?? this.endMinute,
-        mode: mode ?? this.mode,
-        fixedAmount: fixedAmount ?? this.fixedAmount,
-        hourlyAmount: hourlyAmount ?? this.hourlyAmount,
-        multiplier: multiplier ?? this.multiplier,
-      );
+  }) => NightRule(
+    startMinute: startMinute ?? this.startMinute,
+    endMinute: endMinute ?? this.endMinute,
+    mode: mode ?? this.mode,
+    fixedAmount: fixedAmount ?? this.fixedAmount,
+    hourlyAmount: hourlyAmount ?? this.hourlyAmount,
+    multiplier: multiplier ?? this.multiplier,
+  );
 
   String get label =>
       '${(startMinute ~/ 60).toString().padLeft(2, '0')}:00-${(endMinute ~/ 60).toString().padLeft(2, '0')}:00';
 
   Map<String, Object?> toJson() => {
-        'startMinute': startMinute,
-        'endMinute': endMinute,
-        'mode': mode.name,
-        'fixedAmount': fixedAmount,
-        'hourlyAmount': hourlyAmount,
-        'multiplier': multiplier,
-      };
+    'startMinute': startMinute,
+    'endMinute': endMinute,
+    'mode': mode.name,
+    'fixedAmount': fixedAmount,
+    'hourlyAmount': hourlyAmount,
+    'multiplier': multiplier,
+  };
 
   factory NightRule.fromJson(Map<String, Object?> json) => NightRule(
-        startMinute: asInt(json['startMinute'], 22 * 60),
-        endMinute: asInt(json['endMinute'], 6 * 60),
-        mode: NightAllowanceModeX.fromName(json['mode'] as String?),
-        fixedAmount: asDouble(json['fixedAmount'], 30),
-        hourlyAmount: asDouble(json['hourlyAmount'], 5),
-        multiplier: asDouble(json['multiplier'], 1.2),
-      );
+    startMinute: asInt(json['startMinute'], 22 * 60),
+    endMinute: asInt(json['endMinute'], 6 * 60),
+    mode: NightAllowanceModeX.fromName(json['mode'] as String?),
+    fixedAmount: asDouble(json['fixedAmount'], 30),
+    hourlyAmount: asDouble(json['hourlyAmount'], 5),
+    multiplier: asDouble(json['multiplier'], 1.2),
+  );
 }
 
 class ShiftTemplate {
@@ -431,42 +474,42 @@ class ShiftTemplate {
   });
 
   factory ShiftTemplate.standard({String? payRuleId}) => ShiftTemplate(
-        id: 'tpl_standard',
-        name: '早班模板',
-        startMinute: 9 * 60,
-        endMinute: 18 * 60,
-        breakMinutes: 60,
-        defaultPayRuleId: payRuleId,
-        defaultAdjustments: const [
-          Adjustment(
-            id: 'adj_meal_default',
-            name: '餐补',
-            amount: 20,
-            type: AdjustmentType.allowance,
-          ),
-        ],
-      );
+    id: 'tpl_standard',
+    name: '早班模板',
+    startMinute: 9 * 60,
+    endMinute: 18 * 60,
+    breakMinutes: 60,
+    defaultPayRuleId: payRuleId,
+    defaultAdjustments: const [
+      Adjustment(
+        id: 'adj_meal_default',
+        name: '餐补',
+        amount: 20,
+        type: AdjustmentType.allowance,
+      ),
+    ],
+  );
 
   factory ShiftTemplate.night({String? payRuleId}) => ShiftTemplate(
-        id: 'tpl_night',
-        name: '夜班',
-        startMinute: 22 * 60,
-        endMinute: 6 * 60,
-        breakMinutes: 60,
-        type: EntryType.night,
-        colorToken: 'night-slate',
-        defaultPayRuleId: payRuleId,
-      );
+    id: 'tpl_night',
+    name: '夜班',
+    startMinute: 22 * 60,
+    endMinute: 6 * 60,
+    breakMinutes: 60,
+    type: EntryType.night,
+    colorToken: 'night-slate',
+    defaultPayRuleId: payRuleId,
+  );
 
   factory ShiftTemplate.overtime({String? payRuleId}) => ShiftTemplate(
-        id: 'tpl_overtime',
-        name: '加班',
-        startMinute: 18 * 60,
-        endMinute: 21 * 60,
-        type: EntryType.overtime,
-        colorToken: 'overtime-moss',
-        defaultPayRuleId: payRuleId,
-      );
+    id: 'tpl_overtime',
+    name: '加班',
+    startMinute: 18 * 60,
+    endMinute: 21 * 60,
+    type: EntryType.overtime,
+    colorToken: 'overtime-moss',
+    defaultPayRuleId: payRuleId,
+  );
 
   final String id;
   final String name;
@@ -479,31 +522,31 @@ class ShiftTemplate {
   final List<Adjustment> defaultAdjustments;
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'name': name,
-        'startMinute': startMinute,
-        'endMinute': endMinute,
-        'breakMinutes': breakMinutes,
-        'type': type.name,
-        'colorToken': colorToken,
-        'defaultPayRuleId': defaultPayRuleId,
-        'defaultAdjustments': defaultAdjustments.map((a) => a.toJson()).toList(),
-      };
+    'id': id,
+    'name': name,
+    'startMinute': startMinute,
+    'endMinute': endMinute,
+    'breakMinutes': breakMinutes,
+    'type': type.name,
+    'colorToken': colorToken,
+    'defaultPayRuleId': defaultPayRuleId,
+    'defaultAdjustments': defaultAdjustments.map((a) => a.toJson()).toList(),
+  };
 
   factory ShiftTemplate.fromJson(Map<String, Object?> json) => ShiftTemplate(
-        id: json['id'] as String? ?? newId('tpl'),
-        name: json['name'] as String? ?? '模板',
-        startMinute: asInt(json['startMinute'], 9 * 60),
-        endMinute: asInt(json['endMinute'], 18 * 60),
-        breakMinutes: asInt(json['breakMinutes'], 60),
-        type: EntryTypeX.fromName(json['type'] as String?),
-        colorToken: json['colorToken'] as String? ?? 'work-amber',
-        defaultPayRuleId: json['defaultPayRuleId'] as String?,
-        defaultAdjustments: ((json['defaultAdjustments'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((item) => Adjustment.fromJson(Map<String, Object?>.from(item)))
-            .toList(),
-      );
+    id: json['id'] as String? ?? newId('tpl'),
+    name: json['name'] as String? ?? '模板',
+    startMinute: asInt(json['startMinute'], 9 * 60),
+    endMinute: asInt(json['endMinute'], 18 * 60),
+    breakMinutes: asInt(json['breakMinutes'], 60),
+    type: EntryTypeX.fromName(json['type'] as String?),
+    colorToken: json['colorToken'] as String? ?? 'work-amber',
+    defaultPayRuleId: json['defaultPayRuleId'] as String?,
+    defaultAdjustments: ((json['defaultAdjustments'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => Adjustment.fromJson(Map<String, Object?>.from(item)))
+        .toList(),
+  );
 }
 
 class WorkEntry {
@@ -605,62 +648,61 @@ class WorkEntry {
     String? note,
     List<Adjustment>? adjustments,
     bool? isRestDayOvertime,
-  }) =>
-      WorkEntry(
-        id: id ?? this.id,
-        workDate: workDate ?? this.workDate,
-        startDateTime: startDateTime ?? this.startDateTime,
-        endDateTime: endDateTime ?? this.endDateTime,
-        breakMinutes: breakMinutes ?? this.breakMinutes,
-        type: type ?? this.type,
-        templateId: templateId ?? this.templateId,
-        locationName: locationName ?? this.locationName,
-        jobTypeName: jobTypeName ?? this.jobTypeName,
-        payRuleId: payRuleId ?? this.payRuleId,
-        payRuleSnapshot: payRuleSnapshot ?? this.payRuleSnapshot,
-        note: note ?? this.note,
-        adjustments: adjustments ?? this.adjustments,
-        isRestDayOvertime: isRestDayOvertime ?? this.isRestDayOvertime,
-      );
+  }) => WorkEntry(
+    id: id ?? this.id,
+    workDate: workDate ?? this.workDate,
+    startDateTime: startDateTime ?? this.startDateTime,
+    endDateTime: endDateTime ?? this.endDateTime,
+    breakMinutes: breakMinutes ?? this.breakMinutes,
+    type: type ?? this.type,
+    templateId: templateId ?? this.templateId,
+    locationName: locationName ?? this.locationName,
+    jobTypeName: jobTypeName ?? this.jobTypeName,
+    payRuleId: payRuleId ?? this.payRuleId,
+    payRuleSnapshot: payRuleSnapshot ?? this.payRuleSnapshot,
+    note: note ?? this.note,
+    adjustments: adjustments ?? this.adjustments,
+    isRestDayOvertime: isRestDayOvertime ?? this.isRestDayOvertime,
+  );
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'workDate': ymd(workDate),
-        'startDateTime': startDateTime.toIso8601String(),
-        'endDateTime': endDateTime.toIso8601String(),
-        'breakMinutes': breakMinutes,
-        'type': type.name,
-        'templateId': templateId,
-        'locationName': locationName,
-        'jobTypeName': jobTypeName,
-        'payRuleId': payRuleId,
-        'payRuleSnapshot': payRuleSnapshot.toJson(),
-        'note': note,
-        'adjustments': adjustments.map((a) => a.toJson()).toList(),
-        'isRestDayOvertime': isRestDayOvertime,
-      };
+    'id': id,
+    'workDate': ymd(workDate),
+    'startDateTime': startDateTime.toIso8601String(),
+    'endDateTime': endDateTime.toIso8601String(),
+    'breakMinutes': breakMinutes,
+    'type': type.name,
+    'templateId': templateId,
+    'locationName': locationName,
+    'jobTypeName': jobTypeName,
+    'payRuleId': payRuleId,
+    'payRuleSnapshot': payRuleSnapshot.toJson(),
+    'note': note,
+    'adjustments': adjustments.map((a) => a.toJson()).toList(),
+    'isRestDayOvertime': isRestDayOvertime,
+  };
 
   factory WorkEntry.fromJson(Map<String, Object?> json) => WorkEntry(
-        id: json['id'] as String? ?? newId('entry'),
-        workDate: parseDate(json['workDate'] ?? ymd(DateTime.now())),
-        startDateTime: DateTime.parse(json['startDateTime'] as String),
-        endDateTime: DateTime.parse(json['endDateTime'] as String),
-        breakMinutes: asInt(json['breakMinutes']),
-        type: EntryTypeX.fromName(json['type'] as String?),
-        templateId: json['templateId'] as String?,
-        locationName: json['locationName'] as String? ?? '',
-        jobTypeName: json['jobTypeName'] as String? ?? '',
-        payRuleId: json['payRuleId'] as String? ?? '',
-        payRuleSnapshot: PayRule.fromJson(
-          Map<String, Object?>.from(json['payRuleSnapshot'] as Map? ?? {}),
-        ),
-        note: json['note'] as String? ?? '',
-        adjustments: ((json['adjustments'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((item) => Adjustment.fromJson(Map<String, Object?>.from(item)))
-            .toList(),
-        isRestDayOvertime: json['isRestDayOvertime'] == true,
-      );
+    id: json['id'] as String? ?? newId('entry'),
+    workDate: parseDate(json['workDate'] ?? ymd(DateTime.now())),
+    startDateTime: DateTime.parse(json['startDateTime'] as String),
+    endDateTime: DateTime.parse(json['endDateTime'] as String),
+    breakMinutes: asInt(json['breakMinutes']),
+    type: EntryTypeX.fromName(json['type'] as String?),
+    templateId: json['templateId'] as String?,
+    locationName: json['locationName'] as String? ?? '',
+    jobTypeName: json['jobTypeName'] as String? ?? '',
+    payRuleId: json['payRuleId'] as String? ?? '',
+    payRuleSnapshot: PayRule.fromJson(
+      Map<String, Object?>.from(json['payRuleSnapshot'] as Map? ?? {}),
+    ),
+    note: json['note'] as String? ?? '',
+    adjustments: ((json['adjustments'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => Adjustment.fromJson(Map<String, Object?>.from(item)))
+        .toList(),
+    isRestDayOvertime: json['isRestDayOvertime'] == true,
+  );
 }
 
 class PayPeriod {
@@ -681,10 +723,10 @@ class PayPeriod {
       PayPeriodMode.naturalMonth => DateRange.month(anchor.year, anchor.month),
       PayPeriodMode.monthlyStartDay => _monthlyStartRange(anchor),
       PayPeriodMode.customRange => DateRange.custom(
-          customStartDate ?? DateTime(anchor.year, anchor.month),
-          customEndDate ?? DateTime(anchor.year, anchor.month + 1, 0),
-          label: '自定义',
-        ),
+        customStartDate ?? DateTime(anchor.year, anchor.month),
+        customEndDate ?? DateTime(anchor.year, anchor.month + 1, 0),
+        label: '自定义',
+      ),
     };
   }
 
@@ -702,18 +744,18 @@ class PayPeriod {
   }
 
   Map<String, Object?> toJson() => {
-        'mode': mode.name,
-        'monthStartDay': monthStartDay,
-        'customStartDate': customStartDate == null ? null : ymd(customStartDate!),
-        'customEndDate': customEndDate == null ? null : ymd(customEndDate!),
-      };
+    'mode': mode.name,
+    'monthStartDay': monthStartDay,
+    'customStartDate': customStartDate == null ? null : ymd(customStartDate!),
+    'customEndDate': customEndDate == null ? null : ymd(customEndDate!),
+  };
 
   factory PayPeriod.fromJson(Map<String, Object?> json) => PayPeriod(
-        mode: PayPeriodModeX.fromName(json['mode'] as String?),
-        monthStartDay: asInt(json['monthStartDay'], 1),
-        customStartDate: parseOptionalDate(json['customStartDate']),
-        customEndDate: parseOptionalDate(json['customEndDate']),
-      );
+    mode: PayPeriodModeX.fromName(json['mode'] as String?),
+    monthStartDay: asInt(json['monthStartDay'], 1),
+    customStartDate: parseOptionalDate(json['customStartDate']),
+    customEndDate: parseOptionalDate(json['customEndDate']),
+  );
 }
 
 class WebDavConfig {
@@ -731,7 +773,8 @@ class WebDavConfig {
   final String remotePath;
   final DateTime? lastBackupAt;
 
-  bool get isConfigured => url.isNotEmpty && username.isNotEmpty && appPassword.isNotEmpty;
+  bool get isConfigured =>
+      url.isNotEmpty && username.isNotEmpty && appPassword.isNotEmpty;
 
   WebDavConfig sanitized() => copyWith(appPassword: '');
 
@@ -741,29 +784,100 @@ class WebDavConfig {
     String? appPassword,
     String? remotePath,
     DateTime? lastBackupAt,
-  }) =>
-      WebDavConfig(
-        url: url ?? this.url,
-        username: username ?? this.username,
-        appPassword: appPassword ?? this.appPassword,
-        remotePath: remotePath ?? this.remotePath,
-        lastBackupAt: lastBackupAt ?? this.lastBackupAt,
-      );
+  }) => WebDavConfig(
+    url: url ?? this.url,
+    username: username ?? this.username,
+    appPassword: appPassword ?? this.appPassword,
+    remotePath: remotePath ?? this.remotePath,
+    lastBackupAt: lastBackupAt ?? this.lastBackupAt,
+  );
 
   Map<String, Object?> toJson({bool includeSecret = false}) => {
-        'url': url,
-        'username': username,
-        'appPassword': includeSecret ? appPassword : '',
-        'remotePath': remotePath,
-        'lastBackupAt': lastBackupAt?.toIso8601String(),
-      };
+    'url': url,
+    'username': username,
+    'appPassword': includeSecret ? appPassword : '',
+    'remotePath': remotePath,
+    'lastBackupAt': lastBackupAt?.toIso8601String(),
+  };
 
   factory WebDavConfig.fromJson(Map<String, Object?> json) => WebDavConfig(
-        url: json['url'] as String? ?? '',
-        username: json['username'] as String? ?? '',
-        appPassword: json['appPassword'] as String? ?? '',
-        remotePath: json['remotePath'] as String? ?? 'shift-ledger-backup.json',
-        lastBackupAt: parseOptionalDate(json['lastBackupAt']),
+    url: json['url'] as String? ?? '',
+    username: json['username'] as String? ?? '',
+    appPassword: json['appPassword'] as String? ?? '',
+    remotePath: json['remotePath'] as String? ?? 'shift-ledger-backup.json',
+    lastBackupAt: parseOptionalDate(json['lastBackupAt']),
+  );
+}
+
+class AutoBackupConfig {
+  const AutoBackupConfig({
+    this.enabled = false,
+    this.remotePath = 'shift-ledger-auto-latest.json',
+    this.lastSuccessAt,
+    this.lastAttemptAt,
+    this.lastContentHash = '',
+    this.dailyCountDate,
+    this.dailySuccessCount = 0,
+    this.lastStatus = AutoBackupStatus.idle,
+    this.lastError = '',
+  });
+
+  final bool enabled;
+  final String remotePath;
+  final DateTime? lastSuccessAt;
+  final DateTime? lastAttemptAt;
+  final String lastContentHash;
+  final DateTime? dailyCountDate;
+  final int dailySuccessCount;
+  final AutoBackupStatus lastStatus;
+  final String lastError;
+
+  AutoBackupConfig copyWith({
+    bool? enabled,
+    String? remotePath,
+    DateTime? lastSuccessAt,
+    DateTime? lastAttemptAt,
+    String? lastContentHash,
+    DateTime? dailyCountDate,
+    int? dailySuccessCount,
+    AutoBackupStatus? lastStatus,
+    String? lastError,
+  }) => AutoBackupConfig(
+    enabled: enabled ?? this.enabled,
+    remotePath: remotePath ?? this.remotePath,
+    lastSuccessAt: lastSuccessAt ?? this.lastSuccessAt,
+    lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
+    lastContentHash: lastContentHash ?? this.lastContentHash,
+    dailyCountDate: dailyCountDate ?? this.dailyCountDate,
+    dailySuccessCount: dailySuccessCount ?? this.dailySuccessCount,
+    lastStatus: lastStatus ?? this.lastStatus,
+    lastError: lastError ?? this.lastError,
+  );
+
+  Map<String, Object?> toJson() => {
+    'enabled': enabled,
+    'remotePath': remotePath,
+    'lastSuccessAt': lastSuccessAt?.toIso8601String(),
+    'lastAttemptAt': lastAttemptAt?.toIso8601String(),
+    'lastContentHash': lastContentHash,
+    'dailyCountDate': dailyCountDate == null ? null : ymd(dailyCountDate!),
+    'dailySuccessCount': dailySuccessCount,
+    'lastStatus': lastStatus.name,
+    'lastError': lastError,
+  };
+
+  factory AutoBackupConfig.fromJson(Map<String, Object?> json) =>
+      AutoBackupConfig(
+        enabled: json['enabled'] == true,
+        remotePath:
+            json['remotePath'] as String? ?? 'shift-ledger-auto-latest.json',
+        lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
+        lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
+        lastContentHash: json['lastContentHash'] as String? ?? '',
+        dailyCountDate: parseOptionalDate(json['dailyCountDate']),
+        dailySuccessCount: asInt(json['dailySuccessCount']),
+        lastStatus: AutoBackupStatusX.fromName(json['lastStatus'] as String?),
+        lastError: json['lastError'] as String? ?? '',
       );
 }
 
@@ -775,6 +889,7 @@ class LedgerSnapshot {
     required this.nightRule,
     required this.payPeriod,
     required this.webDavConfig,
+    this.autoBackupConfig = const AutoBackupConfig(),
   });
 
   final List<WorkEntry> entries;
@@ -783,49 +898,55 @@ class LedgerSnapshot {
   final NightRule nightRule;
   final PayPeriod payPeriod;
   final WebDavConfig webDavConfig;
+  final AutoBackupConfig autoBackupConfig;
 
   LedgerSnapshot sanitizedForBackup() => LedgerSnapshot(
-        entries: entries,
-        templates: templates,
-        payRules: payRules,
-        nightRule: nightRule,
-        payPeriod: payPeriod,
-        webDavConfig: webDavConfig.sanitized(),
-      );
+    entries: entries,
+    templates: templates,
+    payRules: payRules,
+    nightRule: nightRule,
+    payPeriod: payPeriod,
+    webDavConfig: webDavConfig.sanitized(),
+    autoBackupConfig: autoBackupConfig,
+  );
 
   Map<String, Object?> toJson({bool includeSecrets = false}) => {
-        'schemaVersion': 1,
-        'entries': entries.map((entry) => entry.toJson()).toList(),
-        'templates': templates.map((tpl) => tpl.toJson()).toList(),
-        'payRules': payRules.map((rule) => rule.toJson()).toList(),
-        'nightRule': nightRule.toJson(),
-        'payPeriod': payPeriod.toJson(),
-        'webDavConfig': webDavConfig.toJson(includeSecret: includeSecrets),
-      };
+    'schemaVersion': 1,
+    'entries': entries.map((entry) => entry.toJson()).toList(),
+    'templates': templates.map((tpl) => tpl.toJson()).toList(),
+    'payRules': payRules.map((rule) => rule.toJson()).toList(),
+    'nightRule': nightRule.toJson(),
+    'payPeriod': payPeriod.toJson(),
+    'webDavConfig': webDavConfig.toJson(includeSecret: includeSecrets),
+    'autoBackupConfig': autoBackupConfig.toJson(),
+  };
 
   factory LedgerSnapshot.fromJson(Map<String, Object?> json) => LedgerSnapshot(
-        entries: ((json['entries'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((item) => WorkEntry.fromJson(Map<String, Object?>.from(item)))
-            .toList(),
-        templates: ((json['templates'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((item) => ShiftTemplate.fromJson(Map<String, Object?>.from(item)))
-            .toList(),
-        payRules: ((json['payRules'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((item) => PayRule.fromJson(Map<String, Object?>.from(item)))
-            .toList(),
-        nightRule: NightRule.fromJson(
-          Map<String, Object?>.from(json['nightRule'] as Map? ?? {}),
-        ),
-        payPeriod: PayPeriod.fromJson(
-          Map<String, Object?>.from(json['payPeriod'] as Map? ?? {}),
-        ),
-        webDavConfig: WebDavConfig.fromJson(
-          Map<String, Object?>.from(json['webDavConfig'] as Map? ?? {}),
-        ),
-      );
+    entries: ((json['entries'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => WorkEntry.fromJson(Map<String, Object?>.from(item)))
+        .toList(),
+    templates: ((json['templates'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => ShiftTemplate.fromJson(Map<String, Object?>.from(item)))
+        .toList(),
+    payRules: ((json['payRules'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => PayRule.fromJson(Map<String, Object?>.from(item)))
+        .toList(),
+    nightRule: NightRule.fromJson(
+      Map<String, Object?>.from(json['nightRule'] as Map? ?? {}),
+    ),
+    payPeriod: PayPeriod.fromJson(
+      Map<String, Object?>.from(json['payPeriod'] as Map? ?? {}),
+    ),
+    webDavConfig: WebDavConfig.fromJson(
+      Map<String, Object?>.from(json['webDavConfig'] as Map? ?? {}),
+    ),
+    autoBackupConfig: AutoBackupConfig.fromJson(
+      Map<String, Object?>.from(json['autoBackupConfig'] as Map? ?? {}),
+    ),
+  );
 }
 
 class EntryCalculation {
@@ -848,7 +969,11 @@ class EntryCalculation {
   final double nightIncome;
 
   double get income =>
-      baseIncome + overtimeIncome + nightIncome + entry.allowanceTotal - entry.deductionTotal;
+      baseIncome +
+      overtimeIncome +
+      nightIncome +
+      entry.allowanceTotal -
+      entry.deductionTotal;
 }
 
 class LedgerSummary {
@@ -888,5 +1013,6 @@ class LedgerSummary {
   final double nightIncome;
   final List<EntryCalculation> calculations;
 
-  double get income => baseIncome + overtimeIncome + nightIncome + allowance - deduction;
+  double get income =>
+      baseIncome + overtimeIncome + nightIncome + allowance - deduction;
 }

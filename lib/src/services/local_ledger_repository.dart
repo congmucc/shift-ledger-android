@@ -8,9 +8,11 @@ import '../domain/models.dart';
 import 'backup_service.dart';
 
 class LocalLedgerRepository {
-  LocalLedgerRepository({Directory? directory, FlutterSecureStorage? secureStorage})
-      : _directory = directory,
-        _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  LocalLedgerRepository({
+    Directory? directory,
+    FlutterSecureStorage? secureStorage,
+  }) : _directory = directory,
+       _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   final Directory? _directory;
   final FlutterSecureStorage _secureStorage;
@@ -31,6 +33,7 @@ class LocalLedgerRepository {
       nightRule: snapshot.nightRule,
       payPeriod: snapshot.payPeriod,
       webDavConfig: snapshot.webDavConfig.copyWith(appPassword: password),
+      autoBackupConfig: snapshot.autoBackupConfig,
     );
   }
 
@@ -38,7 +41,9 @@ class LocalLedgerRepository {
     final file = await _dataFile();
     await file.parent.create(recursive: true);
     const encoder = JsonEncoder.withIndent('  ');
-    await file.writeAsString(encoder.convert(snapshot.toJson(includeSecrets: false)));
+    await file.writeAsString(
+      encoder.convert(snapshot.toJson(includeSecrets: false)),
+    );
     if (snapshot.webDavConfig.appPassword.isNotEmpty) {
       await _secureStorage.write(
         key: _secretKey,
@@ -78,14 +83,19 @@ class LocalLedgerRepository {
   }
 
   Future<LedgerSnapshot> readBackup(String path) async {
-    final map = jsonDecode(await File(path).readAsString()) as Map<String, Object?>;
+    final map =
+        jsonDecode(await File(path).readAsString()) as Map<String, Object?>;
     return BackupService().decode(map);
   }
 
-  Future<Directory> _root() async => _directory ?? getApplicationDocumentsDirectory();
-  Future<File> _dataFile() async => File('${(await _root()).path}/$_dataFileName');
-  Future<Directory> _exportsDirectory() async => Directory('${(await _root()).path}/exports');
-  Future<Directory> _backupsDirectory() async => Directory('${(await _root()).path}/backups');
+  Future<Directory> _root() async =>
+      _directory ?? getApplicationDocumentsDirectory();
+  Future<File> _dataFile() async =>
+      File('${(await _root()).path}/$_dataFileName');
+  Future<Directory> _exportsDirectory() async =>
+      Directory('${(await _root()).path}/exports');
+  Future<Directory> _backupsDirectory() async =>
+      Directory('${(await _root()).path}/backups');
 
   String _timestamp() {
     final now = DateTime.now();

@@ -12,13 +12,15 @@ class LedgerState extends ChangeNotifier {
     NightRule? nightRule,
     PayPeriod? payPeriod,
     WebDavConfig? webDavConfig,
+    AutoBackupConfig? autoBackupConfig,
   }) : now = dateOnly(now),
        entries = entries ?? [],
        templates = templates ?? [],
        payRules = payRules ?? [PayRule.defaultHourly()],
        nightRule = nightRule ?? NightRule.defaults(),
        payPeriod = payPeriod ?? const PayPeriod(),
-       webDavConfig = webDavConfig ?? const WebDavConfig();
+       webDavConfig = webDavConfig ?? const WebDavConfig(),
+       autoBackupConfig = autoBackupConfig ?? const AutoBackupConfig();
 
   factory LedgerState.empty({DateTime? now}) {
     final rule = PayRule.defaultHourly();
@@ -93,6 +95,7 @@ class LedgerState extends ChangeNotifier {
         nightRule: snapshot.nightRule,
         payPeriod: snapshot.payPeriod,
         webDavConfig: snapshot.webDavConfig,
+        autoBackupConfig: snapshot.autoBackupConfig,
       );
 
   final DateTime now;
@@ -102,6 +105,7 @@ class LedgerState extends ChangeNotifier {
   NightRule nightRule;
   PayPeriod payPeriod;
   WebDavConfig webDavConfig;
+  AutoBackupConfig autoBackupConfig;
 
   DateRange get currentMonth => DateRange.month(now.year, now.month);
   DateRange get currentPayPeriod => payPeriod.rangeFor(now);
@@ -241,6 +245,11 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateAutoBackupConfig(AutoBackupConfig config) {
+    autoBackupConfig = config;
+    notifyListeners();
+  }
+
   void updatePayPeriod(PayPeriod period) {
     payPeriod = period;
     notifyListeners();
@@ -253,6 +262,7 @@ class LedgerState extends ChangeNotifier {
     nightRule = snapshot.nightRule;
     payPeriod = snapshot.payPeriod;
     webDavConfig = snapshot.webDavConfig.sanitized();
+    autoBackupConfig = snapshot.autoBackupConfig;
     notifyListeners();
   }
 
@@ -263,5 +273,6 @@ class LedgerState extends ChangeNotifier {
     nightRule: nightRule,
     payPeriod: payPeriod,
     webDavConfig: webDavConfig,
+    autoBackupConfig: autoBackupConfig,
   );
 }
