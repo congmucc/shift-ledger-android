@@ -52,6 +52,7 @@ class SettingsPage extends StatelessWidget {
                     .map((r) => '${r.baseType.label} ${r.amountLabel}')
                     .join(' · '),
                 trailing: '${state.payRules.length}条',
+                onTap: () => _showRuleHistory(context),
               ),
               SettingTile(
                 title: '加班规则',
@@ -112,6 +113,76 @@ class SettingsPage extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
       builder: (context) => ShiftTemplateSheet(state: state),
+    );
+  }
+
+  void _showRuleHistory(BuildContext context) {
+    final rules = [...state.payRules]
+      ..sort((a, b) => b.effectiveFrom.compareTo(a.effectiveFrom));
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: LedgerColors.paper,
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.82,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '规则历史',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('关闭'),
+                    ),
+                  ],
+                ),
+                const Text(
+                  '每次修改计薪规则都会生成新版本；历史记录继续使用保存时的规则快照，避免旧工资被新规则改写。',
+                  style: TextStyle(color: LedgerColors.muted),
+                ),
+                const SizedBox(height: 12),
+                for (final rule in rules) ...[
+                  LedgerCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${rule.name} · v${rule.version}${rule.isDefault ? ' · 当前默认' : ''}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${rule.baseType.label} · ${rule.amountLabel} · ${cnDateText(rule.effectiveFrom)} 起${rule.effectiveTo == null ? '' : '，至 ${cnDateText(rule.effectiveTo!)}'}',
+                          style: const TextStyle(color: LedgerColors.muted),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '标准 ${rule.standardHoursPerDay.toStringAsFixed(0)}h/天 · 加班 ${rule.overtimeMultiplier}x · 休息日 ${rule.restDayMultiplier}x',
+                          style: const TextStyle(color: LedgerColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -533,6 +604,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                     ),
                   ),
                   TextButton(
+                    onPressed: _createTemplate,
+                    child: const Text('新增'),
+                  ),
+                  TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text('关闭'),
                   ),
@@ -551,7 +626,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       (tpl) => DropdownMenuItem(
                         value: tpl,
                         child: Text(
-                          '${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
+                          '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
                         ),
                       ),
                     )
@@ -633,18 +708,48 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                 ],
               ),
               const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _save,
-                  child: const Text('保存模板'),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _template == widget.state.templates.first
+                          ? null
+                          : _setAsDefault,
+                      child: const Text('设为默认'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: const Text('保存模板'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  void _createTemplate() {
+    final source = _template;
+    final copy = source.copyWith(
+      id: newId('tpl'),
+      name: '${source.name} 副本',
+    );
+    widget.state.updateShiftTemplate(copy);
+    setState(() {
+      _template = copy;
+      _load(copy);
+    });
+  }
+
+  void _setAsDefault() {
+    widget.state.setDefaultShiftTemplate(_template.id);
+    setState(() {});
   }
 
   void _load(ShiftTemplate template) {

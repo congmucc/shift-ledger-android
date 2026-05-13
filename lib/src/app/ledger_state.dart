@@ -267,6 +267,15 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setDefaultShiftTemplate(String id) {
+    final index = templates.indexWhere((item) => item.id == id);
+    if (index <= 0) return;
+    final next = [...templates];
+    final selected = next.removeAt(index);
+    templates = [selected, ...next];
+    notifyListeners();
+  }
+
   void updateWebDavConfig(WebDavConfig config) {
     webDavConfig = config;
     notifyListeners();
