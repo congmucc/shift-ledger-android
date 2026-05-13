@@ -8,6 +8,7 @@ import 'pages/settings_page.dart';
 import 'pages/summary_page.dart';
 import 'scope.dart';
 import 'theme.dart';
+import 'widgets.dart';
 
 class LedgerShell extends StatefulWidget {
   const LedgerShell({super.key, required this.repository});
@@ -158,7 +159,7 @@ class _NavButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textScaler: TextScaler.noScaling,
+                  textScaler: cappedTextScaler(context, maxScale: 1.2),
                   style: TextStyle(
                     color: selected ? LedgerColors.ink : LedgerColors.muted,
                     fontSize: 12,

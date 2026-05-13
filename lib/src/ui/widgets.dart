@@ -8,6 +8,9 @@ String hoursText(double value) =>
 String moneyText(double value) =>
     '¥${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 2)}';
 
+TextScaler cappedTextScaler(BuildContext context, {double maxScale = 1.35}) =>
+    MediaQuery.textScalerOf(context).clamp(maxScaleFactor: maxScale);
+
 class PageFrame extends StatelessWidget {
   const PageFrame({
     super.key,

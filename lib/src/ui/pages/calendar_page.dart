@@ -340,7 +340,7 @@ class _MonthGrid extends StatelessWidget {
                     '${day.day}',
                     maxLines: 1,
                     overflow: TextOverflow.clip,
-                    textScaler: TextScaler.noScaling,
+                    textScaler: cappedTextScaler(context, maxScale: 1.25),
                     style: TextStyle(
                       color: inMonth ? LedgerColors.ink : LedgerColors.stone,
                       fontWeight: today ? FontWeight.w900 : FontWeight.w700,
@@ -349,10 +349,10 @@ class _MonthGrid extends StatelessWidget {
                   ),
                 ),
                 if (today)
-                  const Text(
+                  Text(
                     '今',
-                    textScaler: TextScaler.noScaling,
-                    style: TextStyle(
+                    textScaler: cappedTextScaler(context, maxScale: 1.25),
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: LedgerColors.infoBlue,
@@ -366,7 +366,7 @@ class _MonthGrid extends StatelessWidget {
                 hoursText(summary.totalHours),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                textScaler: TextScaler.noScaling,
+                textScaler: cappedTextScaler(context, maxScale: 1.25),
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,

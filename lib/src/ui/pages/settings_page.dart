@@ -440,7 +440,7 @@ class SettingsPage extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('当前预览环境不支持读取本地备份')));
+        ).showSnackBar(const SnackBar(content: Text('读取本地备份失败，请确认备份文件仍可访问')));
       }
     }
   }
