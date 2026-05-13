@@ -16,25 +16,25 @@
 - [x] Add project-level `AGENTS.md` requiring official/library-first implementation and large-font adaptation.
 
 ### Task 2: Tests first
-- [ ] Add widget coverage for today navigation and marker visibility.
-- [ ] Add large text-scale smoke coverage for calendar layout.
-- [ ] Add service coverage for injected external file saver.
+- [x] Add widget coverage for today navigation and marker visibility.
+- [x] Add large text-scale smoke coverage for calendar layout.
+- [x] Add service coverage for injected external file saver.
 
 ### Task 3: Shared wrappers
-- [ ] Create reusable picker wrappers around `CupertinoDatePicker` for date, time, and month day.
-- [ ] Create compact metric/card APIs for dense calendar/summary contexts.
+- [x] Create reusable picker wrappers around `CupertinoDatePicker` for date, time, and month day.
+- [x] Create compact metric/card APIs for dense calendar/summary contexts.
 
 ### Task 4: Calendar UI
-- [ ] Replace manual grid with `TableCalendar`.
-- [ ] Add today navigation.
-- [ ] Replace dominant-color ordering with non-exclusive markers for work/overtime/night/note.
+- [x] Replace manual grid with `TableCalendar`.
+- [x] Add today navigation.
+- [x] Replace dominant-color ordering with non-exclusive markers for work/overtime/night/note.
 
 ### Task 5: Save/export
-- [ ] Route CSV and JSON backup export through `flutter_file_dialog` in production.
-- [ ] Keep app-scoped write path for injected test directories and private restore support.
-- [ ] Improve cancellation/error copy.
+- [x] Route CSV and JSON backup export through `flutter_file_dialog` in production.
+- [x] Keep app-scoped write path for injected test directories and private restore support.
+- [x] Improve cancellation/error copy.
 
 ### Task 6: Verify
-- [ ] Run `dart format .`.
-- [ ] Run `flutter analyze`.
-- [ ] Run `flutter test`.
+- [x] Run `dart format lib test` (repository includes Markdown docs, so formatting scope is Dart sources/tests).
+- [x] Run `flutter analyze`.
+- [x] Run `flutter test`.
