@@ -119,6 +119,7 @@ void main() {
       expect(find.text('自动云备份'), findsOneWidget);
       expect(find.textContaining('最小间隔 1 小时'), findsOneWidget);
       expect(find.textContaining('每天最多 6 次'), findsOneWidget);
+      expect(find.textContaining('打开 App 后自动检查'), findsOneWidget);
       final autoSwitch = tester.widget<Switch>(
         find.descendant(
           of: find.byType(SwitchListTile),
@@ -129,6 +130,8 @@ void main() {
       await tester.tap(find.text('自动云备份'));
       await tester.pumpAndSettle();
       expect(find.textContaining('需重新授权'), findsWidgets);
+      await tester.ensureVisible(find.text('从坚果云恢复'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('从坚果云恢复'));
       await tester.pumpAndSettle();
       expect(find.text('从坚果云恢复？'), findsOneWidget);

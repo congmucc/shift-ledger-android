@@ -846,6 +846,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const _StatusLine(label: '打开 App 后自动检查', value: '已启用，开启后生效'),
                 _StatusLine(
                   label: '云端文件',
                   value: widget.state.autoBackupConfig.remotePath,
