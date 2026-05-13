@@ -44,8 +44,8 @@ class _CalendarPageState extends State<CalendarPage> {
           children: [
             IconButton(
               tooltip: '上个月',
-              onPressed: () => setState(
-                () => _month = DateTime(_month.year, _month.month - 1),
+              onPressed: () => _selectMonth(
+                DateTime(_month.year, _month.month - 1),
               ),
               icon: const Icon(Icons.chevron_left),
             ),
@@ -65,54 +65,14 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
             IconButton(
               tooltip: '下个月',
-              onPressed: () => setState(
-                () => _month = DateTime(_month.year, _month.month + 1),
+              onPressed: () => _selectMonth(
+                DateTime(_month.year, _month.month + 1),
               ),
               icon: const Icon(Icons.chevron_right),
             ),
           ],
         ),
-        Row(
-          children: [
-            Expanded(
-              child: MetricCard(
-                label: '总工时',
-                value: hoursText(summary.totalHours),
-                compact: true,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: MetricCard(
-                label: '出勤',
-                value: '${summary.attendanceDays}天',
-                compact: true,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: MetricCard(
-                label: '加班',
-                value: hoursText(summary.overtimeHours),
-                subtext: '${summary.overtimeDays}天',
-                compact: true,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: MetricCard(
-                label: '夜班',
-                value: '${summary.nightShiftCount}次',
-                subtext: hoursText(summary.nightHours),
-                compact: true,
-              ),
-            ),
-          ],
-        ),
+        _MonthSummaryGrid(summary: summary),
         const SizedBox(height: 10),
         SegmentedButton<bool>(
           segments: const [
@@ -154,6 +114,17 @@ class _CalendarPageState extends State<CalendarPage> {
     _selectedDay = widget.state.now;
     _month = DateTime(widget.state.now.year, widget.state.now.month);
   });
+
+  void _selectMonth(DateTime month) => setState(() => _applyMonth(month));
+
+  void _applyMonth(DateTime month) {
+    final targetMonth = DateTime(month.year, month.month);
+    _month = targetMonth;
+    final today = dateOnly(widget.state.now);
+    _selectedDay = targetMonth.year == today.year && targetMonth.month == today.month
+        ? today
+        : targetMonth;
+  }
 
   Future<void> _showMonthPicker() async {
     var pickerYear = _month.year;
@@ -215,7 +186,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         child: OutlinedButton(
                           onPressed: () {
                             setState(
-                              () => _month = DateTime(pickerYear, month),
+                              () => _applyMonth(DateTime(pickerYear, month)),
                             );
                             Navigator.pop(context);
                           },
@@ -265,7 +236,14 @@ class _MonthGrid extends StatelessWidget {
             daysOfWeekHeight: 26,
             selectedDayPredicate: (day) => ymd(day) == ymd(selectedDay),
             onDaySelected: (selected, focused) => onSelect(selected),
-            onPageChanged: (focused) => onSelect(focused),
+            onPageChanged: (focused) {
+              final today = dateOnly(state.now);
+              final target = focused.year == today.year &&
+                      focused.month == today.month
+                  ? today
+                  : DateTime(focused.year, focused.month);
+              onSelect(target);
+            },
             calendarStyle: const CalendarStyle(outsideDaysVisible: true),
             daysOfWeekStyle: const DaysOfWeekStyle(
               weekdayStyle: TextStyle(color: LedgerColors.muted),
@@ -389,6 +367,44 @@ class _MonthGrid extends StatelessWidget {
   }
 }
 
+class _MonthSummaryGrid extends StatelessWidget {
+  const _MonthSummaryGrid({required this.summary});
+  final LedgerSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      ('总工时', hoursText(summary.totalHours), '出勤 ${summary.attendanceDays}天'),
+      ('收入', moneyText(summary.income), '估算'),
+      ('加班', hoursText(summary.overtimeHours), '${summary.overtimeDays}天'),
+      ('夜班', '${summary.nightShiftCount}次', hoursText(summary.nightHours)),
+      ('备注', '${summary.noteDays}天', '有备注日期'),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 420 ? 3 : 2;
+        final itemWidth = (constraints.maxWidth - 10 * (columns - 1)) / columns;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: itemWidth,
+                child: MetricCard(
+                  label: item.$1,
+                  value: item.$2,
+                  subtext: item.$3,
+                  compact: true,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _Dot extends StatelessWidget {
   const _Dot({required this.color});
   final Color color;
@@ -420,7 +436,7 @@ class _LegendMark extends StatelessWidget {
   );
 }
 
-class _MonthList extends StatelessWidget {
+class _MonthList extends StatefulWidget {
   const _MonthList({
     required this.state,
     required this.range,
@@ -431,23 +447,47 @@ class _MonthList extends StatelessWidget {
   final ValueChanged<DateTime> onSelect;
 
   @override
+  State<_MonthList> createState() => _MonthListState();
+}
+
+class _MonthListState extends State<_MonthList> {
+  int _visibleCount = 20;
+
+  @override
+  void didUpdateWidget(covariant _MonthList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.range.start != widget.range.start) {
+      _visibleCount = 20;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final days = [
+      for (
+        var day = widget.range.start;
+        day.isBefore(widget.range.endExclusive);
+        day = day.add(const Duration(days: 1))
+      )
+        day,
+    ];
+    final visibleDays = days.take(_visibleCount).toList();
     return Column(
       children: [
-        for (
-          var day = range.start;
-          day.isBefore(range.endExclusive);
-          day = day.add(const Duration(days: 1))
-        )
-          if (state.entriesForDay(day).isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                onTap: () => onSelect(day),
-                borderRadius: BorderRadius.circular(18),
-                child: _MonthListRow(day: day, state: state),
-              ),
+        for (final day in visibleDays)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              onTap: () => widget.onSelect(day),
+              borderRadius: BorderRadius.circular(18),
+              child: _MonthListRow(day: day, state: widget.state),
             ),
+          ),
+        if (_visibleCount < days.length)
+          OutlinedButton(
+            onPressed: () => setState(() => _visibleCount += 10),
+            child: Text('继续加载 ${days.length - _visibleCount} 天'),
+          ),
       ],
     );
   }
@@ -462,13 +502,15 @@ class _MonthListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = state.entriesForDay(day);
     final summary = state.summaryFor(DateRange.custom(day, day));
-    final meta = [
-      '普通 ${hoursText(summary.regularHours)}',
-      if (summary.overtimeHours > 0) '加班 ${hoursText(summary.overtimeHours)}',
-      if (summary.nightHours > 0) '夜班 ${hoursText(summary.nightHours)}',
-      if (entries.any((entry) => entry.hasNote)) '有备注',
-      if (summary.totalHours > 12) '时长偏长',
-    ].join(' · ');
+    final meta = entries.isEmpty
+        ? '未记录，可点开补一段'
+        : [
+            '普通 ${hoursText(summary.regularHours)}',
+            if (summary.overtimeHours > 0) '加班 ${hoursText(summary.overtimeHours)}',
+            if (summary.nightHours > 0) '夜班 ${hoursText(summary.nightHours)}',
+            if (entries.any((entry) => entry.hasNote)) '有备注',
+            if (summary.totalHours > 12) '时长偏长',
+          ].join(' · ');
     return LedgerCard(
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -478,7 +520,7 @@ class _MonthListRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${day.month.toString().padLeft(2, '0')}/${day.day.toString().padLeft(2, '0')} · ${entries.length} 段',
+                  '${cnDateText(day)} · ${entries.length} 段',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
@@ -497,7 +539,7 @@ class _MonthListRow extends StatelessWidget {
               TextButton(
                 onPressed: () =>
                     showEditWorkEntrySheet(context, state, day: day),
-                child: const Text('编辑'),
+                child: Text(entries.isEmpty ? '新增' : '编辑'),
               ),
             ],
           ),
