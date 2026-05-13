@@ -35,6 +35,7 @@ linux/flutter/ephemeral/
 windows/flutter/ephemeral/
 
 # App packages
+release/
 *.apk
 *.aab
 *.ipa
