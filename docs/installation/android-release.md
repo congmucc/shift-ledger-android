@@ -16,11 +16,26 @@ Build command:
 flutter build apk --release
 ```
 
-Phone install artifact for this handoff is committed at:
+Phone install artifacts for this handoff are committed at:
 
-- Path: `release/shift-ledger-android-v1.0.0+1-release.apk`
-- SHA-256: `a84fa85b1f54b0116441c28d511599c906048418f0387bccb7b0971d41b5dba0`
-- Size: about 50.5 MB
+- Recommended modern Android phone APK: `release/shift-ledger-android-v1.0.0+1-arm64-v8a-release.apk`
+- Recommended APK SHA-256: `a26c049133cff58191b1e3c9dd1c4b9eddb6cf17e8023f9608aa1ba3d1e44864`
+- Recommended APK size: about 17.6 MB
+- Universal fallback APK: `release/shift-ledger-android-v1.0.0+1-release.apk`
+- Universal APK SHA-256: `a84fa85b1f54b0116441c28d511599c906048418f0387bccb7b0971d41b5dba0`
+- Universal APK size: about 50.5 MB
 - Signing certificate SHA-256: `cc689600d205573a0fe81b9af7a9c5ee72faac1e02d2e9b7051ae14d84b467e9`
 
-The APK is committed intentionally for this phone-install handoff. Do not commit `android/keystore.properties` or the keystore file.
+The APK artifacts are committed intentionally for this phone-install handoff. Do not commit `android/keystore.properties` or the keystore file.
+
+## APK size note
+
+The committed APK is a universal APK. It includes native Flutter runtime and app libraries for `arm64-v8a`, `armeabi-v7a`, and `x86_64`, so the file is about 50.5 MB even though the app feature set is small.
+
+For a smaller phone-specific package, build split APKs:
+
+```bash
+flutter build apk --release --split-per-abi
+```
+
+On this machine the split outputs were about 17.6 MB for `app-arm64-v8a-release.apk`, 15.1 MB for `app-armeabi-v7a-release.apk`, and 19.0 MB for `app-x86_64-release.apk`. Most modern Android phones should use the committed `arm64-v8a` APK; use the universal APK only when unsure or when the split APK is incompatible.
