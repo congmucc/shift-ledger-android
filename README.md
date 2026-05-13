@@ -22,12 +22,12 @@ Shift Ledger 是一个本地优先的个人工时账本 Flutter App，首发 And
 
 GitHub Release：
 
-https://github.com/congmucc/shift-ledger-android/releases/tag/v1.0.0%2B1
+https://github.com/congmucc/shift-ledger-android/releases/tag/v1.0.2
 
 推荐 Android 手机下载：
 
 ```text
-shift-ledger-android-v1.0.0+1-arm64-v8a-release.apk
+shift-ledger-android-v1.0.2-arm64-v8a-release.apk
 ```
 
 这个包适合绝大多数近年 Android 手机，体积更小。
@@ -35,14 +35,14 @@ shift-ledger-android-v1.0.0+1-arm64-v8a-release.apk
 如果安装时提示架构不兼容，再下载通用包：
 
 ```text
-shift-ledger-android-v1.0.0+1-release.apk
+shift-ledger-android-v1.0.2-release.apk
 ```
 
 本仓库内对应文件：
 
 ```text
-release/shift-ledger-android-v1.0.0+1-arm64-v8a-release.apk
-release/shift-ledger-android-v1.0.0+1-release.apk
+release/shift-ledger-android-v1.0.2-arm64-v8a-release.apk
+release/shift-ledger-android-v1.0.2-release.apk
 ```
 
 校验值见同目录 `.sha256` 文件。
