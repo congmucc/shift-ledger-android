@@ -1,0 +1,93 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build APK and publish GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must look like v1.0.2, got: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+
+          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION"
+          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build universal APK
+        run: >
+          flutter build apk --release
+          --build-name=${{ steps.version.outputs.version }}
+          --build-number=${{ steps.version.outputs.version_code }}
+
+      - name: Build arm64 APK
+        run: >
+          flutter build apk --release --split-per-abi
+          --build-name=${{ steps.version.outputs.version }}
+          --build-number=${{ steps.version.outputs.version_code }}
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          mkdir -p release
+          VERSION="${{ steps.version.outputs.version }}"
+
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "release/shift-ledger-android-v${VERSION}-release.apk"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            "release/shift-ledger-android-v${VERSION}-arm64-v8a-release.apk"
+
+          (cd release && shasum -a 256 "shift-ledger-android-v${VERSION}-release.apk" > "shift-ledger-android-v${VERSION}-release.apk.sha256")
+          (cd release && shasum -a 256 "shift-ledger-android-v${VERSION}-arm64-v8a-release.apk" > "shift-ledger-android-v${VERSION}-arm64-v8a-release.apk.sha256")
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Shift Ledger ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            release/shift-ledger-android-v${{ steps.version.outputs.version }}-arm64-v8a-release.apk
+            release/shift-ledger-android-v${{ steps.version.outputs.version }}-arm64-v8a-release.apk.sha256
+            release/shift-ledger-android-v${{ steps.version.outputs.version }}-release.apk
+            release/shift-ledger-android-v${{ steps.version.outputs.version }}-release.apk.sha256
