@@ -7,6 +7,8 @@ String ymd(DateTime value) =>
 String hm(DateTime value) =>
     '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 String dateTimeText(DateTime value) => '${ymd(value)} ${hm(value)}';
+String cnDateText(DateTime value) =>
+    '${value.year}年 ${value.month}月 ${value.day}日';
 DateTime parseDate(Object? value) => DateTime.parse(value as String);
 DateTime? parseOptionalDate(Object? value) =>
     value == null || value == '' ? null : DateTime.parse(value as String);

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'src/app/ledger_state.dart';
 import 'src/services/auto_backup_service.dart';
@@ -16,10 +17,10 @@ Future<void> main() async {
   try {
     final snapshot = await repository.load();
     state = snapshot == null
-        ? LedgerState.seeded()
+        ? LedgerState.empty()
         : LedgerState.fromSnapshot(snapshot);
   } catch (_) {
-    state = LedgerState.seeded();
+    state = LedgerState.empty();
   }
   runApp(ShiftLedgerApp(state: state, repository: repository));
 }
@@ -115,6 +116,9 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Shift Ledger 工时账本',
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         theme: buildLedgerTheme(),
         home: LedgerShell(repository: widget.repository),
       ),

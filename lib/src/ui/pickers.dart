@@ -14,17 +14,22 @@ Future<DateTime?> showLedgerDatePicker(
   return showModalBottomSheet<DateTime>(
     context: context,
     backgroundColor: LedgerColors.paper,
-    builder: (context) => _PickerSheet(
-      title: '选择日期',
-      onConfirm: () => Navigator.pop(context, selected),
-      child: SizedBox(
-        height: 216,
-        child: CupertinoDatePicker(
-          mode: CupertinoDatePickerMode.date,
-          initialDateTime: selected,
-          minimumDate: minimumDate ?? DateTime(2000),
-          maximumDate: maximumDate ?? DateTime(2100),
-          onDateTimeChanged: (value) => selected = dateOnly(value),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setSheetState) => _PickerSheet(
+        title: '选择日期',
+        helper: '当前选择：${cnDateText(selected)}',
+        onConfirm: () => Navigator.pop(context, selected),
+        child: SizedBox(
+          height: 216,
+          child: CupertinoDatePicker(
+            mode: CupertinoDatePickerMode.date,
+            dateOrder: DatePickerDateOrder.ymd,
+            initialDateTime: selected,
+            minimumDate: minimumDate ?? DateTime(2000),
+            maximumDate: maximumDate ?? DateTime(2100),
+            onDateTimeChanged: (value) =>
+                setSheetState(() => selected = dateOnly(value)),
+          ),
         ),
       ),
     ),
