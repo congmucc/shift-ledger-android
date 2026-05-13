@@ -4,10 +4,12 @@ import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
 
 void main() {
-  testWidgets('main navigation exposes home calendar add summary settings', (tester) async {
-    await tester.pumpWidget(ShiftLedgerApp(
-      state: LedgerState.seeded(now: DateTime(2026, 5, 13)),
-    ));
+  testWidgets('main navigation exposes home calendar add summary settings', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
 
     expect(find.text('今日记录'), findsOneWidget);
     expect(find.text('首页'), findsOneWidget);
@@ -50,22 +52,73 @@ void main() {
     expect(state.entries, isEmpty);
   });
 
-  testWidgets('summary and settings expose export backup and WebDAV actions', (tester) async {
-    await tester.pumpWidget(ShiftLedgerApp(
-      state: LedgerState.seeded(now: DateTime(2026, 5, 13)),
-    ));
+  testWidgets('summary and settings expose export backup and WebDAV actions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
 
     await tester.tap(find.text('汇总'));
     await tester.pumpAndSettle();
     expect(find.text('工时汇总'), findsOneWidget);
     expect(find.text('CSV'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('导出 CSV'), 200, scrollable: find.byType(Scrollable).first);
-    expect(find.text('导出 CSV'), findsWidgets);
+    await tester.tap(find.text('查看明细'));
+    await tester.pumpAndSettle();
+    expect(find.text('全部明细'), findsOneWidget);
+    await tester.tap(find.text('关闭').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CSV'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('CSV 已生成'), findsOneWidget);
 
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('本地备份/恢复'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      find.text('本地备份/恢复'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('本地备份/恢复'), findsOneWidget);
     expect(find.text('坚果云 WebDAV'), findsOneWidget);
   });
+
+  testWidgets(
+    'calendar list and settings sheets expose review-critical details',
+    (tester) async {
+      await tester.pumpWidget(
+        ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+      );
+
+      await tester.tap(find.text('日历'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('列表'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('普通 8h'), findsOneWidget);
+      expect(find.textContaining('夜班'), findsWidgets);
+      expect(find.text('编辑'), findsWidgets);
+
+      await tester.tap(find.text('设置'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('计薪规则'));
+      await tester.pumpAndSettle();
+      expect(find.text('按小时'), findsWidgets);
+      expect(find.text('按天'), findsWidgets);
+      expect(find.text('按月'), findsWidgets);
+      expect(find.text('加班基准 ¥/h'), findsOneWidget);
+      expect(find.text('休息日倍率'), findsOneWidget);
+      await tester.tap(find.text('取消').last);
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('坚果云 WebDAV'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('坚果云 WebDAV'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('从坚果云恢复'));
+      await tester.pumpAndSettle();
+      expect(find.text('从坚果云恢复？'), findsOneWidget);
+    },
+  );
 }

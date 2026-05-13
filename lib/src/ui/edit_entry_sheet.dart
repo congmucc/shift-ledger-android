@@ -5,7 +5,11 @@ import '../domain/models.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-Future<void> showEditWorkEntrySheet(BuildContext context, LedgerState state, {DateTime? day}) {
+Future<void> showEditWorkEntrySheet(
+  BuildContext context,
+  LedgerState state, {
+  DateTime? day,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -32,7 +36,9 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     super.initState();
     _day = dateOnly(widget.day ?? widget.state.now);
     final existing = widget.state.entriesForDay(_day);
-    _segments = existing.isNotEmpty ? [...existing] : [widget.state.createTemplateEntry(day: _day)];
+    _segments = existing.isNotEmpty
+        ? [...existing]
+        : [widget.state.createTemplateEntry(day: _day)];
   }
 
   @override
@@ -52,8 +58,16 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('新增 / 编辑工时记录', style: Theme.of(context).textTheme.headlineMedium)),
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+                  Expanded(
+                    child: Text(
+                      '新增 / 编辑工时记录',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('关闭'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -66,16 +80,29 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(child: Text(ymd(_day), style: Theme.of(context).textTheme.titleMedium)),
-                        TextButton(onPressed: () => _moveDay(-1), child: const Text('昨天')),
-                        TextButton(onPressed: () => _moveDay(1), child: const Text('明天')),
+                        Expanded(
+                          child: Text(
+                            ymd(_day),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _moveDay(-1),
+                          child: const Text('昨天'),
+                        ),
+                        TextButton(
+                          onPressed: () => _moveDay(1),
+                          child: const Text('明天'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Text('计薪', style: Theme.of(context).textTheme.labelMedium),
                     const SizedBox(height: 4),
-                    Text('${widget.state.defaultRule.name} · ${widget.state.defaultRule.baseType.label} ${widget.state.defaultRule.amountLabel}',
-                        style: const TextStyle(color: LedgerColors.muted)),
+                    Text(
+                      '${widget.state.defaultRule.name} · ${widget.state.defaultRule.baseType.label} ${widget.state.defaultRule.amountLabel}',
+                      style: const TextStyle(color: LedgerColors.muted),
+                    ),
                   ],
                 ),
               ),
@@ -84,7 +111,9 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 WorkEntryTile(
                   entry: entry,
                   onEdit: () => _editSegment(entry),
-                  onDelete: _segments.length == 1 ? null : () => setState(() => _segments.removeWhere((item) => item.id == entry.id)),
+                  onDelete: _segments.length == 1
+                      ? null
+                      : () => _confirmDeleteSegment(entry),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -104,7 +133,9 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(foregroundColor: LedgerColors.errorBrick),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: LedgerColors.errorBrick,
+                      ),
                       onPressed: _confirmDeleteDay,
                       child: const Text('删除当天记录'),
                     ),
@@ -136,10 +167,26 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   WorkEntry _moveEntryToDay(WorkEntry entry, DateTime day) {
-    final start = DateTime(day.year, day.month, day.day, entry.startDateTime.hour, entry.startDateTime.minute);
-    var end = DateTime(day.year, day.month, day.day, entry.endDateTime.hour, entry.endDateTime.minute);
+    final start = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      entry.startDateTime.hour,
+      entry.startDateTime.minute,
+    );
+    var end = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      entry.endDateTime.hour,
+      entry.endDateTime.minute,
+    );
     if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
-    return entry.copyWith(workDate: dateOnly(day), startDateTime: start, endDateTime: end);
+    return entry.copyWith(
+      workDate: dateOnly(day),
+      startDateTime: start,
+      endDateTime: end,
+    );
   }
 
   void _addSegment() {
@@ -148,14 +195,18 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       orElse: () => widget.state.templates.first,
     );
     setState(() {
-      _segments = [..._segments, widget.state.createTemplateEntry(day: _day, template: template)];
+      _segments = [
+        ..._segments,
+        widget.state.createTemplateEntry(day: _day, template: template),
+      ];
     });
   }
 
   Future<void> _editSegment(WorkEntry entry) async {
     final updated = await showDialog<WorkEntry>(
       context: context,
-      builder: (context) => SegmentEditorDialog(entry: entry, rules: widget.state.payRules),
+      builder: (context) =>
+          SegmentEditorDialog(entry: entry, rules: widget.state.payRules),
     );
     if (updated == null) return;
     setState(() {
@@ -164,16 +215,46 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     });
   }
 
+  Future<void> _confirmDeleteSegment(WorkEntry entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除本段？'),
+        content: Text('只删除 ${entry.timeRangeLabel} 这一段，其他分段和当天备注保留。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: LedgerColors.errorBrick,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _segments.removeWhere((item) => item.id == entry.id));
+  }
+
   Future<void> _confirmDeleteDay() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除这条记录？'),
-        content: const Text('删除后会从本月工时、汇总和 CSV 导出中移除。'),
+        title: const Text('删除当天记录？'),
+        content: const Text('删除后，这一天的所有分段、备注、补贴和扣款都会从汇总与 CSV 中移除。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: LedgerColors.errorBrick),
+            style: FilledButton.styleFrom(
+              backgroundColor: LedgerColors.errorBrick,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('确认删除'),
           ),
@@ -185,17 +266,52 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     Navigator.pop(context);
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_hasOverlaps()) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('时间有重叠，仍然保存？'),
+          content: const Text('同一天存在重叠分段。个人账本允许特殊情况，但建议先核对开始/结束时间。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('返回修改'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('仍然保存'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
     widget.state.deleteDay(_day);
     for (final entry in _segments) {
       widget.state.addEntry(entry);
     }
     Navigator.pop(context);
   }
+
+  bool _hasOverlaps() {
+    final sorted = [..._segments]
+      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    for (var i = 1; i < sorted.length; i++) {
+      if (sorted[i - 1].endDateTime.isAfter(sorted[i].startDateTime)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 class SegmentEditorDialog extends StatefulWidget {
-  const SegmentEditorDialog({super.key, required this.entry, required this.rules});
+  const SegmentEditorDialog({
+    super.key,
+    required this.entry,
+    required this.rules,
+  });
   final WorkEntry entry;
   final List<PayRule> rules;
 
@@ -222,8 +338,12 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     _break = TextEditingController(text: widget.entry.breakMinutes.toString());
     _location = TextEditingController(text: widget.entry.locationName);
     _note = TextEditingController(text: widget.entry.note);
-    _allowance = TextEditingController(text: widget.entry.allowanceTotal.toStringAsFixed(0));
-    _deduction = TextEditingController(text: widget.entry.deductionTotal.toStringAsFixed(0));
+    _allowance = TextEditingController(
+      text: widget.entry.allowanceTotal.toStringAsFixed(0),
+    );
+    _deduction = TextEditingController(
+      text: widget.entry.deductionTotal.toStringAsFixed(0),
+    );
     _type = widget.entry.type;
     _rule = widget.rules.firstWhere(
       (rule) => rule.id == widget.entry.payRuleId,
@@ -251,52 +371,113 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(children: [
-              Expanded(child: TextField(controller: _start, decoration: const InputDecoration(labelText: '开始 HH:mm'))),
-              const SizedBox(width: 10),
-              Expanded(child: TextField(controller: _end, decoration: const InputDecoration(labelText: '结束 HH:mm'))),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _start,
+                    decoration: const InputDecoration(labelText: '开始 HH:mm'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _end,
+                    decoration: const InputDecoration(labelText: '结束 HH:mm'),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _break, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '休息分钟')),
+            TextField(
+              controller: _break,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '休息分钟'),
+            ),
             const SizedBox(height: 10),
             DropdownButtonFormField<EntryType>(
               initialValue: _type,
               decoration: const InputDecoration(labelText: '类型'),
-              items: EntryType.values.map((type) => DropdownMenuItem(value: type, child: Text(type.label))).toList(),
+              items: EntryType.values
+                  .map(
+                    (type) =>
+                        DropdownMenuItem(value: type, child: Text(type.label)),
+                  )
+                  .toList(),
               onChanged: (value) => setState(() => _type = value ?? _type),
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<PayRule>(
               initialValue: _rule,
               decoration: const InputDecoration(labelText: '计薪规则'),
-              items: widget.rules.map((rule) => DropdownMenuItem(value: rule, child: Text('${rule.name} · ${rule.amountLabel}'))).toList(),
+              items: widget.rules
+                  .map(
+                    (rule) => DropdownMenuItem(
+                      value: rule,
+                      child: Text('${rule.name} · ${rule.amountLabel}'),
+                    ),
+                  )
+                  .toList(),
               onChanged: (value) => setState(() => _rule = value ?? _rule),
             ),
             const SizedBox(height: 10),
-            TextField(controller: _location, decoration: const InputDecoration(labelText: '地点/岗位')),
+            TextField(
+              controller: _location,
+              decoration: const InputDecoration(labelText: '地点/岗位'),
+            ),
             const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: TextField(controller: _allowance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '补贴'))),
-              const SizedBox(width: 10),
-              Expanded(child: TextField(controller: _deduction, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '扣款'))),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _allowance,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '补贴'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _deduction,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: '扣款'),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _note, decoration: const InputDecoration(labelText: '备注')),
+            TextField(
+              controller: _note,
+              decoration: const InputDecoration(labelText: '备注'),
+            ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
         FilledButton(onPressed: _save, child: const Text('保存本段')),
       ],
     );
   }
 
   void _save() {
-    final startParts = _parseTime(_start.text) ?? [widget.entry.startDateTime.hour, widget.entry.startDateTime.minute];
-    final endParts = _parseTime(_end.text) ?? [widget.entry.endDateTime.hour, widget.entry.endDateTime.minute];
+    final startParts =
+        _parseTime(_start.text) ??
+        [widget.entry.startDateTime.hour, widget.entry.startDateTime.minute];
+    final endParts =
+        _parseTime(_end.text) ??
+        [widget.entry.endDateTime.hour, widget.entry.endDateTime.minute];
     final day = widget.entry.workDate;
-    final start = DateTime(day.year, day.month, day.day, startParts[0], startParts[1]);
+    final start = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      startParts[0],
+      startParts[1],
+    );
     var end = DateTime(day.year, day.month, day.day, endParts[0], endParts[1]);
     if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
     final adjustments = <Adjustment>[];
@@ -325,7 +506,14 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     if (parts.length != 2) return null;
     final hour = int.tryParse(parts[0]);
     final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    if (hour == null ||
+        minute == null ||
+        hour < 0 ||
+        hour > 23 ||
+        minute < 0 ||
+        minute > 59) {
+      return null;
+    }
     return [hour, minute];
   }
 }

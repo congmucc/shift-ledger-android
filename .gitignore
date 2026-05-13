@@ -48,3 +48,4 @@ secrets.properties
 
 # Local validation artifacts
 artifacts/
+.gstack/

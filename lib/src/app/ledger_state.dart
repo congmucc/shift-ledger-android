@@ -12,13 +12,13 @@ class LedgerState extends ChangeNotifier {
     NightRule? nightRule,
     PayPeriod? payPeriod,
     WebDavConfig? webDavConfig,
-  })  : now = dateOnly(now),
-        entries = entries ?? [],
-        templates = templates ?? [],
-        payRules = payRules ?? [PayRule.defaultHourly()],
-        nightRule = nightRule ?? NightRule.defaults(),
-        payPeriod = payPeriod ?? const PayPeriod(),
-        webDavConfig = webDavConfig ?? const WebDavConfig();
+  }) : now = dateOnly(now),
+       entries = entries ?? [],
+       templates = templates ?? [],
+       payRules = payRules ?? [PayRule.defaultHourly()],
+       nightRule = nightRule ?? NightRule.defaults(),
+       payPeriod = payPeriod ?? const PayPeriod(),
+       webDavConfig = webDavConfig ?? const WebDavConfig();
 
   factory LedgerState.empty({DateTime? now}) {
     final rule = PayRule.defaultHourly();
@@ -84,7 +84,8 @@ class LedgerState extends ChangeNotifier {
     );
   }
 
-  factory LedgerState.fromSnapshot(LedgerSnapshot snapshot, {DateTime? now}) => LedgerState(
+  factory LedgerState.fromSnapshot(LedgerSnapshot snapshot, {DateTime? now}) =>
+      LedgerState(
         now: now ?? DateTime.now(),
         entries: snapshot.entries,
         templates: snapshot.templates,
@@ -105,14 +106,16 @@ class LedgerState extends ChangeNotifier {
   DateRange get currentMonth => DateRange.month(now.year, now.month);
   DateRange get currentPayPeriod => payPeriod.rangeFor(now);
   PayRule get defaultRule => payRules.lastWhere(
-        (rule) => rule.isDefault,
-        orElse: () => payRules.first,
-      );
+    (rule) => rule.isDefault,
+    orElse: () => payRules.first,
+  );
 
   PayRule ruleForDate(DateTime day, {String? preferredRuleId}) {
     final activeRules = payRules.where((rule) => rule.activeOn(day)).toList();
     if (preferredRuleId != null) {
-      final preferred = activeRules.where((rule) => rule.id == preferredRuleId).toList();
+      final preferred = activeRules
+          .where((rule) => rule.id == preferredRuleId)
+          .toList();
       if (preferred.isNotEmpty) return preferred.last;
     }
     final activeDefaults = activeRules.where((rule) => rule.isDefault).toList();
@@ -122,11 +125,11 @@ class LedgerState extends ChangeNotifier {
   }
 
   LedgerSummary summaryFor(DateRange range) => PayCalculator().summarize(
-        entries: entries,
-        rules: payRules,
-        nightRule: nightRule,
-        range: range,
-      );
+    entries: entries,
+    rules: payRules,
+    nightRule: nightRule,
+    range: range,
+  );
 
   List<WorkEntry> entriesForDay(DateTime day) {
     final key = ymd(day);
@@ -172,7 +175,8 @@ class LedgerState extends ChangeNotifier {
   }
 
   void addEntry(WorkEntry entry) {
-    entries = [...entries, entry]..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    entries = [...entries, entry]
+      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
     notifyListeners();
   }
 
@@ -206,21 +210,21 @@ class LedgerState extends ChangeNotifier {
         isDefault: false,
         effectiveTo: rule.effectiveFrom.subtract(const Duration(days: 1)),
       );
-      final newVersion = rule.copyWith(
-        id: newId('rule'),
-        isDefault: true,
-      );
+      final newVersion = rule.copyWith(id: newId('rule'), isDefault: true);
       payRules = [
         for (var i = 0; i < payRules.length; i++)
           if (i == index)
             previousVersion
           else
-            payRules[i].isDefault ? payRules[i].copyWith(isDefault: false) : payRules[i],
+            payRules[i].isDefault
+                ? payRules[i].copyWith(isDefault: false)
+                : payRules[i],
         newVersion,
       ];
     } else {
       payRules = [
-        for (final item in payRules) rule.isDefault ? item.copyWith(isDefault: false) : item,
+        for (final item in payRules)
+          rule.isDefault ? item.copyWith(isDefault: false) : item,
         rule,
       ];
     }
@@ -237,22 +241,27 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updatePayPeriod(PayPeriod period) {
+    payPeriod = period;
+    notifyListeners();
+  }
+
   void restore(LedgerSnapshot snapshot) {
     entries = snapshot.entries;
     templates = snapshot.templates.isEmpty ? templates : snapshot.templates;
     payRules = snapshot.payRules.isEmpty ? payRules : snapshot.payRules;
     nightRule = snapshot.nightRule;
     payPeriod = snapshot.payPeriod;
-    webDavConfig = snapshot.webDavConfig.copyWith(appPassword: webDavConfig.appPassword);
+    webDavConfig = snapshot.webDavConfig.sanitized();
     notifyListeners();
   }
 
   LedgerSnapshot toSnapshot() => LedgerSnapshot(
-        entries: entries,
-        templates: templates,
-        payRules: payRules,
-        nightRule: nightRule,
-        payPeriod: payPeriod,
-        webDavConfig: webDavConfig,
-      );
+    entries: entries,
+    templates: templates,
+    payRules: payRules,
+    nightRule: nightRule,
+    payPeriod: payPeriod,
+    webDavConfig: webDavConfig,
+  );
 }

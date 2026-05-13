@@ -3,11 +3,18 @@ import 'package:flutter/material.dart';
 import '../domain/models.dart';
 import 'theme.dart';
 
-String hoursText(double value) => '${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)}h';
-String moneyText(double value) => '¥${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 2)}';
+String hoursText(double value) =>
+    '${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)}h';
+String moneyText(double value) =>
+    '¥${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 2)}';
 
 class PageFrame extends StatelessWidget {
-  const PageFrame({super.key, required this.title, this.trailing, required this.children});
+  const PageFrame({
+    super.key,
+    required this.title,
+    this.trailing,
+    required this.children,
+  });
   final String title;
   final Widget? trailing;
   final List<Widget> children;
@@ -22,7 +29,10 @@ class PageFrame extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(title, style: Theme.of(context).textTheme.headlineLarge),
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
               ),
               ?trailing,
             ],
@@ -36,7 +46,12 @@ class PageFrame extends StatelessWidget {
 }
 
 class LedgerCard extends StatelessWidget {
-  const LedgerCard({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.color});
+  const LedgerCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(18),
+    this.color,
+  });
   final Widget child;
   final EdgeInsets padding;
   final Color? color;
@@ -95,12 +110,21 @@ class MetricCard extends StatelessWidget {
       ),
     );
     if (onTap == null) return content;
-    return InkWell(borderRadius: BorderRadius.circular(24), onTap: onTap, child: content);
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: content,
+    );
   }
 }
 
 class WorkEntryTile extends StatelessWidget {
-  const WorkEntryTile({super.key, required this.entry, this.onEdit, this.onDelete});
+  const WorkEntryTile({
+    super.key,
+    required this.entry,
+    this.onEdit,
+    this.onDelete,
+  });
   final WorkEntry entry;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -108,12 +132,13 @@ class WorkEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isNight = entry.type == EntryType.night;
-    final isOvertime = entry.type == EntryType.overtime || entry.isRestDayOvertime;
+    final isOvertime =
+        entry.type == EntryType.overtime || entry.isRestDayOvertime;
     final chipColor = isNight
         ? LedgerColors.nightSlate
         : isOvertime
-            ? LedgerColors.overtimeMossSoft
-            : LedgerColors.workAmberSoft;
+        ? LedgerColors.overtimeMossSoft
+        : LedgerColors.workAmberSoft;
     final chipText = isNight ? Colors.white : LedgerColors.ink;
     return LedgerCard(
       padding: const EdgeInsets.all(14),
@@ -126,12 +151,28 @@ class WorkEntryTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(entry.timeRangeLabel, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      entry.timeRangeLabel,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(color: chipColor, borderRadius: BorderRadius.circular(99)),
-                      child: Text(entry.type.label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: chipText)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: chipColor,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        entry.type.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: chipText,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -140,8 +181,10 @@ class WorkEntryTile extends StatelessWidget {
                   [
                     if (entry.locationName.isNotEmpty) entry.locationName,
                     '休 ${entry.breakMinutes} 分钟',
-                    if (entry.allowanceTotal > 0) '补贴 ${moneyText(entry.allowanceTotal)}',
-                    if (entry.deductionTotal > 0) '扣款 ${moneyText(entry.deductionTotal)}',
+                    if (entry.allowanceTotal > 0)
+                      '补贴 ${moneyText(entry.allowanceTotal)}',
+                    if (entry.deductionTotal > 0)
+                      '扣款 ${moneyText(entry.deductionTotal)}',
                     if (entry.note.isNotEmpty) '备注：${entry.note}',
                   ].join(' · '),
                   style: const TextStyle(color: LedgerColors.muted),
@@ -153,9 +196,13 @@ class WorkEntryTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(hoursText(entry.netHours), style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                hoursText(entry.netHours),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               TextButton(onPressed: onEdit, child: const Text('编辑')),
-              if (onDelete != null) TextButton(onPressed: onDelete, child: const Text('删除')),
+              if (onDelete != null)
+                TextButton(onPressed: onDelete, child: const Text('删除本段')),
             ],
           ),
         ],
@@ -165,7 +212,12 @@ class WorkEntryTile extends StatelessWidget {
 }
 
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({super.key, required this.title, this.actionLabel, this.onAction});
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
   final String title;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -176,8 +228,14 @@ class SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(top: 18, bottom: 10),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: Theme.of(context).textTheme.headlineMedium)),
-          if (actionLabel != null) TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ),
+          if (actionLabel != null)
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
         ],
       ),
     );
@@ -185,7 +243,13 @@ class SectionHeader extends StatelessWidget {
 }
 
 class SettingTile extends StatelessWidget {
-  const SettingTile({super.key, required this.title, required this.subtitle, this.trailing, this.onTap});
+  const SettingTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
   final String title;
   final String subtitle;
   final String? trailing;
@@ -206,12 +270,21 @@ class SettingTile extends StatelessWidget {
                 children: [
                   Text(title, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: LedgerColors.muted)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: LedgerColors.muted),
+                  ),
                 ],
               ),
             ),
             if (trailing != null)
-              Text(trailing!, style: const TextStyle(color: LedgerColors.warningCopper, fontWeight: FontWeight.w700)),
+              Text(
+                trailing!,
+                style: const TextStyle(
+                  color: LedgerColors.warningCopper,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
           ],
         ),
       ),

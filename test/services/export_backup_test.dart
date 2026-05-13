@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
@@ -33,19 +34,35 @@ void main() {
 
   test('backup excludes WebDAV app password but restores ledger data', () {
     final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
-    state.updateWebDavConfig(const WebDavConfig(
-      url: 'https://dav.jianguoyun.com/dav/shift-ledger',
-      username: 'user@example.com',
-      appPassword: 'secret-app-password',
-      remotePath: 'shift-ledger-backup.json',
-    ));
+    state.updateWebDavConfig(
+      const WebDavConfig(
+        url: 'https://dav.jianguoyun.com/dav/shift-ledger',
+        username: 'user@example.com',
+        appPassword: 'secret-app-password',
+        remotePath: 'shift-ledger-backup.json',
+      ),
+    );
 
     final payload = BackupService().encode(state.toSnapshot());
     expect(payload, isNot(contains('secret-app-password')));
     expect(payload, contains('user@example.com'));
 
-    final decoded = BackupService().decode(jsonDecode(payload) as Map<String, Object?>);
+    final decoded = BackupService().decode(
+      jsonDecode(payload) as Map<String, Object?>,
+    );
     expect(decoded.entries, isNotEmpty);
     expect(decoded.webDavConfig.appPassword, isEmpty);
+
+    state.restore(decoded);
+    expect(state.webDavConfig.username, 'user@example.com');
+    expect(state.webDavConfig.appPassword, isEmpty);
+    expect(state.webDavConfig.isConfigured, isFalse);
+  });
+
+  test('Android release manifest includes Internet permission for WebDAV', () {
+    final manifest = File(
+      'android/app/src/main/AndroidManifest.xml',
+    ).readAsStringSync();
+    expect(manifest, contains('android.permission.INTERNET'));
   });
 }

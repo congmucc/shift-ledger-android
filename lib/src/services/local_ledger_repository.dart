@@ -44,6 +44,8 @@ class LocalLedgerRepository {
         key: _secretKey,
         value: snapshot.webDavConfig.appPassword,
       );
+    } else {
+      await _secureStorage.delete(key: _secretKey);
     }
   }
 
