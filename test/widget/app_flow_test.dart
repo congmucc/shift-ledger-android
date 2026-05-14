@@ -261,4 +261,97 @@ void main() {
     await tester.pumpAndSettle();
     expect(state.templates.any((tpl) => tpl.id == 'tpl_custom'), isFalse);
   });
+
+  testWidgets(
+    'moving a day onto another populated date preserves target entries and refreshes pay rule snapshot',
+    (tester) async {
+      final oldRule = PayRule.defaultHourly(hourlyRate: 35).copyWith(
+        id: 'rule_old',
+        effectiveFrom: DateTime(2026, 5, 1),
+        effectiveTo: DateTime(2026, 5, 13),
+        isDefault: false,
+      );
+      final newRule = PayRule.defaultHourly(hourlyRate: 48).copyWith(
+        id: 'rule_new',
+        effectiveFrom: DateTime(2026, 5, 14),
+        isDefault: true,
+      );
+      final state = LedgerState(
+        now: DateTime(2026, 5, 13),
+        payRules: [oldRule, newRule],
+        templates: [ShiftTemplate.standard(payRuleId: newRule.id)],
+        entries: [
+          WorkEntry.create(
+            id: 'source_entry',
+            workDate: DateTime(2026, 5, 13),
+            startDateTime: DateTime(2026, 5, 13, 9),
+            endDateTime: DateTime(2026, 5, 13, 18),
+            breakMinutes: 60,
+            type: EntryType.regular,
+            payRule: oldRule,
+          ),
+          WorkEntry.create(
+            id: 'target_entry',
+            workDate: DateTime(2026, 5, 14),
+            startDateTime: DateTime(2026, 5, 14, 13),
+            endDateTime: DateTime(2026, 5, 14, 18),
+            type: EntryType.regular,
+            payRule: newRule,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      await tester.tap(find.byTooltip('编辑').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('明天'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('保存').last);
+      await tester.tap(find.text('保存').last);
+      await tester.pumpAndSettle();
+
+      final moved = state.entries.firstWhere(
+        (entry) => entry.id == 'source_entry',
+      );
+      expect(ymd(moved.workDate), '2026-05-14');
+      expect(moved.payRuleId, 'rule_new');
+      expect(moved.payRuleSnapshot.id, 'rule_new');
+      expect(state.entriesForDay(DateTime(2026, 5, 14)).length, 2);
+      expect(state.entries.any((entry) => entry.id == 'target_entry'), isTrue);
+    },
+  );
+
+  testWidgets('enabling auto backup saves current WebDAV fields first', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('坚果云 WebDAV'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('坚果云 WebDAV'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '账号'),
+      'u@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, '应用授权密码'),
+      'app-pass',
+    );
+    await tester.tap(find.text('自动云备份'));
+    await tester.pumpAndSettle();
+
+    expect(state.webDavConfig.isConfigured, isTrue);
+    expect(state.webDavConfig.username, 'u@example.com');
+    expect(state.webDavConfig.appPassword, 'app-pass');
+    expect(state.autoBackupConfig.enabled, isTrue);
+    expect(state.autoBackupConfig.lastStatus, AutoBackupStatus.waiting);
+  });
 }

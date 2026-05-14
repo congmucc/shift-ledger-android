@@ -194,7 +194,7 @@ class _SummaryPageState extends State<SummaryPage> {
       initialDate: _customStart!,
       maximumDate: _customEnd,
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() => _customStart = picked);
   }
 
@@ -205,7 +205,7 @@ class _SummaryPageState extends State<SummaryPage> {
       initialDate: _customEnd!,
       minimumDate: _customStart,
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() => _customEnd = picked);
   }
 
@@ -227,7 +227,7 @@ class _SummaryPageState extends State<SummaryPage> {
         ],
       ),
     );
-    if (confirmed != true || _exporting) return;
+    if (confirmed != true || _exporting || !mounted) return;
     setState(() => _exporting = true);
     final csv = CsvExporter().exportEntries(
       entries: widget.state.entries,
@@ -307,9 +307,12 @@ class _SummaryPageState extends State<SummaryPage> {
     return null;
   }
 
-  void _snack(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 class _RangeSelector extends StatelessWidget {

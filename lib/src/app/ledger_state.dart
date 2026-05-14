@@ -15,12 +15,34 @@ class LedgerState extends ChangeNotifier {
     AutoBackupConfig? autoBackupConfig,
   }) : now = dateOnly(now),
        entries = entries ?? [],
-       templates = templates ?? [],
-       payRules = payRules ?? [PayRule.defaultHourly()],
+       payRules = _safePayRules(payRules),
+       templates = _safeTemplates(templates, payRules),
        nightRule = nightRule ?? NightRule.defaults(),
        payPeriod = payPeriod ?? const PayPeriod(),
        webDavConfig = webDavConfig ?? const WebDavConfig(),
        autoBackupConfig = autoBackupConfig ?? const AutoBackupConfig();
+
+  static List<PayRule> _safePayRules(List<PayRule>? rules) {
+    if (rules != null && rules.isNotEmpty) return rules;
+    return [
+      PayRule.defaultHourly(),
+      PayRule.defaultDaily(),
+      PayRule.defaultMonthly(),
+    ];
+  }
+
+  static List<ShiftTemplate> _safeTemplates(
+    List<ShiftTemplate>? templates,
+    List<PayRule>? rules,
+  ) {
+    if (templates != null && templates.isNotEmpty) return templates;
+    final fallbackRuleId = _safePayRules(rules).first.id;
+    return [
+      ShiftTemplate.standard(payRuleId: fallbackRuleId),
+      ShiftTemplate.overtime(payRuleId: fallbackRuleId),
+      ShiftTemplate.night(payRuleId: fallbackRuleId),
+    ];
+  }
 
   factory LedgerState.empty({DateTime? now}) {
     final rule = PayRule.defaultHourly();
@@ -214,11 +236,17 @@ class LedgerState extends ChangeNotifier {
   ) {
     final originalKey = ymd(originalDay);
     final targetKey = ymd(targetDay);
+    final replacementIds = replacements.map((entry) => entry.id).toSet();
     entries = [
       for (final entry in entries)
-        if (ymd(entry.workDate) != originalKey &&
-            ymd(entry.workDate) != targetKey)
-          entry,
+        if (originalKey == targetKey) ...[
+          if (ymd(entry.workDate) != originalKey) entry,
+        ] else ...[
+          if (ymd(entry.workDate) != originalKey &&
+              !(ymd(entry.workDate) == targetKey &&
+                  replacementIds.contains(entry.id)))
+            entry,
+        ],
       ...replacements,
     ]..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
     notifyListeners();

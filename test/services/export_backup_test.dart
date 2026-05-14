@@ -33,6 +33,31 @@ void main() {
     expect(csv, contains('替班'));
   });
 
+  test('CSV export uses range-prorated hours for cross-boundary shifts', () {
+    final rule = PayRule.defaultHourly(hourlyRate: 10);
+    final entry = WorkEntry.create(
+      workDate: DateTime(2026, 5, 31),
+      startDateTime: DateTime(2026, 5, 31, 22),
+      endDateTime: DateTime(2026, 6, 1, 6),
+      breakMinutes: 60,
+      type: EntryType.regular,
+      payRule: rule,
+    );
+
+    final csv = CsvExporter().exportEntries(
+      entries: [entry],
+      rules: [rule],
+      nightRule: NightRule.defaults(),
+      range: DateRange.month(2026, 6),
+    );
+
+    expect(
+      csv,
+      contains('2026-05-31,2026-05-31 22:00,2026-06-01 06:00,是,45,5.25,5.25'),
+    );
+    expect(csv, contains('总工时,5.25'));
+  });
+
   test('backup excludes WebDAV app password but restores ledger data', () {
     final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
     state.updateWebDavConfig(
@@ -65,11 +90,63 @@ void main() {
     expect(state.webDavConfig.isConfigured, isFalse);
   });
 
+  test(
+    'backup decode skips malformed entries instead of failing all restore',
+    () {
+      final rule = PayRule.defaultHourly(hourlyRate: 35);
+      final validEntry = WorkEntry.create(
+        workDate: DateTime(2026, 5, 13),
+        startDateTime: DateTime(2026, 5, 13, 9),
+        endDateTime: DateTime(2026, 5, 13, 18),
+        breakMinutes: 60,
+        type: EntryType.regular,
+        payRule: rule,
+      );
+
+      final snapshot = BackupService().decode({
+        'entries': [
+          validEntry.toJson(),
+          {
+            'id': 'bad_entry',
+            'workDate': '2026-05-14',
+            'startDateTime': 'not-a-date',
+            'endDateTime': '2026-05-14T18:00:00',
+            'payRuleSnapshot': rule.toJson(),
+          },
+        ],
+        'payRules': [rule.toJson()],
+        'templates': const [],
+        'nightRule': NightRule.defaults().toJson(),
+        'payPeriod': const PayPeriod().toJson(),
+        'webDavConfig': const WebDavConfig().toJson(),
+      });
+
+      expect(snapshot.entries, hasLength(1));
+      expect(snapshot.entries.single.id, validEntry.id);
+    },
+  );
+
+  test('backup decode treats malformed entry containers as empty lists', () {
+    final snapshot = BackupService().decode({
+      'entries': 'not-a-list',
+      'payRules': 'not-a-list',
+      'templates': 'not-a-list',
+      'nightRule': NightRule.defaults().toJson(),
+      'payPeriod': const PayPeriod().toJson(),
+      'webDavConfig': const WebDavConfig().toJson(),
+    });
+
+    expect(snapshot.entries, isEmpty);
+    expect(snapshot.payRules, isEmpty);
+    expect(snapshot.templates, isEmpty);
+  });
+
   test('Android release manifest includes Internet permission for WebDAV', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
     ).readAsStringSync();
     expect(manifest, contains('android.permission.INTERNET'));
+    expect(manifest, contains('android:label="工时账本"'));
   });
 
   test(
@@ -89,6 +166,56 @@ void main() {
       expect(calls.single.mimeType, 'text/csv');
       expect(calls.single.fileName, endsWith('.csv'));
       expect(utf8.decode(calls.single.bytes), 'a,b\n1,2');
+    },
+  );
+
+  test(
+    'production backup keeps a private restore copy separate from external save',
+    () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'shift-ledger-backup-test',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+      final calls = <ExternalSaveRequest>[];
+      final repository = LocalLedgerRepository(
+        rootDirectoryProvider: () async => tempDir,
+        externalSaver: (request) async {
+          calls.add(request);
+          return '/picked/${request.fileName}';
+        },
+      );
+
+      final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+      final externalPath = await repository.writeBackup(state.toSnapshot());
+      final internalPath = await repository.latestBackupPath();
+
+      expect(externalPath, startsWith('/picked/shift-ledger-backup-'));
+      expect(internalPath, isNotNull);
+      expect(internalPath, startsWith('${tempDir.path}/backups/'));
+      expect(calls.single.mimeType, 'application/json');
+      expect(utf8.decode(calls.single.bytes), contains('"entries"'));
+    },
+  );
+
+  test(
+    'production backup reports external save cancellation while keeping private copy',
+    () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'shift-ledger-backup-cancel-test',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+      final repository = LocalLedgerRepository(
+        rootDirectoryProvider: () async => tempDir,
+        externalSaver: (_) async => null,
+      );
+
+      final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+      final externalPath = await repository.writeBackup(state.toSnapshot());
+      final internalPath = await repository.latestBackupPath();
+
+      expect(externalPath, isNull);
+      expect(internalPath, isNotNull);
+      expect(internalPath, startsWith('${tempDir.path}/backups/'));
     },
   );
 }

@@ -185,7 +185,7 @@ class PayCalculator {
     if (grossTotalMinutes <= 0) return 0;
     final overlapMinutes = end.difference(start).inMinutes;
     final breakInOverlap =
-        entry.breakMinutes * overlapMinutes / grossTotalMinutes;
+        _effectiveBreakMinutes(entry) * overlapMinutes / grossTotalMinutes;
     return max(0, overlapMinutes / 60 - breakInOverlap / 60);
   }
 
@@ -213,7 +213,7 @@ class PayCalculator {
       if (end.isAfter(start)) overlap += end.difference(start).inMinutes;
       cursor = cursor.add(const Duration(days: 1));
     }
-    final breakShare = entry.breakMinutes * overlap / grossMinutes;
+    final breakShare = _effectiveBreakMinutes(entry) * overlap / grossMinutes;
     return _round2(max(0, overlap / 60 - breakShare / 60));
   }
 
@@ -236,23 +236,36 @@ class PayCalculator {
   }
 
   double _monthlyBaseIncome(PayRule rule, DateRange range) {
-    final effectiveStart = dateOnly(rule.effectiveFrom).isAfter(range.start)
-        ? dateOnly(rule.effectiveFrom)
-        : range.start;
-    final effectiveToExclusive = rule.effectiveTo == null
+    final ruleStart = dateOnly(rule.effectiveFrom);
+    final ruleEndExclusive = rule.effectiveTo == null
         ? range.endExclusive
-        : dateOnly(
-            rule.effectiveTo!,
-          ).add(const Duration(days: 1)).isBefore(range.endExclusive)
-        ? dateOnly(rule.effectiveTo!).add(const Duration(days: 1))
-        : range.endExclusive;
-    if (!effectiveToExclusive.isAfter(effectiveStart)) return 0;
-    final monthDays = DateTime(
-      range.start.year,
-      range.start.month + 1,
-    ).difference(DateTime(range.start.year, range.start.month)).inDays;
-    final coveredDays = effectiveToExclusive.difference(effectiveStart).inDays;
-    return rule.monthlyRate * coveredDays / monthDays;
+        : dateOnly(rule.effectiveTo!).add(const Duration(days: 1));
+    var total = 0.0;
+    var monthStart = DateTime(range.start.year, range.start.month);
+    while (monthStart.isBefore(range.endExclusive)) {
+      final monthEnd = DateTime(monthStart.year, monthStart.month + 1);
+      final coveredStart = _latest([range.start, ruleStart, monthStart]);
+      final coveredEnd = _earliest([
+        range.endExclusive,
+        ruleEndExclusive,
+        monthEnd,
+      ]);
+      if (coveredEnd.isAfter(coveredStart)) {
+        final monthDays = monthEnd.difference(monthStart).inDays;
+        final coveredDays = coveredEnd.difference(coveredStart).inDays;
+        total += rule.monthlyRate * coveredDays / monthDays;
+      }
+      monthStart = monthEnd;
+    }
+    return total;
+  }
+
+  int _effectiveBreakMinutes(WorkEntry entry) {
+    final grossMinutes = max(
+      0,
+      entry.endDateTime.difference(entry.startDateTime).inMinutes,
+    );
+    return clampInt(entry.breakMinutes, 0, grossMinutes);
   }
 
   DateTime _latest(List<DateTime> values) =>

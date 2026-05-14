@@ -177,6 +177,109 @@ void main() {
       },
     );
 
+    test('monthly pay sums calendar months correctly across year ranges', () {
+      final rule = PayRule.defaultMonthly(
+        monthlyRate: 3100,
+      ).copyWith(effectiveFrom: DateTime(2026, 5, 1));
+      final entry = WorkEntry.create(
+        workDate: DateTime(2026, 5, 20),
+        startDateTime: DateTime(2026, 5, 20, 9),
+        endDateTime: DateTime(2026, 5, 20, 18),
+        breakMinutes: 60,
+        type: EntryType.regular,
+        payRule: rule,
+      );
+
+      final summary = PayCalculator().summarize(
+        entries: [entry],
+        rules: [rule],
+        nightRule: NightRule.defaults(),
+        range: DateRange.year(2026),
+      );
+
+      expect(summary.baseIncome, 3100 * 8);
+    });
+
+    test('negative break minutes never inflate payable hours', () {
+      final rule = PayRule.defaultHourly(hourlyRate: 50);
+      final entry = WorkEntry.create(
+        workDate: DateTime(2026, 5, 20),
+        startDateTime: DateTime(2026, 5, 20, 9),
+        endDateTime: DateTime(2026, 5, 20, 17),
+        breakMinutes: -60,
+        type: EntryType.regular,
+        payRule: rule,
+      );
+
+      final summary = PayCalculator().summarize(
+        entries: [entry],
+        rules: [rule],
+        nightRule: NightRule.defaults(),
+        range: DateRange.month(2026, 5),
+      );
+
+      expect(entry.netHours, 8);
+      expect(summary.totalHours, 8);
+      expect(summary.baseIncome, 400);
+    });
+
+    test('restored malformed numeric fields are clamped to safe ranges', () {
+      final rule = PayRule.fromJson({
+        'id': 'bad_rule',
+        'name': '异常规则',
+        'baseType': 'hourly',
+        'hourlyRate': -50,
+        'effectiveFrom': '2026-05-01',
+        'standardHoursPerDay': -8,
+        'overtimeMultiplier': -1,
+      });
+      final template = ShiftTemplate.fromJson({
+        'id': 'bad_tpl',
+        'name': '异常模板',
+        'startMinute': -10,
+        'endMinute': 2000,
+        'breakMinutes': -30,
+      });
+      final nightRule = NightRule.fromJson({
+        'startMinute': -60,
+        'endMinute': 2000,
+        'fixedAmount': -30,
+      });
+
+      expect(rule.hourlyRate, 0);
+      expect(rule.standardHoursPerDay, 0);
+      expect(rule.overtimeMultiplier, 0);
+      expect(template.startMinute, 0);
+      expect(template.endMinute, 23 * 60 + 59);
+      expect(template.breakMinutes, 0);
+      expect(nightRule.startMinute, 0);
+      expect(nightRule.endMinute, 23 * 60 + 59);
+      expect(nightRule.fixedAmount, 0);
+    });
+
+    test(
+      'pay period preserves 29/30/31 start days and falls back per month',
+      () {
+        const period = PayPeriod(
+          mode: PayPeriodMode.monthlyStartDay,
+          monthStartDay: 31,
+        );
+
+        final febPeriod = period.rangeFor(DateTime(2026, 2, 28));
+        final marBeforeStart = period.rangeFor(DateTime(2026, 3, 30));
+        final restored = PayPeriod.fromJson({
+          'mode': 'monthlyStartDay',
+          'monthStartDay': 31,
+        });
+
+        expect(febPeriod.start, DateTime(2026, 2, 28));
+        expect(febPeriod.endExclusive, DateTime(2026, 3, 31));
+        expect(marBeforeStart.start, DateTime(2026, 2, 28));
+        expect(marBeforeStart.endExclusive, DateTime(2026, 3, 31));
+        expect(restored.monthStartDay, 31);
+      },
+    );
+
     test('record keeps pay rule snapshot stable after rule changes', () {
       final oldRule = PayRule.defaultHourly(hourlyRate: 35);
       final entry = WorkEntry.create(
@@ -236,5 +339,24 @@ void main() {
         expect(entry.deductionTotal, 0);
       },
     );
+
+    test('ledger state recovers safe defaults from sparse snapshots', () {
+      final state = LedgerState.fromSnapshot(
+        LedgerSnapshot(
+          entries: const [],
+          templates: const [],
+          payRules: const [],
+          nightRule: NightRule.defaults(),
+          payPeriod: const PayPeriod(),
+          webDavConfig: const WebDavConfig(),
+        ),
+        now: DateTime(2026, 5, 20),
+      );
+
+      expect(state.payRules, isNotEmpty);
+      expect(state.templates, isNotEmpty);
+      expect(state.defaultRule.id, isNotEmpty);
+      expect(state.createTemplateEntry().payRuleSnapshot.id, isNotEmpty);
+    });
   });
 }

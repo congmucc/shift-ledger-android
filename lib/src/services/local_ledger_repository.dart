@@ -24,19 +24,24 @@ class ExternalSaveRequest {
 
 typedef ExternalFileSaver =
     Future<String?> Function(ExternalSaveRequest request);
+typedef RootDirectoryProvider = Future<Directory> Function();
 
 class LocalLedgerRepository {
   LocalLedgerRepository({
     Directory? directory,
     FlutterSecureStorage? secureStorage,
     ExternalFileSaver? externalSaver,
+    RootDirectoryProvider? rootDirectoryProvider,
   }) : _directory = directory,
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-       _externalSaver = externalSaver ?? _saveWithSystemDialog;
+       _externalSaver = externalSaver ?? _saveWithSystemDialog,
+       _rootDirectoryProvider =
+           rootDirectoryProvider ?? getApplicationDocumentsDirectory;
 
   final Directory? _directory;
   final FlutterSecureStorage _secureStorage;
   final ExternalFileSaver _externalSaver;
+  final RootDirectoryProvider _rootDirectoryProvider;
 
   static const _secretKey = 'shift_ledger_webdav_app_password';
   static const _dataFileName = 'shift_ledger_data.json';
@@ -108,7 +113,7 @@ class LocalLedgerRepository {
         mimeType: 'application/json',
       ),
     );
-    return externalPath ?? file.path;
+    return externalPath;
   }
 
   Future<String?> latestBackupPath() async {
@@ -129,27 +134,14 @@ class LocalLedgerRepository {
     return BackupService().decode(map);
   }
 
-  Future<Directory> _root() async =>
-      _directory ?? getApplicationDocumentsDirectory();
+  Future<Directory> _root() async => _directory ?? _rootDirectoryProvider();
   Future<File> _dataFile() async =>
       File('${(await _root()).path}/$_dataFileName');
   Future<Directory> _exportsDirectory() async => _directory == null
-      ? _downloadsAppDirectory()
+      ? Directory('${(await _root()).path}/exports')
       : Directory('${(await _root()).path}/exports');
-  Future<Directory> _backupsDirectory() async => _directory == null
-      ? _downloadsAppDirectory()
-      : Directory('${(await _root()).path}/backups');
-
-  Future<Directory> _downloadsAppDirectory() async {
-    final downloads = await getDownloadsDirectory();
-    if (downloads != null) {
-      return Directory('${downloads.path}/Shift Ledger');
-    }
-    if (Platform.isAndroid) {
-      return Directory('/storage/emulated/0/Download/Shift Ledger');
-    }
-    return Directory('${(await _root()).path}/Shift Ledger');
-  }
+  Future<Directory> _backupsDirectory() async =>
+      Directory('${(await _root()).path}/backups');
 
   String _timestamp() {
     final now = DateTime.now();

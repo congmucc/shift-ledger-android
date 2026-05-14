@@ -66,7 +66,7 @@ Future<int?> showLedgerMonthDayPicker(
   BuildContext context, {
   required int initialDay,
 }) async {
-  var selected = initialDay.clamp(1, 31);
+  var selected = clampInt(initialDay, 1, 31);
   return showModalBottomSheet<int>(
     context: context,
     backgroundColor: LedgerColors.paper,

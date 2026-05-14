@@ -16,6 +16,18 @@ double asDouble(Object? value, [double fallback = 0]) =>
     value is num ? value.toDouble() : double.tryParse('$value') ?? fallback;
 int asInt(Object? value, [int fallback = 0]) =>
     value is num ? value.toInt() : int.tryParse('$value') ?? fallback;
+double asNonNegativeDouble(Object? value, [double fallback = 0]) {
+  final parsed = asDouble(value, fallback);
+  return parsed < 0 ? 0 : parsed;
+}
+
+int asNonNegativeInt(Object? value, [int fallback = 0]) {
+  final parsed = asInt(value, fallback);
+  return parsed < 0 ? 0 : parsed;
+}
+
+int clampInt(int value, int minValue, int maxValue) =>
+    value.clamp(minValue, maxValue).toInt();
 
 String newId(String prefix) =>
     '${prefix}_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(99999)}';
@@ -229,7 +241,7 @@ class Adjustment {
   factory Adjustment.fromJson(Map<String, Object?> json) => Adjustment(
     id: json['id'] as String? ?? newId('adj'),
     name: json['name'] as String? ?? '补贴',
-    amount: asDouble(json['amount']),
+    amount: asNonNegativeDouble(json['amount']),
     type: AdjustmentTypeX.fromName(json['type'] as String?),
   );
 }
@@ -389,18 +401,21 @@ class PayRule {
     id: json['id'] as String? ?? newId('rule'),
     name: json['name'] as String? ?? '计薪规则',
     baseType: PayBaseTypeX.fromName(json['baseType'] as String?),
-    hourlyRate: asDouble(json['hourlyRate']),
-    dailyRate: asDouble(json['dailyRate']),
-    monthlyRate: asDouble(json['monthlyRate']),
+    hourlyRate: asNonNegativeDouble(json['hourlyRate']),
+    dailyRate: asNonNegativeDouble(json['dailyRate']),
+    monthlyRate: asNonNegativeDouble(json['monthlyRate']),
     dailyPayMode: DailyPayModeX.fromName(json['dailyPayMode'] as String?),
     effectiveFrom: parseDate(json['effectiveFrom'] ?? ymd(DateTime.now())),
     effectiveTo: parseOptionalDate(json['effectiveTo']),
-    version: asInt(json['version'], 1),
-    standardHoursPerDay: asDouble(json['standardHoursPerDay'], 8),
-    overtimeBaseHourlyRate: asDouble(json['overtimeBaseHourlyRate']),
-    overtimeThresholdHours: asDouble(json['overtimeThresholdHours'], 8),
-    overtimeMultiplier: asDouble(json['overtimeMultiplier'], 1.5),
-    restDayMultiplier: asDouble(json['restDayMultiplier'], 2),
+    version: asNonNegativeInt(json['version'], 1),
+    standardHoursPerDay: asNonNegativeDouble(json['standardHoursPerDay'], 8),
+    overtimeBaseHourlyRate: asNonNegativeDouble(json['overtimeBaseHourlyRate']),
+    overtimeThresholdHours: asNonNegativeDouble(
+      json['overtimeThresholdHours'],
+      8,
+    ),
+    overtimeMultiplier: asNonNegativeDouble(json['overtimeMultiplier'], 1.5),
+    restDayMultiplier: asNonNegativeDouble(json['restDayMultiplier'], 2),
     isDefault: json['isDefault'] == true,
   );
 }
@@ -453,12 +468,12 @@ class NightRule {
   };
 
   factory NightRule.fromJson(Map<String, Object?> json) => NightRule(
-    startMinute: asInt(json['startMinute'], 22 * 60),
-    endMinute: asInt(json['endMinute'], 6 * 60),
+    startMinute: clampInt(asInt(json['startMinute'], 22 * 60), 0, 23 * 60 + 59),
+    endMinute: clampInt(asInt(json['endMinute'], 6 * 60), 0, 23 * 60 + 59),
     mode: NightAllowanceModeX.fromName(json['mode'] as String?),
-    fixedAmount: asDouble(json['fixedAmount'], 30),
-    hourlyAmount: asDouble(json['hourlyAmount'], 5),
-    multiplier: asDouble(json['multiplier'], 1.2),
+    fixedAmount: asNonNegativeDouble(json['fixedAmount'], 30),
+    hourlyAmount: asNonNegativeDouble(json['hourlyAmount'], 5),
+    multiplier: asNonNegativeDouble(json['multiplier'], 1.2),
   );
 }
 
@@ -562,9 +577,9 @@ class ShiftTemplate {
   factory ShiftTemplate.fromJson(Map<String, Object?> json) => ShiftTemplate(
     id: json['id'] as String? ?? newId('tpl'),
     name: json['name'] as String? ?? '模板',
-    startMinute: asInt(json['startMinute'], 9 * 60),
-    endMinute: asInt(json['endMinute'], 18 * 60),
-    breakMinutes: asInt(json['breakMinutes'], 60),
+    startMinute: clampInt(asInt(json['startMinute'], 9 * 60), 0, 23 * 60 + 59),
+    endMinute: clampInt(asInt(json['endMinute'], 18 * 60), 0, 23 * 60 + 59),
+    breakMinutes: asNonNegativeInt(json['breakMinutes'], 60),
     type: EntryTypeX.fromName(json['type'] as String?),
     colorToken: json['colorToken'] as String? ?? 'work-amber',
     defaultPayRuleId: json['defaultPayRuleId'] as String?,
@@ -649,7 +664,15 @@ class WorkEntry {
 
   bool get isCrossDay => dateOnly(startDateTime) != dateOnly(endDateTime);
   double get grossHours => endDateTime.difference(startDateTime).inMinutes / 60;
-  double get netHours => max(0, grossHours - breakMinutes / 60);
+  int get effectiveBreakMinutes {
+    final grossMinutes = max(
+      0,
+      endDateTime.difference(startDateTime).inMinutes,
+    );
+    return clampInt(breakMinutes, 0, grossMinutes);
+  }
+
+  double get netHours => max(0, grossHours - effectiveBreakMinutes / 60);
   bool get isManualOvertime => type == EntryType.overtime || isRestDayOvertime;
   bool get hasNote => note.trim().isNotEmpty;
   double get allowanceTotal => adjustments
@@ -715,7 +738,7 @@ class WorkEntry {
     workDate: parseDate(json['workDate'] ?? ymd(DateTime.now())),
     startDateTime: DateTime.parse(json['startDateTime'] as String),
     endDateTime: DateTime.parse(json['endDateTime'] as String),
-    breakMinutes: asInt(json['breakMinutes']),
+    breakMinutes: asNonNegativeInt(json['breakMinutes']),
     type: EntryTypeX.fromName(json['type'] as String?),
     templateId: json['templateId'] as String?,
     locationName: json['locationName'] as String? ?? '',
@@ -759,16 +782,21 @@ class PayPeriod {
   }
 
   DateRange _monthlyStartRange(DateTime anchor) {
-    final startDay = monthStartDay.clamp(1, 28);
-    var start = DateTime(anchor.year, anchor.month, startDay);
+    final preferredDay = clampInt(monthStartDay, 1, 31);
+    var start = _dayInMonth(anchor.year, anchor.month, preferredDay);
     if (dateOnly(anchor).isBefore(start)) {
-      start = DateTime(anchor.year, anchor.month - 1, startDay);
+      start = _dayInMonth(anchor.year, anchor.month - 1, preferredDay);
     }
     return DateRange(
       start: start,
-      endExclusive: DateTime(start.year, start.month + 1, startDay),
-      label: '每月$startDay日起',
+      endExclusive: _dayInMonth(start.year, start.month + 1, preferredDay),
+      label: '每月$preferredDay日起',
     );
+  }
+
+  DateTime _dayInMonth(int year, int month, int preferredDay) {
+    final lastDay = DateTime(year, month + 1, 0).day;
+    return DateTime(year, month, clampInt(preferredDay, 1, lastDay));
   }
 
   Map<String, Object?> toJson() => {
@@ -780,7 +808,7 @@ class PayPeriod {
 
   factory PayPeriod.fromJson(Map<String, Object?> json) => PayPeriod(
     mode: PayPeriodModeX.fromName(json['mode'] as String?),
-    monthStartDay: asInt(json['monthStartDay'], 1),
+    monthStartDay: clampInt(asInt(json['monthStartDay'], 1), 1, 31),
     customStartDate: parseOptionalDate(json['customStartDate']),
     customEndDate: parseOptionalDate(json['customEndDate']),
   );
@@ -903,7 +931,7 @@ class AutoBackupConfig {
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
         lastContentHash: json['lastContentHash'] as String? ?? '',
         dailyCountDate: parseOptionalDate(json['dailyCountDate']),
-        dailySuccessCount: asInt(json['dailySuccessCount']),
+        dailySuccessCount: asNonNegativeInt(json['dailySuccessCount']),
         lastStatus: AutoBackupStatusX.fromName(json['lastStatus'] as String?),
         lastError: json['lastError'] as String? ?? '',
       );
@@ -950,31 +978,59 @@ class LedgerSnapshot {
   };
 
   factory LedgerSnapshot.fromJson(Map<String, Object?> json) => LedgerSnapshot(
-    entries: ((json['entries'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((item) => WorkEntry.fromJson(Map<String, Object?>.from(item)))
-        .toList(),
-    templates: ((json['templates'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((item) => ShiftTemplate.fromJson(Map<String, Object?>.from(item)))
-        .toList(),
-    payRules: ((json['payRules'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((item) => PayRule.fromJson(Map<String, Object?>.from(item)))
-        .toList(),
-    nightRule: NightRule.fromJson(
-      Map<String, Object?>.from(json['nightRule'] as Map? ?? {}),
+    entries: _decodeList(json['entries'], WorkEntry.fromJson),
+    templates: _decodeList(json['templates'], ShiftTemplate.fromJson),
+    payRules: _decodeList(json['payRules'], PayRule.fromJson),
+    nightRule: _decodeObject(
+      json['nightRule'],
+      NightRule.fromJson,
+      NightRule.defaults(),
     ),
-    payPeriod: PayPeriod.fromJson(
-      Map<String, Object?>.from(json['payPeriod'] as Map? ?? {}),
+    payPeriod: _decodeObject(
+      json['payPeriod'],
+      PayPeriod.fromJson,
+      const PayPeriod(),
     ),
-    webDavConfig: WebDavConfig.fromJson(
-      Map<String, Object?>.from(json['webDavConfig'] as Map? ?? {}),
+    webDavConfig: _decodeObject(
+      json['webDavConfig'],
+      WebDavConfig.fromJson,
+      const WebDavConfig(),
     ),
-    autoBackupConfig: AutoBackupConfig.fromJson(
-      Map<String, Object?>.from(json['autoBackupConfig'] as Map? ?? {}),
+    autoBackupConfig: _decodeObject(
+      json['autoBackupConfig'],
+      AutoBackupConfig.fromJson,
+      const AutoBackupConfig(),
     ),
   );
+}
+
+List<T> _decodeList<T>(
+  Object? value,
+  T Function(Map<String, Object?> json) decode,
+) => [
+  for (final item in value is List ? value : const [])
+    if (item is Map)
+      ..._decodeItem(() => decode(Map<String, Object?>.from(item))),
+];
+
+List<T> _decodeItem<T>(T Function() decode) {
+  try {
+    return [decode()];
+  } catch (_) {
+    return const [];
+  }
+}
+
+T _decodeObject<T>(
+  Object? value,
+  T Function(Map<String, Object?> json) decode,
+  T fallback,
+) {
+  try {
+    return decode(Map<String, Object?>.from(value as Map? ?? {}));
+  } catch (_) {
+    return fallback;
+  }
 }
 
 class EntryCalculation {

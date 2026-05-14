@@ -247,8 +247,11 @@ class SettingsPage extends StatelessWidget {
                   onPressed: () {
                     state.updateNightRule(
                       state.nightRule.copyWith(
-                        startMinute: (int.tryParse(start.text) ?? 22) * 60,
-                        endMinute: (int.tryParse(end.text) ?? 6) * 60,
+                        startMinute:
+                            clampInt(int.tryParse(start.text) ?? 22, 0, 23) *
+                            60,
+                        endMinute:
+                            clampInt(int.tryParse(end.text) ?? 6, 0, 23) * 60,
                       ),
                     );
                     Navigator.pop(context);
@@ -274,7 +277,7 @@ class SettingsPage extends StatelessWidget {
     var mode = state.payPeriod.mode == PayPeriodMode.customRange
         ? PayPeriodMode.monthlyStartDay
         : state.payPeriod.mode;
-    var monthStartDay = state.payPeriod.monthStartDay.clamp(1, 31);
+    var monthStartDay = clampInt(state.payPeriod.monthStartDay, 1, 31);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -339,7 +342,7 @@ class SettingsPage extends StatelessWidget {
                               context,
                               initialDay: monthStartDay,
                             );
-                            if (picked != null) {
+                            if (picked != null && context.mounted) {
                               setSheetState(() => monthStartDay = picked);
                             }
                           }
@@ -501,6 +504,7 @@ class SettingsPage extends StatelessWidget {
         ),
       );
       if (confirmed != true) return;
+      if (!context.mounted) return;
       final snapshot = await repository!.readBackup(path);
       state.restore(snapshot);
       if (!context.mounted) return;
@@ -843,7 +847,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
         name: _name.text.trim().isEmpty ? _template.name : _name.text.trim(),
         startMinute: start,
         endMinute: end,
-        breakMinutes: int.tryParse(_break.text) ?? _template.breakMinutes,
+        breakMinutes: asNonNegativeInt(_break.text, _template.breakMinutes),
         type: _type,
         defaultLocationName: _location.text.trim(),
         defaultJobTypeName: '',
@@ -891,7 +895,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   Future<void> _pickTime(TextEditingController controller) async {
     final minute = _parseTime(controller.text) ?? _template.startMinute;
     final picked = await showLedgerTimePicker(context, initialMinute: minute);
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     controller.text = _time(picked);
   }
 
@@ -1147,19 +1151,25 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
     final rule = initial.copyWith(
       name: _name.text.trim().isEmpty ? initial.name : _name.text.trim(),
       baseType: _type,
-      hourlyRate: double.tryParse(_hourly.text) ?? initial.hourlyRate,
-      dailyRate: double.tryParse(_daily.text) ?? initial.dailyRate,
-      monthlyRate: double.tryParse(_monthly.text) ?? initial.monthlyRate,
+      hourlyRate: asNonNegativeDouble(_hourly.text, initial.hourlyRate),
+      dailyRate: asNonNegativeDouble(_daily.text, initial.dailyRate),
+      monthlyRate: asNonNegativeDouble(_monthly.text, initial.monthlyRate),
       dailyPayMode: _dailyPayMode,
       effectiveFrom:
           DateTime.tryParse(_effective.text) ?? initial.effectiveFrom,
-      standardHoursPerDay:
-          double.tryParse(_standard.text) ?? initial.standardHoursPerDay,
-      overtimeMultiplier:
-          double.tryParse(_overtime.text) ?? initial.overtimeMultiplier,
-      overtimeBaseHourlyRate: double.tryParse(_overtimeBase.text) ?? 0,
-      restDayMultiplier:
-          double.tryParse(_restDayMultiplier.text) ?? initial.restDayMultiplier,
+      standardHoursPerDay: asNonNegativeDouble(
+        _standard.text,
+        initial.standardHoursPerDay,
+      ),
+      overtimeMultiplier: asNonNegativeDouble(
+        _overtime.text,
+        initial.overtimeMultiplier,
+      ),
+      overtimeBaseHourlyRate: asNonNegativeDouble(_overtimeBase.text),
+      restDayMultiplier: asNonNegativeDouble(
+        _restDayMultiplier.text,
+        initial.restDayMultiplier,
+      ),
       version: initial.version + 1,
       isDefault: true,
     );
@@ -1173,7 +1183,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
       context,
       initialDate: current ?? widget.initialRule.effectiveFrom,
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     _effective.text = ymd(picked);
   }
 }
@@ -1340,8 +1350,10 @@ class _WebDavSheetState extends State<WebDavSheet> {
             title: const Text('自动云备份'),
             subtitle: const Text('推荐 · 最小间隔 1 小时 · 每天最多 6 次'),
             onChanged: (value) {
-              final configured = _config().isConfigured;
+              final currentConfig = _config();
+              final configured = currentConfig.isConfigured;
               setState(() {
+                widget.state.updateWebDavConfig(currentConfig);
                 widget.state.updateAutoBackupConfig(
                   autoConfig.copyWith(
                     enabled: value,
@@ -1415,7 +1427,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
     await _run(() async {
       final config = _config().copyWith(lastBackupAt: DateTime.now());
       await WebDavClient().uploadBackup(
@@ -1429,7 +1441,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
 
   Future<void> _restore() async {
     final confirmed = await _confirmRestore();
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
     await _run(() async {
       final config = _config();
       final payload = await WebDavClient().downloadBackup(config);
@@ -1488,6 +1500,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
   }
 
   Future<void> _run(Future<void> Function() action) async {
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       _save(showMessage: false);
@@ -1499,9 +1512,12 @@ class _WebDavSheetState extends State<WebDavSheet> {
     }
   }
 
-  void _snack(String message) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 class _StatusLine extends StatelessWidget {

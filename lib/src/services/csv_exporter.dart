@@ -36,7 +36,7 @@ class CsvExporter {
         '收入合计',
         '备注',
       ],
-      for (final calc in summary.calculations) _row(calc),
+      for (final calc in summary.calculations) _row(calc, range),
       [],
       [
         '汇总区间',
@@ -52,15 +52,16 @@ class CsvExporter {
     return rows.map((row) => row.map(_escape).join(',')).join('\n');
   }
 
-  List<Object?> _row(EntryCalculation calc) {
+  List<Object?> _row(EntryCalculation calc, DateRange range) {
     final entry = calc.entry;
+    final netHoursInRange = calc.regularHours + calc.overtimeHours;
     return [
       ymd(entry.workDate),
       dateTimeText(entry.startDateTime),
       dateTimeText(entry.endDateTime),
       entry.isCrossDay ? '是' : '否',
-      entry.breakMinutes,
-      entry.netHours.toStringAsFixed(2),
+      _breakMinutesInRange(entry, range),
+      netHoursInRange.toStringAsFixed(2),
       calc.regularHours.toStringAsFixed(2),
       calc.overtimeHours.toStringAsFixed(2),
       calc.nightHours.toStringAsFixed(2),
@@ -75,6 +76,23 @@ class CsvExporter {
       calc.income.toStringAsFixed(2),
       entry.note,
     ];
+  }
+
+  int _breakMinutesInRange(WorkEntry entry, DateRange range) {
+    final start = entry.startDateTime.isBefore(range.start)
+        ? range.start
+        : entry.startDateTime;
+    final end = entry.endDateTime.isAfter(range.endExclusive)
+        ? range.endExclusive
+        : entry.endDateTime;
+    if (!end.isAfter(start)) return 0;
+    final grossTotalMinutes = entry.endDateTime
+        .difference(entry.startDateTime)
+        .inMinutes;
+    if (grossTotalMinutes <= 0) return 0;
+    final overlapMinutes = end.difference(start).inMinutes;
+    return (entry.effectiveBreakMinutes * overlapMinutes / grossTotalMinutes)
+        .round();
   }
 
   String _escape(Object? value) {

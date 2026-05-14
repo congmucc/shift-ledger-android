@@ -46,6 +46,10 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final summaryRule = widget.state.ruleForDate(
+      _day,
+      preferredRuleId: _segments.isEmpty ? null : _segments.first.payRuleId,
+    );
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -108,7 +112,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                     Text('计薪', style: Theme.of(context).textTheme.labelMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '${widget.state.defaultRule.name} · ${widget.state.defaultRule.baseType.label} ${widget.state.defaultRule.amountLabel}',
+                      '${summaryRule.name} · ${summaryRule.baseType.label} ${summaryRule.amountLabel}',
                       style: const TextStyle(color: LedgerColors.muted),
                     ),
                   ],
@@ -170,7 +174,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
 
   Future<void> _pickDay() async {
     final picked = await showLedgerDatePicker(context, initialDate: _day);
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     _setDay(picked);
   }
 
@@ -200,10 +204,16 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       entry.endDateTime.minute,
     );
     if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
+    final nextRule = widget.state.ruleForDate(
+      day,
+      preferredRuleId: entry.payRuleId,
+    );
     return entry.copyWith(
       workDate: dateOnly(day),
       startDateTime: start,
       endDateTime: end,
+      payRuleId: nextRule.id,
+      payRuleSnapshot: nextRule,
     );
   }
 
@@ -226,7 +236,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       builder: (context) =>
           SegmentEditorDialog(entry: entry, rules: widget.state.payRules),
     );
-    if (updated == null) return;
+    if (updated == null || !mounted) return;
     setState(() {
       final index = _segments.indexWhere((item) => item.id == entry.id);
       if (index >= 0) _segments[index] = updated;
@@ -254,7 +264,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
     setState(() => _segments.removeWhere((item) => item.id == entry.id));
   }
 
@@ -521,7 +531,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
       widget.entry.copyWith(
         startDateTime: start,
         endDateTime: end,
-        breakMinutes: int.tryParse(_break.text) ?? widget.entry.breakMinutes,
+        breakMinutes: asNonNegativeInt(_break.text, widget.entry.breakMinutes),
         type: _type,
         locationName: _location.text,
         note: _note.text,
@@ -540,7 +550,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
           (current?[0] ?? widget.entry.startDateTime.hour) * 60 +
           (current?[1] ?? widget.entry.startDateTime.minute),
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     controller.text =
         '${(picked ~/ 60).toString().padLeft(2, '0')}:${(picked % 60).toString().padLeft(2, '0')}';
   }
