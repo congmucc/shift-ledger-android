@@ -37,9 +37,11 @@ ThemeData buildLedgerTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: LedgerColors.paper,
-    fontFamily: null,
+    fontFamily: 'ShiftLedgerCJK',
     fontFamilyFallback: const [
       'PingFang SC',
+      'Hiragino Sans GB',
+      'Heiti SC',
       'Noto Sans CJK SC',
       'Noto Sans SC',
       'Microsoft YaHei',

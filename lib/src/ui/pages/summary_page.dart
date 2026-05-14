@@ -348,7 +348,7 @@ class _RangeSelector extends StatelessWidget {
                   selected: mode == item,
                   onTap: () => onModeChanged(item),
                 ),
-                if (item != '自定义') const SizedBox(width: 8),
+                if (item != '自定义') const SizedBox(width: 6),
               ],
             ],
           ),
@@ -425,7 +425,7 @@ class _RangeModePill extends StatelessWidget {
     onTap: onTap,
     child: Container(
       constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 9),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? LedgerColors.workAmberSoft : LedgerColors.surface,
@@ -439,12 +439,12 @@ class _RangeModePill extends StatelessWidget {
         children: [
           if (selected) ...[
             const Icon(Icons.check, size: 14),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
           ],
           Text(
             label,
             textScaler: cappedTextScaler(context, maxScale: 1.12),
-            style: const TextStyle(fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ],
       ),
