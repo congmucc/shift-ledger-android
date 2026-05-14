@@ -446,7 +446,8 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '总工时',
-                      value: hoursText(summary.totalHours),
+                      value:
+                          '${hoursText(summary.totalHours)}/${summary.attendanceDays}天',
                       accent: LedgerColors.warningCopper,
                     ),
                   ),
@@ -454,7 +455,7 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '收入',
-                      value: moneyText(summary.income),
+                      value: '${moneyText(summary.income)}估算',
                       accent: LedgerColors.overtimeMoss,
                     ),
                   ),
@@ -462,7 +463,8 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '加班',
-                      value: hoursText(summary.overtimeHours),
+                      value:
+                          '${hoursText(summary.overtimeHours)}/${summary.overtimeDays}天',
                       accent: LedgerColors.overtimeMoss,
                     ),
                   ),
@@ -470,7 +472,8 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '夜班',
-                      value: '${summary.nightShiftCount}次',
+                      value:
+                          '${summary.nightShiftCount}次/${hoursText(summary.nightHours)}',
                       accent: LedgerColors.nightSlate,
                     ),
                   ),
@@ -478,7 +481,7 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '备注',
-                      value: '${summary.noteDays}天',
+                      value: '${summary.noteDays}天备注',
                       accent: LedgerColors.infoBlue,
                     ),
                   ),
@@ -528,17 +531,20 @@ class _MonthStatPill extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 4),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textScaler: cappedTextScaler(context, maxScale: 1.08),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.25,
-            color: LedgerColors.ink,
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textScaler: cappedTextScaler(context, maxScale: 1.06),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.2,
+              color: LedgerColors.ink,
+            ),
           ),
         ),
       ],

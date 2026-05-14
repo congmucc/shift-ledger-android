@@ -384,6 +384,8 @@ void main() {
     expect(calendarBottom, lessThan(620));
     expect(find.text('13今'), findsOneWidget);
     expect(find.byKey(const Key('calendar-month-grid')), findsOneWidget);
+    expect(find.text('15h/2天'), findsOneWidget);
+    expect(find.text('1次/7h'), findsOneWidget);
     expect(
       find.byKey(const Key('calendar-month-summary-card')),
       findsOneWidget,
