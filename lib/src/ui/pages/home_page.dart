@@ -28,11 +28,6 @@ class HomePage extends StatelessWidget {
     final period = state.summaryFor(state.currentPayPeriod);
     return PageFrame(
       title: '今日记录',
-      trailing: IconButton(
-        onPressed: () => showEditWorkEntrySheet(context, state),
-        icon: const Icon(Icons.add_circle_outline),
-        tooltip: '新增',
-      ),
       children: [
         MetricCard(
           label: '今日已记录',
