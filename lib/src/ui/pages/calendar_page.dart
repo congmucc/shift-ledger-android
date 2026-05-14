@@ -70,15 +70,8 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
           ],
         ),
-        Text(
-          '月计 ${hoursText(summary.totalHours)} · 出勤 ${summary.attendanceDays}天 · 加班 ${hoursText(summary.overtimeHours)}',
-          key: const Key('calendar-month-compact-summary'),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: LedgerColors.muted, fontSize: 13),
-        ),
-        const SizedBox(height: 8),
+        _MonthSummaryGrid(summary: summary),
+        const SizedBox(height: 10),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(value: false, label: Text('日历')),
@@ -106,8 +99,6 @@ class _CalendarPageState extends State<CalendarPage> {
               showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
         ),
         _DayDetails(state: widget.state, day: _selectedDay),
-        const SizedBox(height: 10),
-        _MonthSummaryGrid(summary: summary),
       ],
     );
   }
@@ -395,73 +386,160 @@ class _MonthSummaryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      ('总工时', hoursText(summary.totalHours), '出勤 ${summary.attendanceDays}天'),
-      ('收入', moneyText(summary.income), '估算'),
-      ('加班', hoursText(summary.overtimeHours), '${summary.overtimeDays}天'),
-      ('夜班', '${summary.nightShiftCount}次', hoursText(summary.nightHours)),
-      ('备注', '${summary.noteDays}天', '有备注日期'),
-    ];
     return LedgerCard(
       key: const Key('calendar-month-summary-card'),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          for (final item in items)
-            _MonthStat(label: item.$1, value: item.$2, subtext: item.$3),
-        ],
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final statWidth = constraints.maxWidth >= 360
+              ? (constraints.maxWidth - 16) / 3
+              : (constraints.maxWidth - 8) / 2;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: LedgerColors.workAmberSoft.withValues(alpha: .46),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.summarize_outlined,
+                      size: 17,
+                      color: LedgerColors.warningCopper,
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    '本月一览',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium!.copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '月计 ${hoursText(summary.totalHours)} · 出勤 ${summary.attendanceDays}天 · 加班 ${hoursText(summary.overtimeHours)}',
+                      key: const Key('calendar-month-compact-summary'),
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textScaler: cappedTextScaler(context, maxScale: 1.08),
+                      style: const TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 7),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  SizedBox(
+                    width: statWidth,
+                    child: _MonthStatPill(
+                      label: '总工时',
+                      value: hoursText(summary.totalHours),
+                      accent: LedgerColors.warningCopper,
+                    ),
+                  ),
+                  SizedBox(
+                    width: statWidth,
+                    child: _MonthStatPill(
+                      label: '收入',
+                      value: moneyText(summary.income),
+                      accent: LedgerColors.overtimeMoss,
+                    ),
+                  ),
+                  SizedBox(
+                    width: statWidth,
+                    child: _MonthStatPill(
+                      label: '加班',
+                      value: hoursText(summary.overtimeHours),
+                      accent: LedgerColors.overtimeMoss,
+                    ),
+                  ),
+                  SizedBox(
+                    width: statWidth,
+                    child: _MonthStatPill(
+                      label: '夜班',
+                      value: '${summary.nightShiftCount}次',
+                      accent: LedgerColors.nightSlate,
+                    ),
+                  ),
+                  SizedBox(
+                    width: statWidth,
+                    child: _MonthStatPill(
+                      label: '备注',
+                      value: '${summary.noteDays}天',
+                      accent: LedgerColors.infoBlue,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _MonthStat extends StatelessWidget {
-  const _MonthStat({
+class _MonthStatPill extends StatelessWidget {
+  const _MonthStatPill({
     required this.label,
     required this.value,
-    required this.subtext,
+    required this.accent,
   });
 
   final String label;
   final String value;
-  final String subtext;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
     decoration: BoxDecoration(
-      color: LedgerColors.surfaceRaised,
+      color: accent.withValues(alpha: .08),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: LedgerColors.hairline),
+      border: Border.all(color: accent.withValues(alpha: .24)),
     ),
     child: Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: LedgerColors.muted,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.4,
+        _Dot(color: accent),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textScaler: cappedTextScaler(context, maxScale: 1.08),
+            style: const TextStyle(
+              color: LedgerColors.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
         const SizedBox(width: 4),
         Text(
-          subtext,
-          style: const TextStyle(color: LedgerColors.muted, fontSize: 11),
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textScaler: cappedTextScaler(context, maxScale: 1.08),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.25,
+            color: LedgerColors.ink,
+          ),
         ),
       ],
     ),

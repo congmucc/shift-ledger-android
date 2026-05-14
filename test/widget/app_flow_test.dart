@@ -384,8 +384,20 @@ void main() {
     expect(calendarBottom, lessThan(620));
     expect(find.text('13今'), findsOneWidget);
     expect(find.byKey(const Key('calendar-month-grid')), findsOneWidget);
-    await tester.scrollUntilVisible(
+    expect(
       find.byKey(const Key('calendar-month-summary-card')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .getTopLeft(find.byKey(const Key('calendar-month-summary-card')))
+          .dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('calendar-month-grid'))).dy,
+      ),
+    );
+    await tester.scrollUntilVisible(
+      find.textContaining('09:00 — 12:00'),
       320,
       scrollable: find.byType(Scrollable).first,
     );
@@ -393,14 +405,6 @@ void main() {
     expect(find.textContaining('09:00 — 12:00'), findsWidgets);
     expect(find.text('管理当天分段'), findsWidgets);
     expect(find.text('删除当天记录 / 编辑'), findsNothing);
-    expect(
-      tester.getTopLeft(find.textContaining('09:00 — 12:00').first).dy,
-      lessThan(
-        tester
-            .getTopLeft(find.byKey(const Key('calendar-month-summary-card')))
-            .dy,
-      ),
-    );
   });
 
   testWidgets(
