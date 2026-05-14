@@ -45,12 +45,93 @@ void main() {
 
     await tester.tap(find.byTooltip('编辑').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('删除当天记录'));
-    await tester.tap(find.text('删除当天记录'));
+    expect(find.text('删除当天记录'), findsNothing);
+    await tester.ensureVisible(find.text('危险操作'));
+    await tester.tap(find.text('危险操作'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('删除 2026-05-13 全部记录'));
+    await tester.tap(find.textContaining('删除 2026-05-13 全部记录'));
+    await tester.pumpAndSettle();
+    expect(find.text('删除 2026-05-13 全部记录？'), findsOneWidget);
+    expect(find.textContaining('将删除 2 段'), findsOneWidget);
     await tester.tap(find.text('确认删除'));
     await tester.pumpAndSettle();
     expect(state.entries, isEmpty);
+  });
+
+  testWidgets('day delete is hidden after moving the edit sheet date', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
+
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    expect(find.text('危险操作'), findsOneWidget);
+    await tester.ensureVisible(find.text('危险操作'));
+    await tester.tap(find.text('危险操作'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('删除 2026-05-13 全部记录'), findsOneWidget);
+    await tester.tap(find.text('明天'));
+    await tester.pumpAndSettle();
+    expect(find.text('危险操作'), findsNothing);
+    expect(find.textContaining('删除 2026-05-13 全部记录'), findsNothing);
+    await tester.tap(find.text('昨天'));
+    await tester.pumpAndSettle();
+    expect(find.text('危险操作'), findsOneWidget);
+    expect(find.textContaining('删除 2026-05-13 全部记录'), findsNothing);
+  });
+
+  testWidgets('home keeps only the three primary quick actions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('快捷操作'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.scrollUntilVisible(
+      find.text('补今天'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('快捷操作'), findsOneWidget);
+    expect(find.text('补今天'), findsOneWidget);
+    expect(find.text('查日历'), findsOneWidget);
+    expect(find.text('看汇总'), findsOneWidget);
+    expect(find.text('套用模板'), findsNothing);
+    expect(find.text('补一段'), findsNothing);
+    expect(find.text('看某一天'), findsNothing);
+    expect(find.text('导出 CSV'), findsNothing);
+
+    expect(find.text('更多'), findsOneWidget);
+    await tester.tap(find.text('更多'));
+    await tester.pumpAndSettle();
+    expect(find.text('更多操作'), findsOneWidget);
+    expect(find.text('补其他日期'), findsOneWidget);
+    expect(find.text('导出 CSV'), findsOneWidget);
+    expect(find.text('模板、备份和规则'), findsOneWidget);
+    await tester.tap(find.text('模板、备份和规则'));
+    await tester.pumpAndSettle();
+    expect(find.text('个人工时账本'), findsOneWidget);
+  });
+
+  testWidgets('empty home uses补今天 with adjustable default hint', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 13))),
+    );
+
+    expect(find.text('今天还没有记录。'), findsOneWidget);
+    expect(find.text('补今天'), findsOneWidget);
+    expect(find.textContaining('默认 09:00-18:00'), findsOneWidget);
+    expect(find.text('创建 09:00-18:00 记录'), findsNothing);
   });
 
   testWidgets('summary and settings expose export backup and WebDAV actions', (
@@ -98,6 +179,95 @@ void main() {
     );
     expect(find.text('本地备份/恢复'), findsOneWidget);
     expect(find.text('坚果云 WebDAV'), findsOneWidget);
+    expect(find.text('未连接；可配置坚果云备份'), findsOneWidget);
+    expect(find.text('最近删除'), findsOneWidget);
+    expect(find.text('没有可恢复记录'), findsOneWidget);
+  });
+
+  testWidgets('deleted day can be restored from settings recent deleted', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('危险操作'));
+    await tester.tap(find.text('危险操作'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('删除 2026-05-13 全部记录'));
+    await tester.tap(find.textContaining('删除 2026-05-13 全部记录'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认删除'));
+    await tester.pumpAndSettle();
+
+    expect(state.entriesForDay(DateTime(2026, 5, 13)), isEmpty);
+    expect(state.recentDeletedDays.length, 1);
+    expect(find.text('撤销'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('最近删除'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('1天可恢复'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find
+          .ancestor(of: find.text('最近删除'), matching: find.byType(InkWell))
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('恢复这一天'), findsOneWidget);
+    await tester.tap(find.text('恢复这一天'));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复 2026-05-13？'), findsOneWidget);
+    await tester.tap(find.text('确认恢复'));
+    await tester.pumpAndSettle();
+
+    expect(state.entriesForDay(DateTime(2026, 5, 13)).length, 2);
+    expect(state.recentDeletedDays, isEmpty);
+  });
+
+  testWidgets('settings summarizes configured backup status', (tester) async {
+    final state = LedgerState(
+      now: DateTime(2026, 5, 13),
+      webDavConfig: WebDavConfig(
+        url: 'https://dav.jianguoyun.com/dav/',
+        username: 'u@example.com',
+        appPassword: 'app-pass',
+      ),
+      autoBackupConfig: AutoBackupConfig(
+        enabled: true,
+        lastSuccessAt: DateTime(2026, 5, 14, 8, 30),
+        lastStatus: AutoBackupStatus.success,
+      ),
+    );
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('坚果云 WebDAV'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('自动备份正常；最近成功 2026-05-14 08:30'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find
+          .ancestor(of: find.text('坚果云 WebDAV'), matching: find.byType(InkWell))
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('当前状态'), findsOneWidget);
+    expect(find.textContaining('自动备份正常；最近成功 2026-05-14 08:30'), findsWidgets);
   });
 
   testWidgets(
@@ -110,7 +280,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('列表'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('普通 8h'), findsOneWidget);
+      expect(find.textContaining('普通 8h'), findsWidgets);
       expect(find.textContaining('夜班'), findsWidgets);
       expect(find.text('2026年 5月 1日 · 0 段'), findsNothing);
       expect(find.byTooltip('编辑'), findsWidgets);
@@ -174,16 +344,17 @@ void main() {
     tester,
   ) async {
     final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
-        child: ShiftLedgerApp(state: state),
-      ),
-    );
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
 
     await tester.tap(find.text('日历'));
     await tester.pumpAndSettle();
     expect(find.text('今天'), findsOneWidget);
+    expect(
+      MediaQuery.textScalerOf(tester.element(find.text('工时日历'))).scale(10),
+      20,
+    );
 
     await tester.tap(find.byTooltip('下个月'));
     await tester.pumpAndSettle();
@@ -208,10 +379,60 @@ void main() {
 
     await tester.tap(find.text('日历'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('月计 15h'), findsOneWidget);
     final calendarBottom = tester.getBottomLeft(find.text('13今')).dy;
     expect(calendarBottom, lessThan(620));
     expect(find.text('13今'), findsOneWidget);
+    expect(find.byKey(const Key('calendar-month-grid')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('calendar-month-summary-card')),
+      320,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('09:00 — 12:00'), findsWidgets);
+    expect(find.text('管理当天分段'), findsWidgets);
+    expect(find.text('删除当天记录 / 编辑'), findsNothing);
+    expect(
+      tester.getTopLeft(find.textContaining('09:00 — 12:00').first).dy,
+      lessThan(
+        tester
+            .getTopLeft(find.byKey(const Key('calendar-month-summary-card')))
+            .dy,
+      ),
+    );
   });
+
+  testWidgets(
+    'edit sheet keeps save and danger actions reachable at large text',
+    (tester) async {
+      final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      await tester.tap(find.text('＋').last);
+      await tester.pumpAndSettle();
+      expect(
+        MediaQuery.textScalerOf(
+          tester.element(find.text('新增 / 编辑工时记录')),
+        ).scale(10),
+        20,
+      );
+      await tester.ensureVisible(find.text('保存').last);
+      expect(find.text('保存'), findsWidgets);
+      await tester.ensureVisible(find.text('危险操作'));
+      expect(find.text('危险操作'), findsOneWidget);
+      await tester.tap(find.text('危险操作'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.textContaining('删除 2026-05-13 全部记录'));
+      expect(find.textContaining('删除 2026-05-13 全部记录'), findsOneWidget);
+      expect(find.text('首页'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('shift templates can carry defaults and be deleted', (
     tester,

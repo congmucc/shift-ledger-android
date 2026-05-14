@@ -32,6 +32,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   late DateTime _day;
   late DateTime _originalDay;
   late List<WorkEntry> _segments;
+  bool _showDangerActions = false;
 
   @override
   void initState() {
@@ -49,6 +50,14 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     final summaryRule = widget.state.ruleForDate(
       _day,
       preferredRuleId: _segments.isEmpty ? null : _segments.first.payRuleId,
+    );
+    final deleteTargetDay = _originalDay;
+    final canDeleteDay =
+        ymd(_day) == ymd(deleteTargetDay) &&
+        widget.state.entriesForDay(deleteTargetDay).isNotEmpty;
+    final deleteTargetEntries = widget.state.entriesForDay(deleteTargetDay);
+    final deleteTargetSummary = widget.state.summaryFor(
+      DateRange.custom(deleteTargetDay, deleteTargetDay),
     );
     return SafeArea(
       child: Padding(
@@ -144,16 +153,6 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: LedgerColors.errorBrick,
-                      ),
-                      onPressed: _confirmDeleteDay,
-                      child: const Text('删除当天记录'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
                     child: FilledButton(
                       onPressed: _save,
                       child: const Text('保存'),
@@ -161,6 +160,56 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   ),
                 ],
               ),
+              if (canDeleteDay) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: LedgerColors.errorBrick,
+                    ),
+                    onPressed: () => setState(
+                      () => _showDangerActions = !_showDangerActions,
+                    ),
+                    icon: Icon(
+                      _showDangerActions
+                          ? Icons.expand_less
+                          : Icons.warning_amber_outlined,
+                    ),
+                    label: Text(_showDangerActions ? '收起危险操作' : '危险操作'),
+                  ),
+                ),
+                if (_showDangerActions) ...[
+                  const SizedBox(height: 6),
+                  LedgerCard(
+                    color: LedgerColors.surfaceRaised,
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '只删除打开编辑时的原日期。改到其他日期后，请先保存或关闭，再回到目标日期删除。',
+                          style: TextStyle(color: LedgerColors.muted),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: LedgerColors.errorBrick,
+                            ),
+                            onPressed: _confirmDeleteDay,
+                            child: Text(
+                              '删除 ${ymd(deleteTargetDay)} 全部记录'
+                              '（${deleteTargetEntries.length}段 · ${hoursText(deleteTargetSummary.totalHours)}）',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ],
           ),
         ),
@@ -180,8 +229,10 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
 
   void _setDay(DateTime day) {
     final nextDay = dateOnly(day);
+    final changedDay = ymd(nextDay) != ymd(_day);
     setState(() {
       _day = nextDay;
+      if (changedDay) _showDangerActions = false;
       _segments = _segments
           .map((entry) => _moveEntryToDay(entry, nextDay))
           .toList();
@@ -269,11 +320,19 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _confirmDeleteDay() async {
+    final targetDay = _originalDay;
+    final entries = widget.state.entriesForDay(targetDay);
+    final summary = widget.state.summaryFor(
+      DateRange.custom(targetDay, targetDay),
+    );
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除当天记录？'),
-        content: const Text('删除后，这一天的所有分段、备注、补贴和扣款都会从汇总与 CSV 中移除。'),
+        title: Text('删除 ${ymd(targetDay)} 全部记录？'),
+        content: Text(
+          '将删除 ${entries.length} 段、合计 ${hoursText(summary.totalHours)}。'
+          '删除后，这一天的备注、补贴和扣款都会从汇总与 CSV 中移除。',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -290,8 +349,22 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    widget.state.deleteDay(_day);
+    final messenger = ScaffoldMessenger.of(context);
+    final deleted = widget.state.deleteDay(targetDay);
     Navigator.pop(context);
+    if (deleted == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          '已删除 ${ymd(deleted.day)} 全部记录'
+          '（${deleted.segmentCount}段 · ${hoursText(deleted.totalHours)}）',
+        ),
+        action: SnackBarAction(
+          label: '撤销',
+          onPressed: () => widget.state.restoreDeletedDay(deleted.id),
+        ),
+      ),
+    );
   }
 
   Future<void> _save() async {

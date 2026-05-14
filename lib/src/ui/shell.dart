@@ -29,6 +29,7 @@ class _LedgerShellState extends State<LedgerShell> {
         state: state,
         openCalendar: () => setState(() => _index = 1),
         openSummary: () => setState(() => _index = 3),
+        openSettings: () => setState(() => _index = 4),
       ),
       CalendarPage(state: state),
       SummaryPage(state: state, repository: widget.repository),

@@ -142,6 +142,7 @@ class AutoBackupService {
         payPeriod: snapshot.payPeriod,
         webDavConfig: snapshot.webDavConfig,
         autoBackupConfig: config,
+        recentDeletedDays: snapshot.recentDeletedDays,
       ),
     );
   }

@@ -70,8 +70,15 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
           ],
         ),
-        _MonthSummaryGrid(summary: summary),
-        const SizedBox(height: 10),
+        Text(
+          '月计 ${hoursText(summary.totalHours)} · 出勤 ${summary.attendanceDays}天 · 加班 ${hoursText(summary.overtimeHours)}',
+          key: const Key('calendar-month-compact-summary'),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: LedgerColors.muted, fontSize: 13),
+        ),
+        const SizedBox(height: 8),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(value: false, label: Text('日历')),
@@ -99,6 +106,8 @@ class _CalendarPageState extends State<CalendarPage> {
               showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
         ),
         _DayDetails(state: widget.state, day: _selectedDay),
+        const SizedBox(height: 10),
+        _MonthSummaryGrid(summary: summary),
       ],
     );
   }
@@ -220,6 +229,7 @@ class _MonthGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LedgerCard(
+      key: const Key('calendar-month-grid'),
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
       child: Column(
         children: [
@@ -393,6 +403,7 @@ class _MonthSummaryGrid extends StatelessWidget {
       ('备注', '${summary.noteDays}天', '有备注日期'),
     ];
     return LedgerCard(
+      key: const Key('calendar-month-summary-card'),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Wrap(
         spacing: 6,
@@ -740,7 +751,7 @@ class _DayDetails extends StatelessWidget {
         ],
         OutlinedButton(
           onPressed: () => showEditWorkEntrySheet(context, state, day: day),
-          child: const Text('删除当天记录 / 编辑'),
+          child: const Text('管理当天分段'),
         ),
       ],
     );

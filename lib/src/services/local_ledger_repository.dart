@@ -60,6 +60,7 @@ class LocalLedgerRepository {
       payPeriod: snapshot.payPeriod,
       webDavConfig: snapshot.webDavConfig.copyWith(appPassword: password),
       autoBackupConfig: snapshot.autoBackupConfig,
+      recentDeletedDays: snapshot.recentDeletedDays,
     );
   }
 

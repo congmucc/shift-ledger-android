@@ -20,6 +20,10 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rule = state.defaultRule;
+    final backupStatus = _backupStatusDisplay(
+      webDavConfig: state.webDavConfig,
+      autoConfig: state.autoBackupConfig,
+    );
     return PageFrame(
       title: '设置',
       children: [
@@ -94,11 +98,15 @@ class SettingsPage extends StatelessWidget {
               ),
               SettingTile(
                 title: '坚果云 WebDAV',
-                subtitle: state.webDavConfig.isConfigured
-                    ? '${state.webDavConfig.username} · ${state.webDavConfig.remotePath}'
-                    : '恢复后需重新授权',
+                subtitle: backupStatus.summary,
                 trailing: '连接',
                 onTap: () => showWebDavSheet(context, state),
+              ),
+              SettingTile(
+                title: '最近删除',
+                subtitle: _recentDeletedSubtitle(),
+                trailing: state.recentDeletedDays.isEmpty ? null : '恢复',
+                onTap: () => _showRecentlyDeletedSheet(context),
               ),
             ],
           ),
@@ -518,6 +526,123 @@ class SettingsPage extends StatelessWidget {
         ).showSnackBar(const SnackBar(content: Text('读取本地备份失败，请确认备份文件仍可访问')));
       }
     }
+  }
+
+  Future<void> _showRecentlyDeletedSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: LedgerColors.paper,
+      builder: (context) {
+        final deletedDays = state.recentDeletedDays;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('最近删除', style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 8),
+                const Text(
+                  '用于找回误删的整天记录；恢复会把删除的分段放回原日期，不覆盖后来新增记录。',
+                  style: TextStyle(color: LedgerColors.muted),
+                ),
+                const SizedBox(height: 12),
+                if (deletedDays.isEmpty)
+                  const LedgerCard(
+                    color: LedgerColors.surfaceRaised,
+                    child: Text('没有可恢复记录。'),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: deletedDays.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final item = deletedDays[index];
+                        return LedgerCard(
+                          color: LedgerColors.surfaceRaised,
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${ymd(item.day)} · ${item.segmentCount}段 · ${hoursText(item.totalHours)}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '删除于 ${dateTimeText(item.deletedAt)}',
+                                style: const TextStyle(
+                                  color: LedgerColors.muted,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: FilledButton(
+                                  onPressed: () =>
+                                      _confirmRestoreDeletedDay(context, item),
+                                  child: const Text('恢复这一天'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmRestoreDeletedDay(
+    BuildContext context,
+    DeletedDayRecord item,
+  ) async {
+    final existingCount = state.entriesForDay(item.day).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('恢复 ${ymd(item.day)}？'),
+        content: Text(
+          existingCount == 0
+              ? '会恢复 ${item.segmentCount} 段、合计 ${hoursText(item.totalHours)}。'
+              : '这一天现在已有 $existingCount 段。恢复会把删除的 ${item.segmentCount} 段合并回来，不覆盖现有记录。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认恢复'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final restored = state.restoreDeletedDay(item.id);
+    if (!context.mounted) return;
+    Navigator.pop(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(restored ? '已恢复 ${ymd(item.day)}' : '这条删除记录已不可恢复'),
+      ),
+    );
+  }
+
+  String _recentDeletedSubtitle() {
+    if (state.recentDeletedDays.isEmpty) return '没有可恢复记录';
+    final latest = state.recentDeletedDays.first;
+    return '${state.recentDeletedDays.length}天可恢复，最近 ${ymd(latest.day)} · ${latest.segmentCount}段';
   }
 
   String _time(int minutes) =>
@@ -1197,6 +1322,69 @@ Future<void> showWebDavSheet(BuildContext context, LedgerState state) {
   );
 }
 
+class _BackupStatusDisplay {
+  const _BackupStatusDisplay({required this.summary, required this.detail});
+
+  final String summary;
+  final String detail;
+}
+
+_BackupStatusDisplay _backupStatusDisplay({
+  required WebDavConfig webDavConfig,
+  required AutoBackupConfig autoConfig,
+}) {
+  if (!webDavConfig.isConfigured) {
+    final hasPartialConfig =
+        webDavConfig.url.isNotEmpty || webDavConfig.username.isNotEmpty;
+    return _BackupStatusDisplay(
+      summary: hasPartialConfig ? '需重新授权或补全配置' : '未连接；可配置坚果云备份',
+      detail: hasPartialConfig ? 'WebDAV 信息不完整，自动备份不会运行。' : '还没有连接坚果云。',
+    );
+  }
+  if (!autoConfig.enabled) {
+    return _BackupStatusDisplay(
+      summary: '已连接；未开启自动备份',
+      detail: '${webDavConfig.username} · ${webDavConfig.remotePath}',
+    );
+  }
+  return switch (autoConfig.lastStatus) {
+    AutoBackupStatus.success => _BackupStatusDisplay(
+      summary: autoConfig.lastSuccessAt == null
+          ? '自动备份正常'
+          : '自动备份正常；最近成功 ${dateTimeText(autoConfig.lastSuccessAt!)}',
+      detail: '云端文件 ${autoConfig.remotePath}',
+    ),
+    AutoBackupStatus.skipped => _BackupStatusDisplay(
+      summary: '内容未变化，已跳过',
+      detail: autoConfig.lastAttemptAt == null
+          ? '自动备份已开启。'
+          : '最近检查 ${dateTimeText(autoConfig.lastAttemptAt!)}',
+    ),
+    AutoBackupStatus.waiting => _BackupStatusDisplay(
+      summary: autoConfig.lastSuccessAt == null
+          ? '自动备份等待中'
+          : '等待下次自动备份；最近成功 ${dateTimeText(autoConfig.lastSuccessAt!)}',
+      detail: '最小间隔 1 小时，每天最多 6 次。',
+    ),
+    AutoBackupStatus.configIncomplete => const _BackupStatusDisplay(
+      summary: '需重新授权或补全配置',
+      detail: '自动备份已开启，但 WebDAV 配置不完整。',
+    ),
+    AutoBackupStatus.failed => _BackupStatusDisplay(
+      summary: autoConfig.lastError.isEmpty
+          ? '最近自动备份失败'
+          : '最近失败：${autoConfig.lastError}',
+      detail: autoConfig.lastAttemptAt == null
+          ? '请检查账号、应用授权密码和网络。'
+          : '失败时间 ${dateTimeText(autoConfig.lastAttemptAt!)}',
+    ),
+    AutoBackupStatus.idle => const _BackupStatusDisplay(
+      summary: '自动备份已开；等待首次备份',
+      detail: '打开 App 或账本变化后会自动检查。',
+    ),
+  };
+}
+
 class WebDavSheet extends StatefulWidget {
   const WebDavSheet({super.key, required this.state});
   final LedgerState state;
@@ -1336,6 +1524,10 @@ class _WebDavSheetState extends State<WebDavSheet> {
   Widget _buildAutoBackupSection(BuildContext context) {
     final autoConfig = widget.state.autoBackupConfig;
     final displayStatus = _displayAutoBackupStatus();
+    final backupStatus = _backupStatusDisplay(
+      webDavConfig: _config(),
+      autoConfig: autoConfig.copyWith(lastStatus: displayStatus),
+    );
     return Container(
       decoration: BoxDecoration(
         color: LedgerColors.surfaceRaised,
@@ -1374,6 +1566,8 @@ class _WebDavSheetState extends State<WebDavSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const _StatusLine(label: '打开 App 后自动检查', value: '已启用，开启后生效'),
+                _StatusLine(label: '当前状态', value: backupStatus.summary),
+                _StatusLine(label: '状态说明', value: backupStatus.detail),
                 _StatusLine(
                   label: '云端文件',
                   value: widget.state.autoBackupConfig.remotePath,

@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
 import 'package:shift_ledger/src/services/auto_backup_service.dart';
+import 'package:shift_ledger/src/services/backup_service.dart';
 
 void main() {
   group('AutoBackupService', () {
@@ -151,6 +154,34 @@ void main() {
       expect(result.lastStatus, AutoBackupStatus.failed);
       expect(result.lastAttemptAt, now);
       expect(result.lastError, contains('network boom'));
+    });
+
+    test('automatic backup preserves recent deleted restore points', () async {
+      final upload = _UploadSpy();
+      final now = DateTime(2026, 5, 13, 9);
+      final state = LedgerState.seeded(now: now)
+        ..updateWebDavConfig(
+          const WebDavConfig(
+            url: 'https://dav.jianguoyun.com/dav/',
+            username: 'user@example.com',
+            appPassword: 'secret-app-password',
+            remotePath: 'manual-backup.json',
+          ),
+        )
+        ..updateAutoBackupConfig(const AutoBackupConfig(enabled: true));
+      state.deleteDay(now);
+
+      await AutoBackupService(
+        uploader: upload.call,
+        nowProvider: () => now,
+      ).run(state: state);
+
+      final snapshot = BackupService().decode(
+        jsonDecode(upload.calls.single.payload) as Map<String, Object?>,
+      );
+      expect(snapshot.recentDeletedDays, hasLength(1));
+      expect(snapshot.recentDeletedDays.single.segmentCount, 2);
+      expect(snapshot.webDavConfig.appPassword, isEmpty);
     });
   });
 }

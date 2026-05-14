@@ -13,6 +13,7 @@ class LedgerState extends ChangeNotifier {
     PayPeriod? payPeriod,
     WebDavConfig? webDavConfig,
     AutoBackupConfig? autoBackupConfig,
+    List<DeletedDayRecord>? recentDeletedDays,
   }) : now = dateOnly(now),
        entries = entries ?? [],
        payRules = _safePayRules(payRules),
@@ -20,7 +21,8 @@ class LedgerState extends ChangeNotifier {
        nightRule = nightRule ?? NightRule.defaults(),
        payPeriod = payPeriod ?? const PayPeriod(),
        webDavConfig = webDavConfig ?? const WebDavConfig(),
-       autoBackupConfig = autoBackupConfig ?? const AutoBackupConfig();
+       autoBackupConfig = autoBackupConfig ?? const AutoBackupConfig(),
+       recentDeletedDays = recentDeletedDays ?? [];
 
   static List<PayRule> _safePayRules(List<PayRule>? rules) {
     if (rules != null && rules.isNotEmpty) return rules;
@@ -118,6 +120,7 @@ class LedgerState extends ChangeNotifier {
         payPeriod: snapshot.payPeriod,
         webDavConfig: snapshot.webDavConfig,
         autoBackupConfig: snapshot.autoBackupConfig,
+        recentDeletedDays: snapshot.recentDeletedDays,
       );
 
   final DateTime now;
@@ -128,6 +131,7 @@ class LedgerState extends ChangeNotifier {
   PayPeriod payPeriod;
   WebDavConfig webDavConfig;
   AutoBackupConfig autoBackupConfig;
+  List<DeletedDayRecord> recentDeletedDays;
 
   DateRange get currentMonth => DateRange.month(now.year, now.month);
   DateRange get currentPayPeriod => payPeriod.rangeFor(now);
@@ -223,10 +227,42 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteDay(DateTime day) {
+  DeletedDayRecord? deleteDay(DateTime day) {
     final key = ymd(day);
+    final removedEntries = entriesForDay(day);
+    if (removedEntries.isEmpty) return null;
+    final deleted = DeletedDayRecord(
+      id: newId('deleted_day'),
+      day: dateOnly(day),
+      deletedAt: DateTime.now(),
+      entries: removedEntries,
+    );
     entries = entries.where((entry) => ymd(entry.workDate) != key).toList();
+    recentDeletedDays = [
+      deleted,
+      for (final item in recentDeletedDays)
+        if (ymd(item.day) != key) item,
+    ].take(5).toList();
     notifyListeners();
+    return deleted;
+  }
+
+  bool restoreDeletedDay(String id) {
+    final index = recentDeletedDays.indexWhere((item) => item.id == id);
+    if (index < 0) return false;
+    final restorePoint = recentDeletedDays[index];
+    final restoredIds = restorePoint.entries.map((entry) => entry.id).toSet();
+    entries = [
+      for (final entry in entries)
+        if (!restoredIds.contains(entry.id)) entry,
+      ...restorePoint.entries,
+    ]..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    recentDeletedDays = [
+      for (var i = 0; i < recentDeletedDays.length; i++)
+        if (i != index) recentDeletedDays[i],
+    ];
+    notifyListeners();
+    return true;
   }
 
   void replaceDayEntries(
@@ -337,6 +373,7 @@ class LedgerState extends ChangeNotifier {
     payPeriod = snapshot.payPeriod;
     webDavConfig = snapshot.webDavConfig.sanitized();
     autoBackupConfig = snapshot.autoBackupConfig;
+    recentDeletedDays = snapshot.recentDeletedDays;
     notifyListeners();
   }
 
@@ -348,5 +385,6 @@ class LedgerState extends ChangeNotifier {
     payPeriod: payPeriod,
     webDavConfig: webDavConfig,
     autoBackupConfig: autoBackupConfig,
+    recentDeletedDays: recentDeletedDays,
   );
 }

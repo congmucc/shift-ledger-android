@@ -12,10 +12,12 @@ class HomePage extends StatelessWidget {
     required this.state,
     required this.openCalendar,
     required this.openSummary,
+    required this.openSettings,
   });
   final LedgerState state;
   final VoidCallback openCalendar;
   final VoidCallback openSummary;
+  final VoidCallback openSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,12 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 8),
                 FilledButton(
                   onPressed: () => showEditWorkEntrySheet(context, state),
-                  child: const Text('创建 09:00-18:00 记录'),
+                  child: const Text('补今天'),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '会先带出默认 09:00-18:00，可在保存前调整。',
+                  style: TextStyle(color: LedgerColors.muted),
                 ),
               ],
             ),
@@ -66,7 +73,7 @@ class HomePage extends StatelessWidget {
           ],
         SectionHeader(
           title: '本周期进度',
-          actionLabel: '看汇总',
+          actionLabel: '查看汇总',
           onAction: openSummary,
         ),
         LedgerCard(
@@ -92,26 +99,84 @@ class HomePage extends StatelessWidget {
             ],
           ),
         ),
-        const SectionHeader(title: '快捷操作'),
+        SectionHeader(
+          title: '快捷操作',
+          actionLabel: '更多',
+          onAction: () => _showMoreActions(context),
+        ),
         Wrap(
           spacing: 10,
           runSpacing: 10,
           children: [
             ActionChip(label: const Text('查日历'), onPressed: openCalendar),
             ActionChip(
-              label: const Text('套用模板'),
-              onPressed: () => showEditWorkEntrySheet(context, state),
-            ),
-            ActionChip(
-              label: const Text('补一段'),
+              label: const Text('补今天'),
               onPressed: () =>
                   showEditWorkEntrySheet(context, state, day: state.now),
             ),
-            ActionChip(label: const Text('看某一天'), onPressed: openCalendar),
-            ActionChip(label: const Text('导出 CSV'), onPressed: openSummary),
+            ActionChip(label: const Text('看汇总'), onPressed: openSummary),
           ],
         ),
       ],
+    );
+  }
+
+  void _showMoreActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: LedgerColors.paper,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('更多操作', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
+              const Text(
+                '低频入口不放在首页主按钮里，避免打断今天记录。',
+                style: TextStyle(color: LedgerColors.muted),
+              ),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                child: Column(
+                  children: [
+                    SettingTile(
+                      title: '补其他日期',
+                      subtitle: '去日历选择日期后补一段',
+                      trailing: '日历',
+                      onTap: () {
+                        Navigator.pop(context);
+                        openCalendar();
+                      },
+                    ),
+                    SettingTile(
+                      title: '导出 CSV',
+                      subtitle: '去汇总页导出当前统计明细',
+                      trailing: '汇总',
+                      onTap: () {
+                        Navigator.pop(context);
+                        openSummary();
+                      },
+                    ),
+                    SettingTile(
+                      title: '模板、备份和规则',
+                      subtitle: '去设置管理班次模板、计薪规则和备份',
+                      trailing: '设置',
+                      onTap: () {
+                        Navigator.pop(context);
+                        openSettings();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

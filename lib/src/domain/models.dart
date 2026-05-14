@@ -937,6 +937,39 @@ class AutoBackupConfig {
       );
 }
 
+class DeletedDayRecord {
+  const DeletedDayRecord({
+    required this.id,
+    required this.day,
+    required this.deletedAt,
+    required this.entries,
+  });
+
+  final String id;
+  final DateTime day;
+  final DateTime deletedAt;
+  final List<WorkEntry> entries;
+
+  int get segmentCount => entries.length;
+  double get totalHours =>
+      entries.fold(0, (total, entry) => total + entry.netHours);
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'day': ymd(day),
+    'deletedAt': deletedAt.toIso8601String(),
+    'entries': entries.map((entry) => entry.toJson()).toList(),
+  };
+
+  factory DeletedDayRecord.fromJson(Map<String, Object?> json) =>
+      DeletedDayRecord(
+        id: json['id'] as String? ?? newId('deleted_day'),
+        day: parseDate(json['day']),
+        deletedAt: parseOptionalDate(json['deletedAt']) ?? DateTime.now(),
+        entries: _decodeList(json['entries'], WorkEntry.fromJson),
+      );
+}
+
 class LedgerSnapshot {
   const LedgerSnapshot({
     required this.entries,
@@ -946,6 +979,7 @@ class LedgerSnapshot {
     required this.payPeriod,
     required this.webDavConfig,
     this.autoBackupConfig = const AutoBackupConfig(),
+    this.recentDeletedDays = const [],
   });
 
   final List<WorkEntry> entries;
@@ -955,6 +989,7 @@ class LedgerSnapshot {
   final PayPeriod payPeriod;
   final WebDavConfig webDavConfig;
   final AutoBackupConfig autoBackupConfig;
+  final List<DeletedDayRecord> recentDeletedDays;
 
   LedgerSnapshot sanitizedForBackup() => LedgerSnapshot(
     entries: entries,
@@ -964,6 +999,7 @@ class LedgerSnapshot {
     payPeriod: payPeriod,
     webDavConfig: webDavConfig.sanitized(),
     autoBackupConfig: autoBackupConfig,
+    recentDeletedDays: recentDeletedDays,
   );
 
   Map<String, Object?> toJson({bool includeSecrets = false}) => {
@@ -975,6 +1011,7 @@ class LedgerSnapshot {
     'payPeriod': payPeriod.toJson(),
     'webDavConfig': webDavConfig.toJson(includeSecret: includeSecrets),
     'autoBackupConfig': autoBackupConfig.toJson(),
+    'recentDeletedDays': recentDeletedDays.map((day) => day.toJson()).toList(),
   };
 
   factory LedgerSnapshot.fromJson(Map<String, Object?> json) => LedgerSnapshot(
@@ -1000,6 +1037,10 @@ class LedgerSnapshot {
       json['autoBackupConfig'],
       AutoBackupConfig.fromJson,
       const AutoBackupConfig(),
+    ),
+    recentDeletedDays: _decodeList(
+      json['recentDeletedDays'],
+      DeletedDayRecord.fromJson,
     ),
   );
 }
