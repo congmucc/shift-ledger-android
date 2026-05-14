@@ -36,6 +36,14 @@ ThemeData buildLedgerTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: LedgerColors.paper,
     fontFamily: null,
+    fontFamilyFallback: const [
+      'PingFang SC',
+      'Noto Sans CJK SC',
+      'Noto Sans SC',
+      'Microsoft YaHei',
+      'Arial Unicode MS',
+      'sans-serif',
+    ],
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
         fontSize: 28,
