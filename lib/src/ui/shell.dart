@@ -45,77 +45,87 @@ class _LedgerShellState extends State<LedgerShell> {
         minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         child: SizedBox(
           height: 96,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: LedgerColors.surface,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: LedgerColors.hairline),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x1A5D3E1E),
-                  blurRadius: 24,
-                  offset: Offset(0, 12),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: ledgerContentMaxWidth,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                _NavButton(
-                  label: '首页',
-                  icon: Icons.home_outlined,
-                  selected: _index == 0,
-                  onTap: () => setState(() => _index = 0),
+                decoration: BoxDecoration(
+                  color: LedgerColors.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: LedgerColors.hairline),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A5D3E1E),
+                      blurRadius: 24,
+                      offset: Offset(0, 12),
+                    ),
+                  ],
                 ),
-                _NavButton(
-                  label: '日历',
-                  icon: Icons.calendar_month_outlined,
-                  selected: _index == 1,
-                  onTap: () => setState(() => _index = 1),
-                ),
-                Expanded(
-                  child: Center(
-                    child: Semantics(
-                      button: true,
-                      label: '新增工时记录',
-                      child: InkWell(
-                        onTap: () => showEditWorkEntrySheet(context, state),
-                        borderRadius: BorderRadius.circular(99),
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: const BoxDecoration(
-                            color: LedgerColors.charcoal,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '＋',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
+                child: Row(
+                  children: [
+                    _NavButton(
+                      label: '首页',
+                      icon: Icons.home_outlined,
+                      selected: _index == 0,
+                      onTap: () => setState(() => _index = 0),
+                    ),
+                    _NavButton(
+                      label: '日历',
+                      icon: Icons.calendar_month_outlined,
+                      selected: _index == 1,
+                      onTap: () => setState(() => _index = 1),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Semantics(
+                          button: true,
+                          label: '新增工时记录',
+                          child: InkWell(
+                            onTap: () => showEditWorkEntrySheet(context, state),
+                            borderRadius: BorderRadius.circular(99),
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              decoration: const BoxDecoration(
+                                color: LedgerColors.charcoal,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  '＋',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                    _NavButton(
+                      label: '汇总',
+                      icon: Icons.query_stats_outlined,
+                      selected: _index == 3,
+                      onTap: () => setState(() => _index = 3),
+                    ),
+                    _NavButton(
+                      label: '设置',
+                      icon: Icons.tune_outlined,
+                      selected: _index == 4,
+                      onTap: () => setState(() => _index = 4),
+                    ),
+                  ],
                 ),
-                _NavButton(
-                  label: '汇总',
-                  icon: Icons.query_stats_outlined,
-                  selected: _index == 3,
-                  onTap: () => setState(() => _index = 3),
-                ),
-                _NavButton(
-                  label: '设置',
-                  icon: Icons.tune_outlined,
-                  selected: _index == 4,
-                  onTap: () => setState(() => _index = 4),
-                ),
-              ],
+              ),
             ),
           ),
         ),

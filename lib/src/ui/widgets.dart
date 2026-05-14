@@ -26,23 +26,30 @@ class PageFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final sidePadding = constraints.maxWidth > ledgerContentMaxWidth
+              ? (constraints.maxWidth - ledgerContentMaxWidth) / 2 + 16
+              : 16.0;
+          return ListView(
+            padding: EdgeInsets.fromLTRB(sidePadding, 18, sidePadding, 120),
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
+                  ),
+                  ?trailing,
+                ],
               ),
-              ?trailing,
+              const SizedBox(height: 16),
+              ...children,
             ],
-          ),
-          const SizedBox(height: 16),
-          ...children,
-        ],
+          );
+        },
       ),
     );
   }

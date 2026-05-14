@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const double ledgerContentMaxWidth = 960;
+
 class LedgerColors {
   static const paper = Color(0xFFF8F1E7);
   static const surface = Color(0xFFFFFCF6);
