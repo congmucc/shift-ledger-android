@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
+import 'package:shift_ledger/src/domain/models.dart';
 
 void main() {
   testWidgets('main navigation exposes home calendar add summary settings', (
@@ -33,7 +34,7 @@ void main() {
     expect(state.entries.length, 1);
     expect(find.textContaining('09:00 — 18:00'), findsWidgets);
 
-    await tester.tap(find.text('编辑').first);
+    await tester.tap(find.byTooltip('编辑').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('新增分段'));
     await tester.pumpAndSettle();
@@ -42,7 +43,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(state.entries.length, 2);
 
-    await tester.tap(find.text('编辑').first);
+    await tester.tap(find.byTooltip('编辑').first);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('删除当天记录'));
     await tester.tap(find.text('删除当天记录'));
@@ -63,11 +64,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('工时汇总'), findsOneWidget);
     expect(find.text('CSV'), findsWidgets);
+    expect(find.text('范围'), findsOneWidget);
     await tester.tap(find.text('查看明细'));
     await tester.pumpAndSettle();
     expect(find.text('全部明细'), findsOneWidget);
+    expect(find.textContaining('2026年 5月 13日'), findsOneWidget);
+    expect(find.textContaining('来源'), findsNothing);
+    expect(find.text('编辑'), findsWidgets);
+    expect(find.text('展开明细'), findsWidgets);
+    await tester.tap(find.text('展开明细').first);
+    await tester.pumpAndSettle();
+    expect(find.text('收起明细'), findsOneWidget);
+    expect(find.textContaining('09:00'), findsWidgets);
     await tester.tap(find.text('关闭').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('自定义'));
+    await tester.pumpAndSettle();
+    expect(find.text('改开始'), findsNothing);
+    expect(find.text('改结束'), findsNothing);
     await tester.tap(find.text('CSV'));
     await tester.pumpAndSettle();
     expect(find.text('导出 CSV？'), findsOneWidget);
@@ -98,7 +112,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('普通 8h'), findsOneWidget);
       expect(find.textContaining('夜班'), findsWidgets);
-      expect(find.text('编辑'), findsWidgets);
+      expect(find.text('2026年 5月 1日 · 0 段'), findsNothing);
+      expect(find.byTooltip('编辑'), findsWidgets);
 
       await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
@@ -109,6 +124,10 @@ void main() {
       expect(find.text('保存模板'), findsOneWidget);
       expect(find.text('模板名称'), findsOneWidget);
       await tester.enterText(find.widgetWithText(TextField, '模板名称'), '白班');
+      expect(find.text('地点/岗位默认值'), findsOneWidget);
+      expect(find.text('默认补贴'), findsOneWidget);
+      expect(find.text('默认扣款'), findsOneWidget);
+      await tester.ensureVisible(find.text('保存模板'));
       await tester.tap(find.text('保存模板'));
       await tester.pumpAndSettle();
       expect(state.templates.first.name, '白班');
@@ -174,5 +193,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('2026 年 5 月'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('summary and calendar stay dense at normal text scale', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('汇总'));
+    await tester.pumpAndSettle();
+    final summaryBottom = tester.getBottomLeft(find.text('按天查看')).dy;
+    expect(summaryBottom, lessThan(700));
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    final calendarBottom = tester.getBottomLeft(find.text('13今')).dy;
+    expect(calendarBottom, lessThan(620));
+    expect(find.text('13今'), findsOneWidget);
+  });
+
+  testWidgets('shift templates can carry defaults and be deleted', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+    state.updateShiftTemplate(
+      ShiftTemplate.standard(
+        payRuleId: state.defaultRule.id,
+      ).copyWith(id: 'tpl_custom', name: '周末店班'),
+    );
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('班次模板'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(DropdownButtonFormField<ShiftTemplate>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('周末店班').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '地点/岗位默认值'), '南山店');
+    await tester.enterText(find.widgetWithText(TextField, '默认补贴'), '0');
+    await tester.enterText(find.widgetWithText(TextField, '默认扣款'), '5');
+    await tester.ensureVisible(find.text('保存模板'));
+    await tester.tap(find.text('保存模板'));
+    await tester.pumpAndSettle();
+
+    final entry = state.createTemplateEntry(
+      day: DateTime(2026, 5, 14),
+      template: state.templates.firstWhere((tpl) => tpl.id == 'tpl_custom'),
+    );
+    expect(entry.locationName, '南山店');
+    expect(entry.allowanceTotal, 0);
+    expect(entry.deductionTotal, 5);
+
+    await tester.tap(find.text('班次模板'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<ShiftTemplate>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('周末店班').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('删除模板'));
+    await tester.tap(find.text('删除模板'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认删除'));
+    await tester.pumpAndSettle();
+    expect(state.templates.any((tpl) => tpl.id == 'tpl_custom'), isFalse);
   });
 }

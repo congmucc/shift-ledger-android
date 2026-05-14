@@ -154,7 +154,7 @@ class WorkEntryTile extends StatelessWidget {
         : LedgerColors.workAmberSoft;
     final chipText = isNight ? Colors.white : LedgerColors.ink;
     return LedgerCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -162,17 +162,16 @@ class WorkEntryTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
-                    Text(
-                      entry.timeRangeLabel,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(width: 8),
+                    Text(entry.timeRangeLabel, style: _timeStyle(context)),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 4,
+                        horizontal: 8,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: chipColor,
@@ -181,47 +180,92 @@ class WorkEntryTile extends StatelessWidget {
                       child: Text(
                         entry.type.label,
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
                           color: chipText,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: LedgerColors.surfaceSoft.withValues(alpha: .74),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        hoursText(entry.netHours),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: LedgerColors.ink,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    if (entry.locationName.isNotEmpty) entry.locationName,
-                    '休 ${entry.breakMinutes} 分钟',
-                    if (entry.allowanceTotal > 0)
-                      '补贴 ${moneyText(entry.allowanceTotal)}',
-                    if (entry.deductionTotal > 0)
-                      '扣款 ${moneyText(entry.deductionTotal)}',
-                    if (entry.note.isNotEmpty) '备注：${entry.note}',
-                  ].join(' · '),
-                  style: const TextStyle(color: LedgerColors.muted),
-                ),
+                if (_metaText.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    _metaText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: LedgerColors.muted,
+                      fontSize: 13,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                hoursText(entry.netHours),
-                style: Theme.of(context).textTheme.titleMedium,
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                tooltip: '编辑',
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 20),
               ),
-              TextButton(onPressed: onEdit, child: const Text('编辑')),
               if (onDelete != null)
-                TextButton(onPressed: onDelete, child: const Text('删除本段')),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(44, 32),
+                    padding: EdgeInsets.zero,
+                    foregroundColor: LedgerColors.errorBrick,
+                  ),
+                  onPressed: onDelete,
+                  child: const Text('删除'),
+                ),
             ],
           ),
         ],
       ),
     );
   }
+
+  TextStyle _timeStyle(BuildContext context) =>
+      Theme.of(context).textTheme.titleMedium!.copyWith(
+        fontSize: 16,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  String get _metaText => [
+    if (entry.locationName.isNotEmpty) entry.locationName,
+    if (entry.jobTypeName.isNotEmpty) entry.jobTypeName,
+    if (entry.breakMinutes > 0) '休 ${entry.breakMinutes} 分钟',
+    if (entry.allowanceTotal > 0) '补贴 ${moneyText(entry.allowanceTotal)}',
+    if (entry.deductionTotal > 0) '扣款 ${moneyText(entry.deductionTotal)}',
+    if (entry.note.isNotEmpty) '备注：${entry.note}',
+  ].join(' · ');
 }
 
 class SectionHeader extends StatelessWidget {

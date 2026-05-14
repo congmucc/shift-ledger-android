@@ -44,9 +44,8 @@ class _CalendarPageState extends State<CalendarPage> {
           children: [
             IconButton(
               tooltip: '上个月',
-              onPressed: () => _selectMonth(
-                DateTime(_month.year, _month.month - 1),
-              ),
+              onPressed: () =>
+                  _selectMonth(DateTime(_month.year, _month.month - 1)),
               icon: const Icon(Icons.chevron_left),
             ),
             Expanded(
@@ -65,9 +64,8 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
             IconButton(
               tooltip: '下个月',
-              onPressed: () => _selectMonth(
-                DateTime(_month.year, _month.month + 1),
-              ),
+              onPressed: () =>
+                  _selectMonth(DateTime(_month.year, _month.month + 1)),
               icon: const Icon(Icons.chevron_right),
             ),
           ],
@@ -121,7 +119,8 @@ class _CalendarPageState extends State<CalendarPage> {
     final targetMonth = DateTime(month.year, month.month);
     _month = targetMonth;
     final today = dateOnly(widget.state.now);
-    _selectedDay = targetMonth.year == today.year && targetMonth.month == today.month
+    _selectedDay =
+        targetMonth.year == today.year && targetMonth.month == today.month
         ? today
         : targetMonth;
   }
@@ -221,10 +220,11 @@ class _MonthGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LedgerCard(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
       child: Column(
         children: [
           TableCalendar<void>(
+            locale: 'zh_CN',
             firstDay: DateTime(2000),
             lastDay: DateTime(2100, 12, 31),
             focusedDay: month,
@@ -232,19 +232,25 @@ class _MonthGrid extends StatelessWidget {
             headerVisible: false,
             sixWeekMonthsEnforced: true,
             availableGestures: AvailableGestures.horizontalSwipe,
-            rowHeight: 64,
-            daysOfWeekHeight: 26,
+            rowHeight: MediaQuery.textScalerOf(
+              context,
+            ).scale(56).clamp(56.0, 68.0),
+            daysOfWeekHeight: 22,
             selectedDayPredicate: (day) => ymd(day) == ymd(selectedDay),
             onDaySelected: (selected, focused) => onSelect(selected),
             onPageChanged: (focused) {
               final today = dateOnly(state.now);
-              final target = focused.year == today.year &&
-                      focused.month == today.month
+              final target =
+                  focused.year == today.year && focused.month == today.month
                   ? today
                   : DateTime(focused.year, focused.month);
               onSelect(target);
             },
-            calendarStyle: const CalendarStyle(outsideDaysVisible: true),
+            calendarStyle: const CalendarStyle(
+              outsideDaysVisible: true,
+              cellMargin: EdgeInsets.zero,
+              cellPadding: EdgeInsets.zero,
+            ),
             daysOfWeekStyle: const DaysOfWeekStyle(
               weekdayStyle: TextStyle(color: LedgerColors.muted),
               weekendStyle: TextStyle(color: LedgerColors.muted),
@@ -256,7 +262,7 @@ class _MonthGrid extends StatelessWidget {
               outsideBuilder: _buildCell,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           const Wrap(
             spacing: 10,
             runSpacing: 6,
@@ -283,84 +289,90 @@ class _MonthGrid extends StatelessWidget {
     final hasOvertime = summary.overtimeHours > 0;
     final hasNight = summary.nightHours > 0;
     final hasWork = entries.isNotEmpty;
-    final fill = !inMonth
-        ? LedgerColors.surface
+    final dateFill = selected
+        ? LedgerColors.warningCopper
         : hasWork
-        ? LedgerColors.workAmberSoft.withValues(alpha: .55)
-        : LedgerColors.surfaceRaised;
+        ? LedgerColors.workAmberSoft.withValues(alpha: .82)
+        : Colors.transparent;
+    final dateTextColor = selected
+        ? Colors.white
+        : inMonth
+        ? LedgerColors.ink
+        : LedgerColors.stone;
     return Semantics(
       button: true,
       selected: selected,
       label:
           '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasNote ? '，有备注' : ''}',
-      child: Container(
-        margin: const EdgeInsets.all(3),
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-        decoration: BoxDecoration(
-          color: fill.withValues(alpha: inMonth ? 1 : .42),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            width: selected || today ? 1.8 : 1,
-            color: selected
-                ? LedgerColors.warningCopper
-                : today
-                ? LedgerColors.infoBlue
-                : LedgerColors.hairline,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${day.day}',
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    textScaler: cappedTextScaler(context, maxScale: 1.25),
-                    style: TextStyle(
-                      color: inMonth ? LedgerColors.ink : LedgerColors.stone,
-                      fontWeight: today ? FontWeight.w900 : FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
+      child: Opacity(
+        opacity: inMonth ? 1 : .45,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: dateFill,
+                  shape: BoxShape.circle,
+                  border: today && !selected
+                      ? Border.all(color: LedgerColors.infoBlue, width: 1.4)
+                      : null,
                 ),
-                if (today)
-                  Text(
-                    '今',
-                    textScaler: cappedTextScaler(context, maxScale: 1.25),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: LedgerColors.infoBlue,
-                    ),
+                child: Text(
+                  today ? '${day.day}今' : '${day.day}',
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  textScaler: cappedTextScaler(context, maxScale: 1.18),
+                  style: TextStyle(
+                    color: today && !selected
+                        ? LedgerColors.infoBlue
+                        : dateTextColor,
+                    fontWeight: selected || today || hasWork
+                        ? FontWeight.w900
+                        : FontWeight.w700,
+                    fontSize: today ? 11 : 13,
                   ),
-              ],
-            ),
-            const Spacer(),
-            if (summary.totalHours > 0)
-              Text(
-                hoursText(summary.totalHours),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textScaler: cappedTextScaler(context, maxScale: 1.25),
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
                 ),
               ),
-            Wrap(
-              spacing: 3,
-              runSpacing: 2,
-              children: [
-                if (hasWork) const _Dot(color: LedgerColors.workAmber),
-                if (hasOvertime) const _Dot(color: LedgerColors.overtimeMoss),
-                if (hasNight) const _Dot(color: LedgerColors.nightSlate),
-                if (hasNote) const _Dot(color: LedgerColors.warningCopper),
-              ],
-            ),
-          ],
+              SizedBox(
+                height: 15,
+                child: Center(
+                  child: summary.totalHours > 0
+                      ? Text(
+                          hoursText(summary.totalHours),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textScaler: cappedTextScaler(context, maxScale: 1.12),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: LedgerColors.warningCopper,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+              SizedBox(
+                height: 6,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 3,
+                  runSpacing: 2,
+                  children: [
+                    if (hasWork) const _Dot(color: LedgerColors.workAmber),
+                    if (hasOvertime)
+                      const _Dot(color: LedgerColors.overtimeMoss),
+                    if (hasNight) const _Dot(color: LedgerColors.nightSlate),
+                    if (hasNote) const _Dot(color: LedgerColors.warningCopper),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -380,29 +392,69 @@ class _MonthSummaryGrid extends StatelessWidget {
       ('夜班', '${summary.nightShiftCount}次', hoursText(summary.nightHours)),
       ('备注', '${summary.noteDays}天', '有备注日期'),
     ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 420 ? 3 : 2;
-        final itemWidth = (constraints.maxWidth - 10 * (columns - 1)) / columns;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final item in items)
-              SizedBox(
-                width: itemWidth,
-                child: MetricCard(
-                  label: item.$1,
-                  value: item.$2,
-                  subtext: item.$3,
-                  compact: true,
-                ),
-              ),
-          ],
-        );
-      },
+    return LedgerCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final item in items)
+            _MonthStat(label: item.$1, value: item.$2, subtext: item.$3),
+        ],
+      ),
     );
   }
+}
+
+class _MonthStat extends StatelessWidget {
+  const _MonthStat({
+    required this.label,
+    required this.value,
+    required this.subtext,
+  });
+
+  final String label;
+  final String value;
+  final String subtext;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceRaised,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: LedgerColors.hairline),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          subtext,
+          style: const TextStyle(color: LedgerColors.muted, fontSize: 11),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Dot extends StatelessWidget {
@@ -469,9 +521,29 @@ class _MonthListState extends State<_MonthList> {
         day.isBefore(widget.range.endExclusive);
         day = day.add(const Duration(days: 1))
       )
-        day,
+        if (widget.state.entriesForDay(day).isNotEmpty) day,
     ];
     final visibleDays = days.take(_visibleCount).toList();
+    if (days.isEmpty) {
+      return LedgerCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('本月暂无记录'),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: () => showEditWorkEntrySheet(
+                context,
+                widget.state,
+                day: widget.range.start,
+              ),
+              child: const Text('新增第一段'),
+            ),
+          ],
+        ),
+      );
+    }
     return Column(
       children: [
         for (final day in visibleDays)
@@ -486,7 +558,7 @@ class _MonthListState extends State<_MonthList> {
         if (_visibleCount < days.length)
           OutlinedButton(
             onPressed: () => setState(() => _visibleCount += 10),
-            child: Text('继续加载 ${days.length - _visibleCount} 天'),
+            child: Text('继续加载 ${days.length - _visibleCount} 天记录'),
           ),
       ],
     );
@@ -502,51 +574,113 @@ class _MonthListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = state.entriesForDay(day);
     final summary = state.summaryFor(DateRange.custom(day, day));
-    final meta = entries.isEmpty
-        ? '未记录，可点开补一段'
-        : [
-            '普通 ${hoursText(summary.regularHours)}',
-            if (summary.overtimeHours > 0) '加班 ${hoursText(summary.overtimeHours)}',
-            if (summary.nightHours > 0) '夜班 ${hoursText(summary.nightHours)}',
-            if (entries.any((entry) => entry.hasNote)) '有备注',
-            if (summary.totalHours > 12) '时长偏长',
-          ].join(' · ');
+    final meta = [
+      if (summary.regularHours > 0) '普通 ${hoursText(summary.regularHours)}',
+      if (summary.overtimeHours > 0) '加班 ${hoursText(summary.overtimeHours)}',
+      if (summary.nightHours > 0) '夜班 ${hoursText(summary.nightHours)}',
+      if (summary.allowance > 0) '补贴 ${moneyText(summary.allowance)}',
+      if (summary.deduction > 0) '扣款 ${moneyText(summary.deduction)}',
+      if (entries.any((entry) => entry.hasNote)) '有备注',
+      if (summary.totalHours > 12) '时长偏长',
+    ].join(' · ');
     return LedgerCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       child: Row(
         children: [
+          Container(
+            width: 52,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: LedgerColors.workAmberSoft.withValues(alpha: .46),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  day.day.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  _weekdayText(day.weekday),
+                  style: const TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${cnDateText(day)} · ${entries.length} 段',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      '${entries.length} 段',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    _SmallPill(hoursText(summary.totalHours)),
+                    if (summary.income > 0)
+                      _SmallPill(moneyText(summary.income)),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(meta, style: const TextStyle(color: LedgerColors.muted)),
+                if (meta.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    meta,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: LedgerColors.muted,
+                      fontSize: 13,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                hoursText(summary.totalHours),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              TextButton(
-                onPressed: () =>
-                    showEditWorkEntrySheet(context, state, day: day),
-                child: Text(entries.isEmpty ? '新增' : '编辑'),
-              ),
-            ],
+          IconButton(
+            tooltip: '编辑',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            onPressed: () => showEditWorkEntrySheet(context, state, day: day),
+            icon: const Icon(Icons.edit_outlined, size: 20),
           ),
         ],
       ),
     );
   }
+
+  String _weekdayText(int weekday) =>
+      const ['一', '二', '三', '四', '五', '六', '日'][weekday - 1];
+}
+
+class _SmallPill extends StatelessWidget {
+  const _SmallPill(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceSoft.withValues(alpha: .7),
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 class _DayDetails extends StatelessWidget {
@@ -576,17 +710,33 @@ class _DayDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '当天合计 ${hoursText(summary.totalHours)} · 普通 ${hoursText(summary.regularHours)} · 加班 ${hoursText(summary.overtimeHours)}',
-          style: const TextStyle(color: LedgerColors.muted),
+        LedgerCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          color: LedgerColors.surfaceRaised,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _SmallPill('合计 ${hoursText(summary.totalHours)}'),
+              _SmallPill('普通 ${hoursText(summary.regularHours)}'),
+              if (summary.overtimeHours > 0)
+                _SmallPill('加班 ${hoursText(summary.overtimeHours)}'),
+              if (summary.nightHours > 0)
+                _SmallPill('夜班 ${hoursText(summary.nightHours)}'),
+              if (summary.allowance > 0)
+                _SmallPill('补贴 ${moneyText(summary.allowance)}'),
+              if (summary.deduction > 0)
+                _SmallPill('扣款 ${moneyText(summary.deduction)}'),
+            ],
+          ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         for (final entry in entries) ...[
           WorkEntryTile(
             entry: entry,
             onEdit: () => showEditWorkEntrySheet(context, state, day: day),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
         ],
         OutlinedButton(
           onPressed: () => showEditWorkEntrySheet(context, state, day: day),

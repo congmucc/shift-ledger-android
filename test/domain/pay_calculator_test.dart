@@ -223,5 +223,18 @@ void main() {
         expect(state.payRules.length, 2);
       },
     );
+
+    test(
+      'default shift template creates neutral entries without allowance',
+      () {
+        final state = LedgerState.empty(now: DateTime(2026, 5, 20));
+
+        final entry = state.createTemplateEntry(day: DateTime(2026, 5, 20));
+
+        expect(state.templates.first.defaultAdjustments, isEmpty);
+        expect(entry.allowanceTotal, 0);
+        expect(entry.deductionTotal, 0);
+      },
+    );
   });
 }

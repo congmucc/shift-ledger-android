@@ -172,7 +172,8 @@ class LedgerState extends ChangeNotifier {
       breakMinutes: tpl.breakMinutes,
       type: type ?? tpl.type,
       templateId: tpl.id,
-      locationName: '',
+      locationName: tpl.defaultLocationName,
+      jobTypeName: tpl.defaultJobTypeName,
       payRule: rule,
       adjustments: tpl.defaultAdjustments,
     );
@@ -265,6 +266,15 @@ class LedgerState extends ChangeNotifier {
       templates = [...templates, template];
     }
     notifyListeners();
+  }
+
+  bool deleteShiftTemplate(String id) {
+    if (templates.length <= 1) return false;
+    final next = templates.where((template) => template.id != id).toList();
+    if (next.length == templates.length || next.isEmpty) return false;
+    templates = next;
+    notifyListeners();
+    return true;
   }
 
   void setDefaultShiftTemplate(String id) {

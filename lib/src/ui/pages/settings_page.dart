@@ -558,6 +558,9 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   late final TextEditingController _start;
   late final TextEditingController _end;
   late final TextEditingController _break;
+  late final TextEditingController _location;
+  late final TextEditingController _allowance;
+  late final TextEditingController _deduction;
   late EntryType _type;
 
   @override
@@ -568,6 +571,9 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     _start = TextEditingController();
     _end = TextEditingController();
     _break = TextEditingController();
+    _location = TextEditingController();
+    _allowance = TextEditingController();
+    _deduction = TextEditingController();
     _load(_template);
   }
 
@@ -577,6 +583,9 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     _start.dispose();
     _end.dispose();
     _break.dispose();
+    _location.dispose();
+    _allowance.dispose();
+    _deduction.dispose();
     super.dispose();
   }
 
@@ -708,6 +717,54 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                 ],
               ),
               const SizedBox(height: 14),
+              TextField(
+                controller: _location,
+                decoration: const InputDecoration(
+                  labelText: '地点/岗位默认值',
+                  helperText: '新增记录时自动带入；没有固定地点就留空。',
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _allowance,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: '默认补贴',
+                        helperText: '默认 0',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _deduction,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: '默认扣款',
+                        helperText: '默认 0',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: LedgerColors.errorBrick,
+                  ),
+                  onPressed: widget.state.templates.length <= 1
+                      ? null
+                      : _confirmDeleteTemplate,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('删除模板'),
+                ),
+              ),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -736,10 +793,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
 
   void _createTemplate() {
     final source = _template;
-    final copy = source.copyWith(
-      id: newId('tpl'),
-      name: '${source.name} 副本',
-    );
+    final copy = source.copyWith(id: newId('tpl'), name: '${source.name} 副本');
     widget.state.updateShiftTemplate(copy);
     setState(() {
       _template = copy;
@@ -757,12 +811,33 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     _start.text = _time(template.startMinute);
     _end.text = _time(template.endMinute);
     _break.text = template.breakMinutes.toString();
+    _location.text = [
+      template.defaultLocationName,
+      template.defaultJobTypeName,
+    ].where((value) => value.trim().isNotEmpty).join(' / ');
+    _allowance.text = template.defaultAdjustments
+        .where((item) => item.type == AdjustmentType.allowance)
+        .fold(0.0, (sum, item) => sum + item.amount)
+        .toStringAsFixed(0);
+    _deduction.text = template.defaultAdjustments
+        .where((item) => item.type == AdjustmentType.deduction)
+        .fold(0.0, (sum, item) => sum + item.amount)
+        .toStringAsFixed(0);
     _type = template.type;
   }
 
   void _save() {
     final start = _parseTime(_start.text) ?? _template.startMinute;
     final end = _parseTime(_end.text) ?? _template.endMinute;
+    final defaultAdjustments = <Adjustment>[];
+    final allowance = double.tryParse(_allowance.text) ?? 0;
+    final deduction = double.tryParse(_deduction.text) ?? 0;
+    if (allowance > 0) {
+      defaultAdjustments.add(Adjustment.allowance('默认补贴', allowance));
+    }
+    if (deduction > 0) {
+      defaultAdjustments.add(Adjustment.deduction('默认扣款', deduction));
+    }
     widget.state.updateShiftTemplate(
       _template.copyWith(
         name: _name.text.trim().isEmpty ? _template.name : _name.text.trim(),
@@ -770,9 +845,47 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
         endMinute: end,
         breakMinutes: int.tryParse(_break.text) ?? _template.breakMinutes,
         type: _type,
+        defaultLocationName: _location.text.trim(),
+        defaultJobTypeName: '',
+        defaultAdjustments: defaultAdjustments,
       ),
     );
     Navigator.pop(context);
+  }
+
+  Future<void> _confirmDeleteTemplate() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除模板？'),
+        content: Text('只删除“${_template.name}”这个模板，已经保存的工时记录不会被删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: LedgerColors.errorBrick,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final deleted = widget.state.deleteShiftTemplate(_template.id);
+    if (!deleted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('至少保留一个班次模板')));
+      return;
+    }
+    setState(() {
+      _template = widget.state.templates.first;
+      _load(_template);
+    });
   }
 
   Future<void> _pickTime(TextEditingController controller) async {

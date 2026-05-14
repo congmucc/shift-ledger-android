@@ -472,6 +472,8 @@ class ShiftTemplate {
     this.type = EntryType.regular,
     this.colorToken = 'work-amber',
     this.defaultPayRuleId,
+    this.defaultLocationName = '',
+    this.defaultJobTypeName = '',
     this.defaultAdjustments = const [],
   });
 
@@ -482,14 +484,6 @@ class ShiftTemplate {
     endMinute: 18 * 60,
     breakMinutes: 60,
     defaultPayRuleId: payRuleId,
-    defaultAdjustments: const [
-      Adjustment(
-        id: 'adj_meal_default',
-        name: '餐补',
-        amount: 20,
-        type: AdjustmentType.allowance,
-      ),
-    ],
   );
 
   factory ShiftTemplate.night({String? payRuleId}) => ShiftTemplate(
@@ -521,6 +515,8 @@ class ShiftTemplate {
   final EntryType type;
   final String colorToken;
   final String? defaultPayRuleId;
+  final String defaultLocationName;
+  final String defaultJobTypeName;
   final List<Adjustment> defaultAdjustments;
 
   ShiftTemplate copyWith({
@@ -532,6 +528,8 @@ class ShiftTemplate {
     EntryType? type,
     String? colorToken,
     String? defaultPayRuleId,
+    String? defaultLocationName,
+    String? defaultJobTypeName,
     List<Adjustment>? defaultAdjustments,
   }) => ShiftTemplate(
     id: id ?? this.id,
@@ -542,6 +540,8 @@ class ShiftTemplate {
     type: type ?? this.type,
     colorToken: colorToken ?? this.colorToken,
     defaultPayRuleId: defaultPayRuleId ?? this.defaultPayRuleId,
+    defaultLocationName: defaultLocationName ?? this.defaultLocationName,
+    defaultJobTypeName: defaultJobTypeName ?? this.defaultJobTypeName,
     defaultAdjustments: defaultAdjustments ?? this.defaultAdjustments,
   );
 
@@ -554,6 +554,8 @@ class ShiftTemplate {
     'type': type.name,
     'colorToken': colorToken,
     'defaultPayRuleId': defaultPayRuleId,
+    'defaultLocationName': defaultLocationName,
+    'defaultJobTypeName': defaultJobTypeName,
     'defaultAdjustments': defaultAdjustments.map((a) => a.toJson()).toList(),
   };
 
@@ -566,6 +568,8 @@ class ShiftTemplate {
     type: EntryTypeX.fromName(json['type'] as String?),
     colorToken: json['colorToken'] as String? ?? 'work-amber',
     defaultPayRuleId: json['defaultPayRuleId'] as String?,
+    defaultLocationName: json['defaultLocationName'] as String? ?? '',
+    defaultJobTypeName: json['defaultJobTypeName'] as String? ?? '',
     defaultAdjustments: ((json['defaultAdjustments'] as List?) ?? const [])
         .whereType<Map>()
         .map((item) => Adjustment.fromJson(Map<String, Object?>.from(item)))
