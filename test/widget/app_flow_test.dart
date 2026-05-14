@@ -384,16 +384,29 @@ void main() {
     expect(calendarBottom, lessThan(620));
     expect(find.text('13今'), findsOneWidget);
     expect(find.byKey(const Key('calendar-month-grid')), findsOneWidget);
-    expect(find.text('15h/2天'), findsOneWidget);
-    expect(find.text('1次/7h'), findsOneWidget);
+    final monthSummaryCard = find.byKey(
+      const Key('calendar-month-summary-card'),
+    );
     expect(
-      find.byKey(const Key('calendar-month-summary-card')),
+      find.descendant(of: monthSummaryCard, matching: find.text('出勤')),
       findsOneWidget,
     );
     expect(
-      tester
-          .getTopLeft(find.byKey(const Key('calendar-month-summary-card')))
-          .dy,
+      find.descendant(of: monthSummaryCard, matching: find.text('2天')),
+      findsWidgets,
+    );
+    expect(
+      find.descendant(of: monthSummaryCard, matching: find.text('1次/7h')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: monthSummaryCard, matching: find.text('备注')),
+      findsOneWidget,
+    );
+    expect(find.text('0天备注'), findsNothing);
+    expect(monthSummaryCard, findsOneWidget);
+    expect(
+      tester.getTopLeft(monthSummaryCard).dy,
       lessThan(
         tester.getTopLeft(find.byKey(const Key('calendar-month-grid'))).dy,
       ),

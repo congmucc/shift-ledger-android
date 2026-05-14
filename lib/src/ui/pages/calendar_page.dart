@@ -446,16 +446,23 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '总工时',
-                      value:
-                          '${hoursText(summary.totalHours)}/${summary.attendanceDays}天',
+                      value: hoursText(summary.totalHours),
                       accent: LedgerColors.warningCopper,
                     ),
                   ),
                   SizedBox(
                     width: statWidth,
                     child: _MonthStatPill(
+                      label: '出勤',
+                      value: '${summary.attendanceDays}天',
+                      accent: LedgerColors.workAmber,
+                    ),
+                  ),
+                  SizedBox(
+                    width: statWidth,
+                    child: _MonthStatPill(
                       label: '收入',
-                      value: '${moneyText(summary.income)}估算',
+                      value: moneyText(summary.income),
                       accent: LedgerColors.overtimeMoss,
                     ),
                   ),
@@ -481,7 +488,7 @@ class _MonthSummaryGrid extends StatelessWidget {
                     width: statWidth,
                     child: _MonthStatPill(
                       label: '备注',
-                      value: '${summary.noteDays}天备注',
+                      value: '${summary.noteDays}天',
                       accent: LedgerColors.infoBlue,
                     ),
                   ),
@@ -518,32 +525,35 @@ class _MonthStatPill extends StatelessWidget {
       children: [
         _Dot(color: accent),
         const SizedBox(width: 5),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textScaler: cappedTextScaler(context, maxScale: 1.08),
-            style: const TextStyle(
-              color: LedgerColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.clip,
+          textScaler: cappedTextScaler(context, maxScale: 1.08),
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(width: 3),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textScaler: cappedTextScaler(context, maxScale: 1.06),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.2,
-              color: LedgerColors.ink,
+        const SizedBox(width: 5),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                maxLines: 1,
+                textScaler: cappedTextScaler(context, maxScale: 1.06),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.2,
+                  color: LedgerColors.ink,
+                ),
+              ),
             ),
           ),
         ),
