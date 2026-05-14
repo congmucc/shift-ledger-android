@@ -17,3 +17,8 @@
 - [x] Re-evaluate whether Home needs a low-emphasis “more actions” path for export, templates, or non-today entry.
   - Why: the first screen should stay quiet, but ledger users may still need discoverable secondary actions.
   - Done: Home keeps only three primary chips and adds a low-emphasis “更多” bottom sheet for export, templates/settings, and non-today entry.
+
+## Design review 2026-05-14 deferred
+
+- [ ] Medium / Color: Avoid using `workAmber` as body text on light surfaces; measured contrast is about 4.15:1, below WCAG AA body text target.
+- [ ] Polish / Interaction: Calendar page top-right icon-only `+` is acceptable but could be clearer with a text action or stronger semantic affordance.
