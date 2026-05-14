@@ -187,7 +187,11 @@ class _MiniStat extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: Theme.of(context).textTheme.titleMedium),
+          FittedValueText(
+            value,
+            style: Theme.of(context).textTheme.titleMedium!,
+            maxScale: 1.08,
+          ),
           const SizedBox(height: 3),
           Text(
             label,

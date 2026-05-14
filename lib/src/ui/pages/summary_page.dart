@@ -394,11 +394,10 @@ class _RangeSelector extends StatelessWidget {
                 ),
               ] else
                 Expanded(
-                  child: Text(
+                  child: FittedValueText(
                     rangeText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium!,
+                    maxScale: 1.08,
                   ),
                 ),
             ],
@@ -472,12 +471,11 @@ class _RangeDateButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: LedgerColors.hairline),
       ),
-      child: Text(
+      child: FittedValueText(
         label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        textScaler: cappedTextScaler(context, maxScale: 1.12),
+        alignment: Alignment.center,
+        maxScale: 1.12,
         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
       ),
     ),
@@ -574,10 +572,9 @@ class _MiniMetric extends StatelessWidget {
         children: [
           Text(label, style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 2),
-          Text(
+          FittedValueText(
             value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxScale: 1.1,
             style: TextStyle(
               fontSize: emphasized ? 23 : 19,
               fontWeight: FontWeight.w900,
@@ -586,10 +583,9 @@ class _MiniMetric extends StatelessWidget {
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-          Text(
+          FittedValueText(
             subtext,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxScale: 1.06,
             style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
           ),
         ],
@@ -699,7 +695,11 @@ class _InsightTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
-          Text(item.value, style: Theme.of(context).textTheme.titleMedium),
+          FittedValueText(
+            item.value,
+            style: Theme.of(context).textTheme.titleMedium!,
+            maxScale: 1.08,
+          ),
           Text(
             item.subtitle,
             maxLines: 1,
@@ -831,12 +831,10 @@ class _DaySummaryCardState extends State<_DaySummaryCard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Text(
+                child: FittedValueText(
                   '${cnDateText(row.date)} · ${_weekdayText(row.date.weekday)} · ${row.entries.length}段',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textScaler: cappedTextScaler(context, maxScale: 1.15),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  maxScale: 1.15,
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(
                     fontSize: 16,
                     letterSpacing: -0.2,
                   ),
@@ -865,8 +863,6 @@ class _DaySummaryCardState extends State<_DaySummaryCard> {
             const SizedBox(height: 3),
             Text(
               breakdown,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textScaler: cappedTextScaler(context, maxScale: 1.12),
               style: const TextStyle(
                 color: LedgerColors.muted,
@@ -952,19 +948,24 @@ class _ExpandedSegmentLine extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: FittedValueText(
                   '${entry.timeRangeLabel} · $name ${hoursText(hours > 0 ? hours : entry.netHours)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textScaler: cappedTextScaler(context, maxScale: 1.12),
+                  maxScale: 1.12,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                moneyText(calc.income),
-                textScaler: cappedTextScaler(context, maxScale: 1.1),
-                style: const TextStyle(fontWeight: FontWeight.w800),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    moneyText(calc.income),
+                    textScaler: cappedTextScaler(context, maxScale: 1.1),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
               ),
             ],
           ),
@@ -972,8 +973,6 @@ class _ExpandedSegmentLine extends StatelessWidget {
             const SizedBox(height: 1),
             Text(
               tags.join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textScaler: cappedTextScaler(context, maxScale: 1.1),
               style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
             ),
@@ -990,20 +989,24 @@ class _DenseValuePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(maxWidth: 92),
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
     decoration: BoxDecoration(
       color: LedgerColors.surfaceRaised,
       borderRadius: BorderRadius.circular(99),
       border: Border.all(color: LedgerColors.hairline),
     ),
-    child: Text(
-      text,
-      maxLines: 1,
-      textScaler: cappedTextScaler(context, maxScale: 1.08),
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -0.2,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        text,
+        maxLines: 1,
+        textScaler: cappedTextScaler(context, maxScale: 1.08),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.2,
+        ),
       ),
     ),
   );
@@ -1089,10 +1092,12 @@ class _BreakdownRow extends StatelessWidget {
           const SizedBox(width: 10),
           SizedBox(
             width: 88,
-            child: Text(
+            child: FittedValueText(
               value,
               textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.titleMedium,
+              alignment: Alignment.centerRight,
+              maxScale: 1.08,
+              style: Theme.of(context).textTheme.titleMedium!,
             ),
           ),
         ],
@@ -1111,7 +1116,16 @@ class _Line extends StatelessWidget {
     child: Row(
       children: [
         Expanded(child: Text(label)),
-        Text(value, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(width: 10),
+        Flexible(
+          child: FittedValueText(
+            value,
+            alignment: Alignment.centerRight,
+            textAlign: TextAlign.right,
+            maxScale: 1.08,
+            style: Theme.of(context).textTheme.titleMedium!,
+          ),
+        ),
       ],
     ),
   );

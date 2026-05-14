@@ -11,6 +11,39 @@ String moneyText(double value) =>
 TextScaler cappedTextScaler(BuildContext context, {double maxScale = 1.35}) =>
     MediaQuery.textScalerOf(context).clamp(maxScaleFactor: maxScale);
 
+class FittedValueText extends StatelessWidget {
+  const FittedValueText(
+    this.text, {
+    super.key,
+    required this.style,
+    this.alignment = Alignment.centerLeft,
+    this.textAlign,
+    this.maxScale = 1.12,
+  });
+
+  final String text;
+  final TextStyle style;
+  final Alignment alignment;
+  final TextAlign? textAlign;
+  final double maxScale;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: alignment,
+      child: Text(
+        text,
+        maxLines: 1,
+        textAlign: textAlign,
+        textScaler: cappedTextScaler(context, maxScale: maxScale),
+        style: style,
+      ),
+    ),
+  );
+}
+
 class PageFrame extends StatelessWidget {
   const PageFrame({
     super.key,
@@ -105,10 +138,8 @@ class MetricCard extends StatelessWidget {
         children: [
           Text(label, style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
-          Text(
+          FittedValueText(
             value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: compact ? 24 : 34,
               fontWeight: FontWeight.w800,
@@ -119,10 +150,9 @@ class MetricCard extends StatelessWidget {
           ),
           if (subtext != null) ...[
             const SizedBox(height: 4),
-            Text(
+            FittedValueText(
               subtext!,
-              maxLines: compact ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
+              maxScale: 1.08,
               style: const TextStyle(color: LedgerColors.muted),
             ),
           ],

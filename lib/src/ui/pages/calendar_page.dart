@@ -343,15 +343,20 @@ class _MonthGrid extends StatelessWidget {
                 height: 15,
                 child: Center(
                   child: summary.totalHours > 0
-                      ? Text(
-                          hoursText(summary.totalHours),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textScaler: cappedTextScaler(context, maxScale: 1.12),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: LedgerColors.warningCopper,
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            hoursText(summary.totalHours),
+                            maxLines: 1,
+                            textScaler: cappedTextScaler(
+                              context,
+                              maxScale: 1.12,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: LedgerColors.warningCopper,
+                            ),
                           ),
                         )
                       : const SizedBox.shrink(),
@@ -422,13 +427,12 @@ class _MonthSummaryGrid extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: FittedValueText(
                       '月计 ${hoursText(summary.totalHours)} · 出勤 ${summary.attendanceDays}天 · 加班 ${hoursText(summary.overtimeHours)}',
                       key: const Key('calendar-month-compact-summary'),
                       textAlign: TextAlign.end,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textScaler: cappedTextScaler(context, maxScale: 1.08),
+                      alignment: Alignment.centerRight,
+                      maxScale: 1.08,
                       style: const TextStyle(
                         color: LedgerColors.muted,
                         fontSize: 12,
@@ -742,8 +746,6 @@ class _MonthListRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     meta,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: LedgerColors.muted,
                       fontSize: 13,
@@ -776,14 +778,19 @@ class _SmallPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(maxWidth: 118),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
       color: LedgerColors.surfaceSoft.withValues(alpha: .7),
       borderRadius: BorderRadius.circular(99),
     ),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        text,
+        maxLines: 1,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
     ),
   );
 }
