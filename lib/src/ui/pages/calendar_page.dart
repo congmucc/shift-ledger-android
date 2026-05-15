@@ -271,8 +271,16 @@ class _MonthGrid extends StatelessWidget {
               _LegendMark(color: LedgerColors.primaryBlue, label: '有工时'),
               _LegendMark(color: LedgerColors.successGreen, label: '加班'),
               _LegendMark(color: LedgerColors.nightIndigo, label: '夜班'),
-              _LegendMark(color: LedgerColors.warningOrange, label: '备注'),
-              _LegendMark(color: LedgerColors.primaryBlue, label: '今日'),
+              _LegendMark(
+                color: LedgerColors.warningOrange,
+                label: '备注',
+                markerText: '备',
+              ),
+              _LegendMark(
+                color: LedgerColors.primaryBlue,
+                label: '今日',
+                marker: _TodayLegendMarker(),
+              ),
             ],
           ),
         ],
@@ -367,7 +375,7 @@ class _MonthGrid extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 6,
+                height: 8,
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 3,
@@ -377,7 +385,8 @@ class _MonthGrid extends StatelessWidget {
                     if (hasOvertime)
                       const _Dot(color: LedgerColors.successGreen),
                     if (hasNight) const _Dot(color: LedgerColors.nightIndigo),
-                    if (hasNote) const _Dot(color: LedgerColors.warningOrange),
+                    if (hasNote)
+                      const _NoteMarker(color: LedgerColors.warningOrange),
                   ],
                 ),
               ),
@@ -583,21 +592,85 @@ class _Dot extends StatelessWidget {
 }
 
 class _LegendMark extends StatelessWidget {
-  const _LegendMark({required this.color, required this.label});
+  const _LegendMark({
+    required this.color,
+    required this.label,
+    this.markerText,
+    this.marker,
+  });
   final Color color;
   final String label;
+  final String? markerText;
+  final Widget? marker;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      _Dot(color: color),
+      marker ??
+          (markerText == null
+              ? _Dot(color: color)
+              : _NoteMarker(color: color, text: markerText!)),
       const SizedBox(width: 4),
       Text(
         label,
         style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
       ),
     ],
+  );
+}
+
+class _NoteMarker extends StatelessWidget {
+  const _NoteMarker({required this.color, this.text = '备'});
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 11,
+    height: 8,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .14),
+      borderRadius: BorderRadius.circular(3),
+      border: Border.all(color: color.withValues(alpha: .55), width: .8),
+    ),
+    child: Text(
+      text,
+      textScaler: TextScaler.noScaling,
+      style: TextStyle(
+        color: color,
+        fontSize: 6,
+        height: 1,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
+  );
+}
+
+class _TodayLegendMarker extends StatelessWidget {
+  const _TodayLegendMarker();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('calendar-legend-today-marker'),
+    width: 12,
+    height: 12,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: LedgerColors.primaryBlue, width: 1.1),
+    ),
+    child: const Text(
+      '今',
+      textScaler: TextScaler.noScaling,
+      style: TextStyle(
+        color: LedgerColors.primaryBlue,
+        fontSize: 6,
+        height: 1,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
   );
 }
 

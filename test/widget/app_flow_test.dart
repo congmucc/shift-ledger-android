@@ -12,11 +12,11 @@ void main() {
     );
 
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(materialApp.theme?.scaffoldBackgroundColor, const Color(0xFFFFFFFF));
-    expect(LedgerColors.paper, const Color(0xFFFFFFFF));
-    expect(LedgerColors.workAmber, const Color(0xFF007AFF));
+    expect(materialApp.theme?.scaffoldBackgroundColor, const Color(0xFFF9FAFB));
+    expect(LedgerColors.paper, const Color(0xFFF9FAFB));
+    expect(LedgerColors.workAmber, const Color(0xFF0066CC));
     expect(LedgerColors.overtimeMoss, const Color(0xFF34C759));
-    expect(LedgerColors.warningCopper, const Color(0xFF007AFF));
+    expect(LedgerColors.warningCopper, const Color(0xFFFF9500));
   });
 
   testWidgets(
@@ -424,6 +424,10 @@ void main() {
     await tester.tap(find.text('今天'));
     await tester.pumpAndSettle();
     expect(find.text('2026 年 5 月'), findsOneWidget);
+    expect(
+      find.byKey(const Key('calendar-legend-today-marker')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

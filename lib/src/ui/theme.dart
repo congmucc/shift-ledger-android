@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 const double ledgerContentMaxWidth = 960;
 
 class LedgerColors {
-  static const background = Color(0xFFFFFFFF);
+  static const background = Color(0xFFF9FAFB);
   static const canvas = Color(0xFFF9FAFB);
   static const surface = Color(0xFFFAFAFA);
   static const surfaceSoft = Color(0xFFF3F4F6);
@@ -14,7 +14,7 @@ class LedgerColors {
   static const charcoal = Color(0xFF111827);
   static const muted = Color(0xFF6B7280);
   static const stone = Color(0xFF9CA3AF);
-  static const primaryBlue = Color(0xFF007AFF);
+  static const primaryBlue = Color(0xFF0066CC);
   static const primaryBlueSoft = Color(0xFFE5F1FF);
   static const successGreen = Color(0xFF34C759);
   static const successGreenSoft = Color(0xFFDCFCE7);
@@ -31,7 +31,7 @@ class LedgerColors {
   static const overtimeMossSoft = successGreenSoft;
   static const nightSlate = nightIndigo;
   static const nightSlateSoft = nightIndigoSoft;
-  static const warningCopper = primaryBlue;
+  static const warningCopper = warningOrange;
   static const errorBrick = errorRed;
   static const infoBlue = primaryBlue;
 }
