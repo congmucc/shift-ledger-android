@@ -568,6 +568,56 @@ void main() {
   });
 
   testWidgets(
+    'built-in template keeps only single-template restore and cannot be deleted',
+    (tester) async {
+      final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+      state.updateShiftTemplate(
+        state.templates.first.copyWith(
+          name: '白班',
+          breakMinutes: 45,
+          defaultLocationName: '南山店',
+        ),
+      );
+      state.updateShiftTemplate(
+        ShiftTemplate.standard(
+          payRuleId: state.defaultRule.id,
+        ).copyWith(id: 'tpl_custom', name: '周末店班'),
+      );
+
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      await tester.tap(find.text('设置'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('班次模板'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('恢复当前内置模板'), findsOneWidget);
+      expect(find.text('恢复全部内置模板'), findsNothing);
+      final deleteBuiltIn = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, '删除模板'),
+      );
+      expect(deleteBuiltIn.onPressed, isNull);
+
+      await tester.ensureVisible(find.text('恢复当前内置模板'));
+      await tester.tap(find.text('恢复当前内置模板'));
+      await tester.pumpAndSettle();
+      expect(find.text('恢复当前模板？'), findsOneWidget);
+      expect(find.text('确认恢复'), findsOneWidget);
+      await tester.tap(find.text('确认恢复'));
+      await tester.pumpAndSettle();
+
+      expect(
+        state.templates.firstWhere(
+          (template) => template.id == ShiftTemplate.standardId,
+        ),
+        isA<ShiftTemplate>()
+            .having((template) => template.name, 'name', '标准班次')
+            .having((template) => template.breakMinutes, 'breakMinutes', 0),
+      );
+    },
+  );
+
+  testWidgets(
     'moving a day onto another populated date preserves target entries and refreshes pay rule snapshot',
     (tester) async {
       final oldRule = PayRule.defaultHourly(hourlyRate: 35).copyWith(

@@ -37,12 +37,18 @@ class LedgerState extends ChangeNotifier {
     List<ShiftTemplate>? templates,
     List<PayRule>? rules,
   ) {
-    if (templates != null && templates.isNotEmpty) return templates;
     final fallbackRuleId = _safePayRules(rules).first.id;
+    final existing = templates ?? const <ShiftTemplate>[];
+    if (existing.isEmpty) {
+      return ShiftTemplate.builtInTemplates(payRuleId: fallbackRuleId);
+    }
+    final existingIds = existing.map((template) => template.id).toSet();
     return [
-      ShiftTemplate.standard(payRuleId: fallbackRuleId),
-      ShiftTemplate.overtime(payRuleId: fallbackRuleId),
-      ShiftTemplate.night(payRuleId: fallbackRuleId),
+      ...existing,
+      for (final builtIn in ShiftTemplate.builtInTemplates(
+        payRuleId: fallbackRuleId,
+      ))
+        if (!existingIds.contains(builtIn.id)) builtIn,
     ];
   }
 
@@ -51,11 +57,7 @@ class LedgerState extends ChangeNotifier {
     return LedgerState(
       now: now ?? DateTime.now(),
       payRules: [rule, PayRule.defaultDaily(), PayRule.defaultMonthly()],
-      templates: [
-        ShiftTemplate.standard(payRuleId: rule.id),
-        ShiftTemplate.overtime(payRuleId: rule.id),
-        ShiftTemplate.night(payRuleId: rule.id),
-      ],
+      templates: ShiftTemplate.builtInTemplates(payRuleId: rule.id),
     );
   }
 
@@ -102,11 +104,7 @@ class LedgerState extends ChangeNotifier {
       now: anchor,
       entries: entries,
       payRules: [rule, daily, monthly],
-      templates: [
-        ShiftTemplate.standard(payRuleId: rule.id),
-        ShiftTemplate.overtime(payRuleId: rule.id),
-        ShiftTemplate.night(payRuleId: rule.id),
-      ],
+      templates: ShiftTemplate.builtInTemplates(payRuleId: rule.id),
     );
   }
 
@@ -333,6 +331,7 @@ class LedgerState extends ChangeNotifier {
   }
 
   bool deleteShiftTemplate(String id) {
+    if (ShiftTemplate.builtInIds.contains(id)) return false;
     if (templates.length <= 1) return false;
     final next = templates.where((template) => template.id != id).toList();
     if (next.length == templates.length || next.isEmpty) return false;
@@ -348,6 +347,17 @@ class LedgerState extends ChangeNotifier {
     final selected = next.removeAt(index);
     templates = [selected, ...next];
     notifyListeners();
+  }
+
+  bool restoreShiftTemplate(String id) {
+    if (!ShiftTemplate.builtInIds.contains(id)) return false;
+    final index = templates.indexWhere((item) => item.id == id);
+    if (index < 0) return false;
+    final restored = ShiftTemplate.builtInById(id, payRuleId: defaultRule.id);
+    if (restored == null) return false;
+    templates = [...templates]..[index] = restored;
+    notifyListeners();
+    return true;
   }
 
   void updateWebDavConfig(WebDavConfig config) {
@@ -366,9 +376,15 @@ class LedgerState extends ChangeNotifier {
   }
 
   void restore(LedgerSnapshot snapshot) {
+    final nextPayRules = snapshot.payRules.isEmpty
+        ? payRules
+        : snapshot.payRules;
     entries = snapshot.entries;
-    templates = snapshot.templates.isEmpty ? templates : snapshot.templates;
-    payRules = snapshot.payRules.isEmpty ? payRules : snapshot.payRules;
+    payRules = nextPayRules;
+    templates = _safeTemplates(
+      snapshot.templates.isEmpty ? templates : snapshot.templates,
+      nextPayRules,
+    );
     nightRule = snapshot.nightRule;
     payPeriod = snapshot.payPeriod;
     webDavConfig = snapshot.webDavConfig.sanitized();

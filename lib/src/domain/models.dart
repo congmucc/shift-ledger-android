@@ -478,12 +478,17 @@ class NightRule {
 }
 
 class ShiftTemplate {
+  static const standardId = 'tpl_standard';
+  static const overtimeId = 'tpl_overtime';
+  static const nightId = 'tpl_night';
+  static const builtInIds = <String>[standardId, overtimeId, nightId];
+
   const ShiftTemplate({
     required this.id,
     required this.name,
     required this.startMinute,
     required this.endMinute,
-    this.breakMinutes = 60,
+    this.breakMinutes = 0,
     this.type = EntryType.regular,
     this.colorToken = 'work-amber',
     this.defaultPayRuleId,
@@ -492,31 +497,50 @@ class ShiftTemplate {
     this.defaultAdjustments = const [],
   });
 
+  static List<ShiftTemplate> builtInTemplates({String? payRuleId}) => [
+    ShiftTemplate.standard(payRuleId: payRuleId),
+    ShiftTemplate.overtime(payRuleId: payRuleId),
+    ShiftTemplate.night(payRuleId: payRuleId),
+  ];
+
+  static ShiftTemplate? builtInById(String id, {String? payRuleId}) {
+    switch (id) {
+      case standardId:
+        return ShiftTemplate.standard(payRuleId: payRuleId);
+      case overtimeId:
+        return ShiftTemplate.overtime(payRuleId: payRuleId);
+      case nightId:
+        return ShiftTemplate.night(payRuleId: payRuleId);
+    }
+    return null;
+  }
+
   factory ShiftTemplate.standard({String? payRuleId}) => ShiftTemplate(
-    id: 'tpl_standard',
+    id: standardId,
     name: '标准班次',
     startMinute: 9 * 60,
     endMinute: 18 * 60,
-    breakMinutes: 60,
+    breakMinutes: 0,
     defaultPayRuleId: payRuleId,
   );
 
   factory ShiftTemplate.night({String? payRuleId}) => ShiftTemplate(
-    id: 'tpl_night',
+    id: nightId,
     name: '夜班',
     startMinute: 22 * 60,
     endMinute: 6 * 60,
-    breakMinutes: 60,
+    breakMinutes: 0,
     type: EntryType.night,
     colorToken: 'night-slate',
     defaultPayRuleId: payRuleId,
   );
 
   factory ShiftTemplate.overtime({String? payRuleId}) => ShiftTemplate(
-    id: 'tpl_overtime',
+    id: overtimeId,
     name: '加班',
     startMinute: 18 * 60,
     endMinute: 21 * 60,
+    breakMinutes: 0,
     type: EntryType.overtime,
     colorToken: 'overtime-moss',
     defaultPayRuleId: payRuleId,
@@ -533,6 +557,8 @@ class ShiftTemplate {
   final String defaultLocationName;
   final String defaultJobTypeName;
   final List<Adjustment> defaultAdjustments;
+
+  bool get isBuiltIn => builtInIds.contains(id);
 
   ShiftTemplate copyWith({
     String? id,
@@ -579,7 +605,7 @@ class ShiftTemplate {
     name: json['name'] as String? ?? '模板',
     startMinute: clampInt(asInt(json['startMinute'], 9 * 60), 0, 23 * 60 + 59),
     endMinute: clampInt(asInt(json['endMinute'], 18 * 60), 0, 23 * 60 + 59),
-    breakMinutes: asNonNegativeInt(json['breakMinutes'], 60),
+    breakMinutes: asNonNegativeInt(json['breakMinutes'], 0),
     type: EntryTypeX.fromName(json['type'] as String?),
     colorToken: json['colorToken'] as String? ?? 'work-amber',
     defaultPayRuleId: json['defaultPayRuleId'] as String?,

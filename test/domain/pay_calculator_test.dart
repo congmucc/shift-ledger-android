@@ -340,6 +340,111 @@ void main() {
       },
     );
 
+    test('built-in shift templates default to zero break minutes', () {
+      final state = LedgerState.empty(now: DateTime(2026, 5, 20));
+
+      expect(
+        ShiftTemplate.standard(payRuleId: state.defaultRule.id).breakMinutes,
+        0,
+      );
+      expect(
+        ShiftTemplate.overtime(payRuleId: state.defaultRule.id).breakMinutes,
+        0,
+      );
+      expect(
+        ShiftTemplate.night(payRuleId: state.defaultRule.id).breakMinutes,
+        0,
+      );
+      expect(
+        state.templates.map((template) => template.breakMinutes),
+        everyElement(0),
+      );
+    });
+
+    test(
+      'restoreShiftTemplate resets one built-in template without touching custom templates',
+      () {
+        final state = LedgerState.empty(now: DateTime(2026, 5, 20));
+        state.updateShiftTemplate(
+          state.templates.first.copyWith(
+            name: '白班',
+            breakMinutes: 45,
+            defaultLocationName: '南山店',
+          ),
+        );
+        state.updateShiftTemplate(
+          ShiftTemplate.standard(
+            payRuleId: state.defaultRule.id,
+          ).copyWith(id: 'tpl_custom', name: '周末店班'),
+        );
+
+        final restored = state.restoreShiftTemplate(ShiftTemplate.standardId);
+
+        expect(restored, isTrue);
+        expect(
+          state.templates.firstWhere(
+            (template) => template.id == ShiftTemplate.standardId,
+          ),
+          isA<ShiftTemplate>()
+              .having((template) => template.name, 'name', '标准班次')
+              .having((template) => template.breakMinutes, 'breakMinutes', 0)
+              .having(
+                (template) => template.defaultLocationName,
+                'location',
+                '',
+              ),
+        );
+        expect(
+          state.templates
+              .firstWhere((template) => template.id == 'tpl_custom')
+              .name,
+          '周末店班',
+        );
+      },
+    );
+
+    test('deleteShiftTemplate rejects built-in templates', () {
+      final state = LedgerState.empty(now: DateTime(2026, 5, 20));
+
+      final deleted = state.deleteShiftTemplate(ShiftTemplate.nightId);
+
+      expect(deleted, isFalse);
+      expect(
+        state.templates.any((template) => template.id == ShiftTemplate.nightId),
+        isTrue,
+      );
+    });
+
+    test('ledger state auto-heals missing built-in templates on load', () {
+      final rule = PayRule.defaultHourly(hourlyRate: 35);
+      final custom = ShiftTemplate.standard(
+        payRuleId: rule.id,
+      ).copyWith(id: 'tpl_custom', name: '周末店班');
+      final state = LedgerState(
+        now: DateTime(2026, 5, 20),
+        payRules: [rule],
+        templates: [custom],
+      );
+
+      expect(state.templates.first.id, 'tpl_custom');
+      expect(
+        state.templates.any(
+          (template) => template.id == ShiftTemplate.standardId,
+        ),
+        isTrue,
+      );
+      expect(
+        state.templates.any(
+          (template) => template.id == ShiftTemplate.overtimeId,
+        ),
+        isTrue,
+      );
+      expect(
+        state.templates.any((template) => template.id == ShiftTemplate.nightId),
+        isTrue,
+      );
+    });
+
     test('ledger state recovers safe defaults from sparse snapshots', () {
       final state = LedgerState.fromSnapshot(
         LedgerSnapshot(

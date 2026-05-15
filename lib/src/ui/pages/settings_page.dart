@@ -880,13 +880,32 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                 ],
               ),
               const SizedBox(height: 14),
+              Text('内置模板恢复', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 6),
+              const Text(
+                '内置模板不能删除；如果改乱了，可以恢复当前这个模板的默认值。',
+                style: TextStyle(color: LedgerColors.muted),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _template.isBuiltIn
+                      ? _confirmRestoreCurrentTemplate
+                      : null,
+                  icon: const Icon(Icons.restore_outlined),
+                  label: const Text('恢复当前内置模板'),
+                ),
+              ),
+              const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: LedgerColors.errorBrick,
                   ),
-                  onPressed: widget.state.templates.length <= 1
+                  onPressed:
+                      _template.isBuiltIn || widget.state.templates.length <= 1
                       ? null
                       : _confirmDeleteTemplate,
                   icon: const Icon(Icons.delete_outline),
@@ -933,6 +952,44 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   void _setAsDefault() {
     widget.state.setDefaultShiftTemplate(_template.id);
     setState(() {});
+  }
+
+  Future<void> _confirmRestoreCurrentTemplate() async {
+    if (!_template.isBuiltIn) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('恢复当前模板？'),
+        content: Text('会把“${_template.name}”恢复成系统默认值；你自己新增的模板不会被改动。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认恢复'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final restored = widget.state.restoreShiftTemplate(_template.id);
+    if (!restored) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('当前模板不支持恢复默认')));
+      return;
+    }
+    setState(() {
+      _template = widget.state.templates.firstWhere(
+        (template) => template.id == _template.id,
+      );
+      _load(_template);
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('已恢复“${_template.name}”默认模板')));
   }
 
   void _load(ShiftTemplate template) {
