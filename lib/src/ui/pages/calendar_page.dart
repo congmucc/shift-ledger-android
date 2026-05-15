@@ -440,7 +440,7 @@ class _MonthGrid extends StatelessWidget {
       button: true,
       selected: selected,
       label:
-          '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasLongDuration ? '，时长偏长' : ''}${hasNote ? '，有备注' : ''}',
+          '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasLongDuration ? '，时长偏长' : ''}${hasNote ? '，有备注' : ''}${isQuietDay ? '，不在当前筛选范围内' : ''}',
       child: Opacity(
         opacity: inMonth ? (visibleByFilter ? 1 : .42) : .24,
         child: Padding(
@@ -892,7 +892,7 @@ class _MonthListState extends State<_MonthList> {
         day = day.add(const Duration(days: 1))
       )
         if (widget.matchesDay(day)) day,
-    ];
+    ]..sort((a, b) => a.compareTo(b));
     final visibleDays = days.take(_visibleCount).toList();
     if (days.isEmpty) {
       return LedgerCard(
@@ -919,7 +919,33 @@ class _MonthListState extends State<_MonthList> {
       );
     }
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        LedgerCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.swap_vert_rounded,
+                size: 18,
+                color: LedgerColors.primaryBlue,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '1日 → 31日',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const Spacer(),
+              Text(
+                '按月内时间顺序浏览',
+                style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
         for (final day in visibleDays)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -948,45 +974,31 @@ class _MonthListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = state.entriesForDay(day);
     final summary = state.summaryFor(DateRange.custom(day, day));
-    final meta = [
+    final hasNote = entries.any((entry) => entry.hasNote);
+    final hasOvertime = summary.overtimeHours > 0;
+    final hasNight = summary.nightHours > 0;
+    final hasLongDuration = summary.totalHours > 12;
+    final metaParts = [
       if (summary.regularHours > 0) '普通 ${hoursText(summary.regularHours)}',
       if (summary.overtimeHours > 0) '加班 ${hoursText(summary.overtimeHours)}',
-      if (summary.nightHours > 0) '夜班 ${hoursText(summary.nightHours)}',
       if (summary.allowance > 0) '补贴 ${moneyText(summary.allowance)}',
       if (summary.deduction > 0) '扣款 ${moneyText(summary.deduction)}',
-      if (entries.any((entry) => entry.hasNote)) '有备注',
-      if (summary.totalHours > 12) '时长偏长',
-    ].join(' · ');
+    ];
+    final previewEntries = entries.take(2).toList();
+    final hiddenCount = entries.length - previewEntries.length;
+
     return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: LedgerColors.primaryBlueSoft.withValues(alpha: .8),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  day.day.toString().padLeft(2, '0'),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                Text(
-                  _weekdayText(day.weekday),
-                  style: const TextStyle(
-                    color: LedgerColors.muted,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
+          _MonthListDateBlock(
+            day: day,
+            hasWork: entries.isNotEmpty,
+            hasOvertime: hasOvertime,
+            hasNight: hasNight,
+            hasLongDuration: hasLongDuration,
+            hasNote: hasNote,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -995,25 +1007,64 @@ class _MonthListRow extends StatelessWidget {
               children: [
                 Wrap(
                   spacing: 8,
-                  runSpacing: 4,
+                  runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       '${entries.length} 段',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    _SmallPill(hoursText(summary.totalHours)),
-                    if (summary.income > 0)
-                      _SmallPill(moneyText(summary.income)),
+                    _SmallPill('合计 ${hoursText(summary.totalHours)}'),
+                    if (hasOvertime)
+                      const _SmallPill(
+                        '加班',
+                        backgroundColor: LedgerColors.successGreenSoft,
+                        foregroundColor: LedgerColors.successGreen,
+                      ),
+                    if (hasNight)
+                      const _SmallPill(
+                        '夜班',
+                        backgroundColor: LedgerColors.nightIndigoSoft,
+                        foregroundColor: LedgerColors.nightIndigo,
+                      ),
+                    if (hasNote)
+                      const _SmallPill(
+                        '有备注',
+                        backgroundColor: LedgerColors.warningOrangeSoft,
+                        foregroundColor: LedgerColors.warningOrange,
+                      ),
+                    if (hasLongDuration)
+                      const _SmallPill(
+                        '超长',
+                        backgroundColor: Color(0xFFFCE8E6),
+                        foregroundColor: LedgerColors.errorRed,
+                      ),
                   ],
                 ),
-                if (meta.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final entry in previewEntries)
+                      _SmallPill(_entryPreviewLabel(entry), maxWidth: 138),
+                    if (hiddenCount > 0)
+                      _SmallPill(
+                        '+$hiddenCount段',
+                        backgroundColor: LedgerColors.primaryBlueSoft,
+                        foregroundColor: LedgerColors.primaryBlue,
+                      ),
+                  ],
+                ),
+                if (metaParts.isNotEmpty) ...[
+                  const SizedBox(height: 6),
                   Text(
-                    meta,
+                    metaParts.join(' · '),
                     style: const TextStyle(
                       color: LedgerColors.muted,
-                      fontSize: 13,
+                      fontSize: 12,
                       height: 1.25,
                     ),
                   ),
@@ -1021,32 +1072,125 @@ class _MonthListRow extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            tooltip: '编辑',
-            visualDensity: VisualDensity.compact,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: () => showEditWorkEntrySheet(context, state, day: day),
-            icon: const Icon(Icons.edit_outlined, size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (summary.income > 0)
+                Text(
+                  moneyText(summary.income),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: LedgerColors.successGreen,
+                  ),
+                ),
+              if (summary.income > 0) const SizedBox(height: 2),
+              Text(
+                '编辑',
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              IconButton(
+                tooltip: '编辑',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () =>
+                    showEditWorkEntrySheet(context, state, day: day),
+                icon: const Icon(Icons.edit_outlined, size: 20),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  String _entryPreviewLabel(WorkEntry entry) =>
+      '${hm(entry.startDateTime)}—${hm(entry.endDateTime)}';
+}
+
+class _MonthListDateBlock extends StatelessWidget {
+  const _MonthListDateBlock({
+    required this.day,
+    required this.hasWork,
+    required this.hasOvertime,
+    required this.hasNight,
+    required this.hasLongDuration,
+    required this.hasNote,
+  });
+
+  final DateTime day;
+  final bool hasWork;
+  final bool hasOvertime;
+  final bool hasNight;
+  final bool hasLongDuration;
+  final bool hasNote;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 60,
+    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+    decoration: BoxDecoration(
+      color: LedgerColors.primaryBlueSoft.withValues(alpha: .8),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Column(
+      children: [
+        Text(
+          day.day.toString().padLeft(2, '0'),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
+        Text(
+          _weekdayText(day.weekday),
+          style: const TextStyle(color: LedgerColors.muted, fontSize: 11),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 3,
+          runSpacing: 2,
+          children: [
+            if (hasWork) const _Dot(color: LedgerColors.primaryBlue),
+            if (hasOvertime) const _Dot(color: LedgerColors.successGreen),
+            if (hasNight) const _Dot(color: LedgerColors.nightIndigo),
+            if (hasLongDuration) const _Dot(color: LedgerColors.errorRed),
+            if (hasNote) const _NoteMarker(color: LedgerColors.warningOrange),
+          ],
+        ),
+      ],
+    ),
+  );
+
   String _weekdayText(int weekday) =>
       const ['一', '二', '三', '四', '五', '六', '日'][weekday - 1];
 }
 
 class _SmallPill extends StatelessWidget {
-  const _SmallPill(this.text);
+  const _SmallPill(
+    this.text, {
+    this.backgroundColor,
+    this.foregroundColor,
+    this.maxWidth = 118,
+  });
   final String text;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(maxWidth: 118),
+    constraints: BoxConstraints(maxWidth: maxWidth),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
-      color: LedgerColors.surfaceSoft.withValues(alpha: .7),
+      color: backgroundColor ?? LedgerColors.surfaceSoft.withValues(alpha: .7),
       borderRadius: BorderRadius.circular(99),
     ),
     child: FittedBox(
@@ -1054,7 +1198,11 @@ class _SmallPill extends StatelessWidget {
       child: Text(
         text,
         maxLines: 1,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: foregroundColor ?? LedgerColors.ink,
+        ),
       ),
     ),
   );
