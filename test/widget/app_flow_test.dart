@@ -428,7 +428,7 @@ void main() {
 
     await tester.tap(find.text('汇总'));
     await tester.pumpAndSettle();
-    final summaryBottom = tester.getBottomLeft(find.text('按天查看')).dy;
+    final summaryBottom = tester.getBottomLeft(find.text('计薪依据').first).dy;
     expect(summaryBottom, lessThan(700));
 
     await tester.tap(find.text('日历'));

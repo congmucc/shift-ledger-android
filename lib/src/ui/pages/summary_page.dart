@@ -4,7 +4,6 @@ import '../../app/ledger_state.dart';
 import '../../domain/models.dart';
 import '../../services/csv_exporter.dart';
 import '../../services/local_ledger_repository.dart';
-import '../edit_entry_sheet.dart';
 import '../pickers.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -28,17 +27,18 @@ class _SummaryPageState extends State<SummaryPage> {
   Widget build(BuildContext context) {
     final range = _range();
     final summary = widget.state.summaryFor(range);
-    final dayRows = _groupSummaryByDay(summary);
+    final defaultRule = widget.state.defaultRule;
     return PageFrame(
       title: '工时汇总',
       trailing: FilledButton.tonal(
         onPressed: _exporting ? null : () => _exportCsv(range),
-        child: Text(_exporting ? '导出中' : 'CSV'),
+        child: Text(_exporting ? '导出中' : '导出'),
       ),
       children: [
         _RangeSelector(
           mode: _mode,
           range: range,
+          summary: summary,
           onModeChanged: (value) => setState(() {
             _mode = value;
             if (value == '自定义') _ensureCustomRange();
@@ -46,118 +46,19 @@ class _SummaryPageState extends State<SummaryPage> {
           onPickStart: _mode == '自定义' ? _pickCustomStart : null,
           onPickEnd: _mode == '自定义' ? _pickCustomEnd : null,
         ),
-        const SizedBox(height: 12),
         _SummaryOverview(
           summary: summary,
-          onHoursTap: () => _showDayRows('出勤明细', dayRows),
-          onIncomeTap: () => _showIncomeBreakdown(summary),
+          payrollBasisSummary:
+              '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
         ),
-        SectionHeader(
-          title: '按天查看',
-          actionLabel: '查看明细',
-          onAction: () => _showDayRows('全部明细', dayRows),
-        ),
-        LedgerCard(
-          padding: const EdgeInsets.all(12),
-          child: _InsightGrid(
-            items: [
-              _InsightItem(
-                title: '全部日期',
-                value: '${summary.attendanceDays}天',
-                subtitle: '按日期汇总每一天',
-                onTap: () => _showDayRows('全部明细', dayRows),
-              ),
-              _InsightItem(
-                title: '时长偏长',
-                value: '${summary.longDurationDays}天',
-                subtitle: '单日超过 12h',
-                onTap: () => _showDayRows(
-                  '时长偏长',
-                  dayRows.where((row) => row.totalHours > 12).toList(),
-                ),
-              ),
-              _InsightItem(
-                title: '备注',
-                value: '${summary.noteDays}天',
-                subtitle: '只看有备注的日期',
-                onTap: () => _showDayRows(
-                  '含备注日期',
-                  dayRows.where((row) => row.hasNote).toList(),
-                ),
-              ),
-              _InsightItem(
-                title: '补贴',
-                value: moneyText(summary.allowance),
-                subtitle: '有金额的日期',
-                onTap: () => _showDayRows(
-                  '补贴日期',
-                  dayRows.where((row) => row.allowance > 0).toList(),
-                ),
-              ),
-              _InsightItem(
-                title: '扣款',
-                value: moneyText(summary.deduction),
-                subtitle: '有金额的日期',
-                onTap: () => _showDayRows(
-                  '扣款日期',
-                  dayRows.where((row) => row.deduction > 0).toList(),
-                ),
-              ),
-              _InsightItem(
-                title: '加班',
-                value: '${summary.overtimeDays}天',
-                subtitle: hoursText(summary.overtimeHours),
-                onTap: () => _showDayRows(
-                  '加班日期',
-                  dayRows.where((row) => row.overtimeHours > 0).toList(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SectionHeader(title: '工时与收入拆分'),
-        LedgerCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            children: [
-              _BreakdownRow(
-                label: '普通',
-                value: hoursText(summary.regularHours),
-                color: LedgerColors.primaryBlue,
-                fraction: summary.totalHours == 0
-                    ? 0
-                    : summary.regularHours / summary.totalHours,
-              ),
-              _BreakdownRow(
-                label: '加班',
-                value:
-                    '${hoursText(summary.overtimeHours)} · ${summary.overtimeDays}天',
-                color: LedgerColors.successGreen,
-                fraction: summary.totalHours == 0
-                    ? 0
-                    : summary.overtimeHours / summary.totalHours,
-              ),
-              _BreakdownRow(
-                label: '夜班',
-                value:
-                    '${summary.nightShiftCount}次 · ${hoursText(summary.nightHours)}',
-                color: LedgerColors.nightIndigo,
-                fraction: summary.totalHours == 0
-                    ? 0
-                    : summary.nightHours / summary.totalHours,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        LedgerCard(
-          padding: const EdgeInsets.all(12),
-          child: SettingTile(
-            title: '导出 CSV',
-            subtitle: '含计薪规则、收入拆分、跨天标记',
-            trailing: _exporting ? '导出中' : '导出',
-            onTap: _exporting ? null : () => _exportCsv(range),
-          ),
+        _IncomeCompositionCard(summary: summary),
+        _PayrollBasisCard(
+          range: range,
+          rule: defaultRule,
+          nightRule: widget.state.nightRule,
+          exporting: _exporting,
+          onExplain: () => _showIncomeBreakdown(summary),
+          onExport: () => _exportCsv(range),
         ),
       ],
     );
@@ -260,51 +161,20 @@ class _SummaryPageState extends State<SummaryPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('收入构成', style: Theme.of(context).textTheme.headlineMedium),
+              Text('收入组成', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 12),
               _Line('基础收入', moneyText(summary.baseIncome)),
               _Line('加班收入', moneyText(summary.overtimeIncome)),
               _Line('夜班收入', moneyText(summary.nightIncome)),
               _Line('补贴', moneyText(summary.allowance)),
               _Line('扣款', '-${moneyText(summary.deduction)}'),
+              const Divider(height: 24),
+              _Line('预计到手', moneyText(summary.income)),
             ],
           ),
         ),
       ),
     );
-  }
-
-  List<_DaySummaryRow> _groupSummaryByDay(LedgerSummary summary) {
-    final byDay = <String, List<EntryCalculation>>{};
-    for (final calc in summary.calculations) {
-      byDay.putIfAbsent(ymd(calc.entry.workDate), () => []).add(calc);
-    }
-    final rows = byDay.values.map((items) => _DaySummaryRow(items)).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
-    return rows;
-  }
-
-  void _showDayRows(String title, List<_DaySummaryRow> rows) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: LedgerColors.paper,
-      builder: (context) => _SummaryDrillDownSheet(
-        title: title,
-        rows: rows,
-        state: widget.state,
-        templateNameFor: _templateNameFor,
-      ),
-    );
-  }
-
-  String? _templateNameFor(WorkEntry entry) {
-    final id = entry.templateId;
-    if (id == null) return null;
-    for (final template in widget.state.templates) {
-      if (template.id == id) return template.name;
-    }
-    return null;
   }
 
   void _snack(String message) {
@@ -319,6 +189,7 @@ class _RangeSelector extends StatelessWidget {
   const _RangeSelector({
     required this.mode,
     required this.range,
+    required this.summary,
     required this.onModeChanged,
     this.onPickStart,
     this.onPickEnd,
@@ -326,6 +197,7 @@ class _RangeSelector extends StatelessWidget {
 
   final String mode;
   final DateRange range;
+  final LedgerSummary summary;
   final ValueChanged<String> onModeChanged;
   final VoidCallback? onPickStart;
   final VoidCallback? onPickEnd;
@@ -355,50 +227,53 @@ class _RangeSelector extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         LedgerCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          child: Row(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.filter_alt_outlined,
-                size: 18,
-                color: LedgerColors.primaryBlue,
-              ),
-              const SizedBox(width: 8),
-              Text('范围', style: Theme.of(context).textTheme.labelMedium),
-              const SizedBox(width: 8),
-              if (custom) ...[
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _RangeDateButton(
-                          label: ymd(range.start),
-                          onTap: onPickStart,
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          '至',
-                          style: TextStyle(color: LedgerColors.muted),
-                        ),
-                      ),
-                      Expanded(
-                        child: _RangeDateButton(
-                          label: ymd(range.endInclusive),
-                          onTap: onPickEnd,
-                        ),
-                      ),
-                    ],
+              Row(
+                children: [
+                  const Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: LedgerColors.primaryBlue,
                   ),
+                  const SizedBox(width: 8),
+                  Text('当前范围', style: Theme.of(context).textTheme.labelMedium),
+                  const Spacer(),
+                  _ScopeBadge(text: '$mode · ${summary.range.dayCount}天'),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (custom) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _RangeDateButton(
+                        label: ymd(range.start),
+                        onTap: onPickStart,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        '至',
+                        style: TextStyle(color: LedgerColors.muted),
+                      ),
+                    ),
+                    Expanded(
+                      child: _RangeDateButton(
+                        label: ymd(range.endInclusive),
+                        onTap: onPickEnd,
+                      ),
+                    ),
+                  ],
                 ),
               ] else
-                Expanded(
-                  child: FittedValueText(
-                    rangeText,
-                    style: Theme.of(context).textTheme.titleMedium!,
-                    maxScale: 1.08,
-                  ),
+                FittedValueText(
+                  rangeText,
+                  style: Theme.of(context).textTheme.titleMedium!,
+                  maxScale: 1.08,
                 ),
             ],
           ),
@@ -454,6 +329,25 @@ class _RangeModePill extends StatelessWidget {
   );
 }
 
+class _ScopeBadge extends StatelessWidget {
+  const _ScopeBadge({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: LedgerColors.primaryBlueSoft,
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+    ),
+  );
+}
+
 class _RangeDateButton extends StatelessWidget {
   const _RangeDateButton({required this.label, required this.onTap});
 
@@ -487,13 +381,11 @@ class _RangeDateButton extends StatelessWidget {
 class _SummaryOverview extends StatelessWidget {
   const _SummaryOverview({
     required this.summary,
-    required this.onHoursTap,
-    required this.onIncomeTap,
+    required this.payrollBasisSummary,
   });
 
   final LedgerSummary summary;
-  final VoidCallback onHoursTap;
-  final VoidCallback onIncomeTap;
+  final String payrollBasisSummary;
 
   @override
   Widget build(BuildContext context) {
@@ -509,7 +401,6 @@ class _SummaryOverview extends StatelessWidget {
                   label: '总工时',
                   value: hoursText(summary.totalHours),
                   subtext: '${summary.attendanceDays}天出勤',
-                  onTap: onHoursTap,
                   emphasized: true,
                 ),
               ),
@@ -520,7 +411,6 @@ class _SummaryOverview extends StatelessWidget {
                   value: moneyText(summary.income),
                   subtext:
                       '补 ${moneyText(summary.allowance)} / 扣 ${moneyText(summary.deduction)}',
-                  onTap: onIncomeTap,
                   emphasized: true,
                 ),
               ),
@@ -531,11 +421,22 @@ class _SummaryOverview extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: [
-              _StatChip('加班', hoursText(summary.overtimeHours)),
-              _StatChip('夜班', '${summary.nightShiftCount}次'),
-              _StatChip('备注', '${summary.noteDays}天'),
-              _StatChip('偏长', '${summary.longDurationDays}天'),
+              _StatChip('出勤', '${summary.attendanceDays}天'),
+              _StatChip('加班', '${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}'),
+              _StatChip('夜班', '${summary.nightShiftCount}次 / ${hoursText(summary.nightHours)}'),
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '备注 ${summary.noteDays} 天 · 偏长 ${summary.longDurationDays} 天 · 共 ${summary.calculations.length} 段',
+            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 4),
+          Text('计薪依据', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 2),
+          Text(
+            payrollBasisSummary,
+            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
           ),
         ],
       ),
@@ -548,58 +449,48 @@ class _MiniMetric extends StatelessWidget {
     required this.label,
     required this.value,
     required this.subtext,
-    this.onTap,
     this.emphasized = false,
   });
 
   final String label;
   final String value;
   final String subtext;
-  final VoidCallback? onTap;
   final bool emphasized;
 
   @override
-  Widget build(BuildContext context) {
-    final child = Container(
-      constraints: const BoxConstraints(minHeight: 60),
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-      decoration: BoxDecoration(
-        color: LedgerColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LedgerColors.hairline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 2),
-          FittedValueText(
-            value,
-            maxScale: 1.1,
-            style: TextStyle(
-              fontSize: emphasized ? 23 : 19,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.8,
-              color: LedgerColors.ink,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 60),
+    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceRaised,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: LedgerColors.hairline),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 2),
+        FittedValueText(
+          value,
+          maxScale: 1.1,
+          style: TextStyle(
+            fontSize: emphasized ? 23 : 19,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.8,
+            color: LedgerColors.ink,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
-          FittedValueText(
-            subtext,
-            maxScale: 1.06,
-            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-    if (onTap == null) return child;
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: child,
-    );
-  }
+        ),
+        FittedValueText(
+          subtext,
+          maxScale: 1.06,
+          style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
+        ),
+      ],
+    ),
+  );
 }
 
 class _StatChip extends StatelessWidget {
@@ -621,61 +512,15 @@ class _StatChip extends StatelessWidget {
   );
 }
 
-class _InsightItem {
-  const _InsightItem({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.onTap,
-  });
-  final String title;
-  final String value;
-  final String subtitle;
-  final VoidCallback onTap;
-}
+class _IncomeCompositionCard extends StatelessWidget {
+  const _IncomeCompositionCard({required this.summary});
 
-class _InsightGrid extends StatelessWidget {
-  const _InsightGrid({required this.items});
-  final List<_InsightItem> items;
+  final LedgerSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 420 ? 3 : 2;
-        final width = (constraints.maxWidth - 8 * (columns - 1)) / columns;
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final item in items)
-              SizedBox(
-                width: width,
-                child: _InsightTile(item: item),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _InsightTile extends StatelessWidget {
-  const _InsightTile({required this.item});
-  final _InsightItem item;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(16),
-    onTap: item.onTap,
-    child: Container(
-      constraints: const BoxConstraints(minHeight: 58),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: LedgerColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LedgerColors.hairline),
-      ),
+    return LedgerCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -683,429 +528,101 @@ class _InsightTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium,
+                  '收入组成',
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                size: 16,
-                color: LedgerColors.muted,
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          FittedValueText(
-            item.value,
-            style: Theme.of(context).textTheme.titleMedium!,
-            maxScale: 1.08,
-          ),
-          Text(
-            item.subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-          ),
+          const SizedBox(height: 8),
+          _Line('基础收入', moneyText(summary.baseIncome)),
+          _Line('加班收入', moneyText(summary.overtimeIncome)),
+          _Line('夜班收入', moneyText(summary.nightIncome)),
+          _Line('补贴', moneyText(summary.allowance)),
+          _Line('扣款', '-${moneyText(summary.deduction)}'),
+          _Line('预计到手', moneyText(summary.income)),
         ],
-      ),
-    ),
-  );
-}
-
-class _SummaryDrillDownSheet extends StatefulWidget {
-  const _SummaryDrillDownSheet({
-    required this.title,
-    required this.rows,
-    required this.state,
-    required this.templateNameFor,
-  });
-
-  final String title;
-  final List<_DaySummaryRow> rows;
-  final LedgerState state;
-  final String? Function(WorkEntry entry) templateNameFor;
-
-  @override
-  State<_SummaryDrillDownSheet> createState() => _SummaryDrillDownSheetState();
-}
-
-class _SummaryDrillDownSheetState extends State<_SummaryDrillDownSheet> {
-  static const _pageSize = 15;
-  int _visibleCount = _pageSize;
-
-  @override
-  Widget build(BuildContext context) {
-    final visibleRows = widget.rows.take(_visibleCount).toList();
-    final shownCount = visibleRows.length;
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.84,
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('关闭'),
-                  ),
-                ],
-              ),
-              Text(
-                widget.rows.isEmpty
-                    ? '没有匹配日期'
-                    : '按天汇总 · 已显示 $shownCount / ${widget.rows.length} 天',
-                style: const TextStyle(color: LedgerColors.muted),
-              ),
-              const SizedBox(height: 12),
-              if (widget.rows.isEmpty) const LedgerCard(child: Text('没有匹配日期')),
-              for (final row in visibleRows) ...[
-                _DaySummaryCard(
-                  row: row,
-                  state: widget.state,
-                  templateNameFor: widget.templateNameFor,
-                ),
-                const SizedBox(height: 8),
-              ],
-              if (_visibleCount < widget.rows.length)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => setState(() => _visibleCount += _pageSize),
-                    child: Text('继续加载 ${widget.rows.length - _visibleCount} 天'),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
-class _DaySummaryCard extends StatefulWidget {
-  const _DaySummaryCard({
-    required this.row,
-    required this.state,
-    required this.templateNameFor,
+class _PayrollBasisCard extends StatelessWidget {
+  const _PayrollBasisCard({
+    required this.range,
+    required this.rule,
+    required this.nightRule,
+    required this.exporting,
+    required this.onExplain,
+    required this.onExport,
   });
 
-  final _DaySummaryRow row;
-  final LedgerState state;
-  final String? Function(WorkEntry entry) templateNameFor;
-
-  @override
-  State<_DaySummaryCard> createState() => _DaySummaryCardState();
-}
-
-class _DaySummaryCardState extends State<_DaySummaryCard> {
-  bool _expanded = false;
+  final DateRange range;
+  final PayRule rule;
+  final NightRule nightRule;
+  final bool exporting;
+  final VoidCallback onExplain;
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
-    final row = widget.row;
-    final breakdown = row.breakdownText(widget.templateNameFor);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: LedgerColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LedgerColors.hairline),
-      ),
+    final overtimeBase = moneyText(rule.overtimeHourlyBase(range: range));
+    return LedgerCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: FittedValueText(
-                  '${cnDateText(row.date)} · ${_weekdayText(row.date.weekday)} · ${row.entries.length}段',
-                  maxScale: 1.15,
-                  style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                    fontSize: 16,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _DenseValuePill(hoursText(row.totalHours)),
-              const SizedBox(width: 6),
-              _DenseValuePill(moneyText(row.income)),
-              const SizedBox(width: 2),
-              TextButton(
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  minimumSize: const Size(44, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  showEditWorkEntrySheet(context, widget.state, day: row.date);
-                },
-                child: const Text('编辑'),
-              ),
-            ],
+          Text('计薪依据', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 6),
+          SettingTile(
+            title: '默认规则',
+            subtitle:
+                '${rule.name} · ${rule.baseType.label} · ${rule.amountLabel}',
           ),
-          if (breakdown.isNotEmpty) ...[
-            const SizedBox(height: 3),
-            Text(
-              breakdown,
-              textScaler: cappedTextScaler(context, maxScale: 1.12),
-              style: const TextStyle(
-                color: LedgerColors.muted,
-                fontSize: 12,
-                height: 1.25,
-              ),
-            ),
-          ],
-          _ExpandDetailsButton(
-            expanded: _expanded,
-            onTap: () => setState(() => _expanded = !_expanded),
+          SettingTile(
+            title: '加班计算',
+            subtitle:
+                '超过 ${hoursText(rule.overtimeThresholdHours)} 后按 ${_factorText(rule.overtimeMultiplier)} · 基数 $overtimeBase/h',
           ),
-          if (_expanded) ...[
-            const SizedBox(height: 4),
-            for (final calc in row.calculations) ...[
-              _ExpandedSegmentLine(
-                calc: calc,
-                templateName: widget.templateNameFor(calc.entry),
-              ),
-              if (calc != row.calculations.last)
-                const Divider(height: 8, color: LedgerColors.hairline),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ExpandDetailsButton extends StatelessWidget {
-  const _ExpandDetailsButton({required this.expanded, required this.onTap});
-  final bool expanded;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.centerLeft,
-    child: TextButton.icon(
-      style: TextButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        minimumSize: const Size(44, 30),
-        padding: const EdgeInsets.symmetric(horizontal: 0),
-        foregroundColor: LedgerColors.primaryBlue,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      onPressed: onTap,
-      icon: Icon(
-        expanded
-            ? Icons.keyboard_arrow_up_rounded
-            : Icons.keyboard_arrow_down_rounded,
-        size: 18,
-      ),
-      label: Text(expanded ? '收起明细' : '展开明细'),
-    ),
-  );
-}
-
-class _ExpandedSegmentLine extends StatelessWidget {
-  const _ExpandedSegmentLine({required this.calc, required this.templateName});
-
-  final EntryCalculation calc;
-  final String? templateName;
-
-  @override
-  Widget build(BuildContext context) {
-    final entry = calc.entry;
-    final name = templateName ?? entry.type.label;
-    final hours = calc.regularHours + calc.overtimeHours;
-    final tags = [
-      if (calc.regularHours > 0) '普通 ${hoursText(calc.regularHours)}',
-      if (calc.overtimeHours > 0) '加班 ${hoursText(calc.overtimeHours)}',
-      if (calc.nightHours > 0) '夜班 ${hoursText(calc.nightHours)}',
-      if (entry.allowanceTotal > 0) '补 ${moneyText(entry.allowanceTotal)}',
-      if (entry.deductionTotal > 0) '扣 ${moneyText(entry.deductionTotal)}',
-      if (entry.isCrossDay) '跨天',
-      if (entry.hasNote) '备注',
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          SettingTile(
+            title: '夜班规则',
+            subtitle:
+                '${nightRule.label} · ${nightRule.mode.label} · ${_nightRuleValueText(nightRule)}',
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: FittedValueText(
-                  '${entry.timeRangeLabel} · $name ${hoursText(hours > 0 ? hours : entry.netHours)}',
-                  maxScale: 1.12,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                child: OutlinedButton(
+                  onPressed: onExplain,
+                  child: const Text('计算说明'),
                 ),
               ),
               const SizedBox(width: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 96),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    moneyText(calc.income),
-                    textScaler: cappedTextScaler(context, maxScale: 1.1),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: exporting ? null : onExport,
+                  child: Text(exporting ? '导出中' : '导出 CSV'),
                 ),
               ),
             ],
           ),
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: 1),
-            Text(
-              tags.join(' · '),
-              textScaler: cappedTextScaler(context, maxScale: 1.1),
-              style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _DenseValuePill extends StatelessWidget {
-  const _DenseValuePill(this.text);
-  final String text;
+String _factorText(double value) => '${value.toStringAsFixed(
+  value.truncateToDouble() == value ? 0 : 1,
+)}x';
 
-  @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(maxWidth: 92),
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-    decoration: BoxDecoration(
-      color: LedgerColors.surfaceRaised,
-      borderRadius: BorderRadius.circular(99),
-      border: Border.all(color: LedgerColors.hairline),
-    ),
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Text(
-        text,
-        maxLines: 1,
-        textScaler: cappedTextScaler(context, maxScale: 1.08),
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.2,
-        ),
-      ),
-    ),
-  );
-}
-
-class _DaySummaryRow {
-  _DaySummaryRow(List<EntryCalculation> calculations)
-    : calculations = [
-        ...calculations,
-      ]..sort((a, b) => a.entry.startDateTime.compareTo(b.entry.startDateTime));
-
-  final List<EntryCalculation> calculations;
-
-  DateTime get date => calculations.first.entry.workDate;
-  List<WorkEntry> get entries =>
-      calculations.map((calc) => calc.entry).toList();
-  double get regularHours => _sum((calc) => calc.regularHours);
-  double get overtimeHours => _sum((calc) => calc.overtimeHours);
-  double get nightHours => _sum((calc) => calc.nightHours);
-  double get totalHours =>
-      _sum((calc) => calc.regularHours + calc.overtimeHours);
-  double get allowance =>
-      entries.fold(0.0, (sum, entry) => sum + entry.allowanceTotal);
-  double get deduction =>
-      entries.fold(0.0, (sum, entry) => sum + entry.deductionTotal);
-  double get income => _sum((calc) => calc.income);
-  bool get hasNote => entries.any((entry) => entry.hasNote);
-
-  String breakdownText(String? Function(WorkEntry entry) templateNameFor) {
-    final byName = <String, double>{};
-    for (final calc in calculations) {
-      final entry = calc.entry;
-      final name = templateNameFor(entry) ?? entry.type.label;
-      final hours = calc.regularHours + calc.overtimeHours;
-      byName[name] = (byName[name] ?? 0) + (hours > 0 ? hours : entry.netHours);
-    }
-    final parts = [
-      for (final item in byName.entries) '${item.key} ${hoursText(item.value)}',
-      if (allowance > 0) '补 ${moneyText(allowance)}',
-      if (deduction > 0) '扣 ${moneyText(deduction)}',
-      if (hasNote) '备注',
-    ];
-    return parts.join(' · ');
-  }
-
-  double _sum(double Function(EntryCalculation calc) selector) =>
-      calculations.fold(0.0, (sum, calc) => sum + selector(calc));
-}
-
-String _weekdayText(int weekday) =>
-    '周${const ['一', '二', '三', '四', '五', '六', '日'][weekday - 1]}';
-
-class _BreakdownRow extends StatelessWidget {
-  const _BreakdownRow({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.fraction,
-  });
-  final String label;
-  final String value;
-  final Color color;
-  final double fraction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          SizedBox(width: 46, child: Text(label)),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: fraction.clamp(0, 1),
-                minHeight: 7,
-                color: color,
-                backgroundColor: LedgerColors.surfaceSoft,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 88,
-            child: FittedValueText(
-              value,
-              textAlign: TextAlign.right,
-              alignment: Alignment.centerRight,
-              maxScale: 1.08,
-              style: Theme.of(context).textTheme.titleMedium!,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+String _nightRuleValueText(NightRule rule) {
+  return switch (rule.mode) {
+    NightAllowanceMode.fixed => '每次 ${moneyText(rule.fixedAmount)}',
+    NightAllowanceMode.hourly => '每小时 ${moneyText(rule.hourlyAmount)}',
+    NightAllowanceMode.multiplier => '按 ${_factorText(rule.multiplier)} 计算',
+  };
 }
 
 class _Line extends StatelessWidget {
