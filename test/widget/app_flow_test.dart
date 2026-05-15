@@ -209,7 +209,11 @@ void main() {
     expect(find.text('计薪依据'), findsOneWidget);
     expect(find.text('查看明细'), findsNothing);
     expect(find.text('全部明细'), findsNothing);
-    await tester.tap(find.text('导出').first);
+    final summaryExportAction = find.descendant(
+      of: find.byType(Scaffold),
+      matching: find.widgetWithText(FilledButton, '导出'),
+    );
+    await tester.tap(summaryExportAction);
     await tester.pumpAndSettle();
     expect(find.text('导出 CSV？'), findsOneWidget);
     await tester.tap(find.text('确认导出'));

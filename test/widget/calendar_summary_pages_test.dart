@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
@@ -51,6 +52,23 @@ void main() {
     );
   }
 
+  LedgerState buildSummaryState() {
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    return LedgerState(
+      now: DateTime(2026, 5, 15),
+      payRules: [rule],
+      entries: [
+        WorkEntry.create(
+          id: 'summary_seed',
+          workDate: DateTime(2026, 5, 15),
+          startDateTime: DateTime(2026, 5, 15, 9),
+          endDateTime: DateTime(2026, 5, 15, 17),
+          payRule: rule,
+        ),
+      ],
+    );
+  }
+
   testWidgets('calendar list mode locks the approved monthly chronology', (
     tester,
   ) async {
@@ -68,19 +86,30 @@ void main() {
     expect(find.text('08:00—12:00'), findsOneWidget);
     expect(find.text('13:00—18:00'), findsOneWidget);
     expect(find.text('+2段'), findsOneWidget);
+    expect(find.text('19:00—21:00'), findsNothing);
+    expect(find.text('22:00—23:00'), findsNothing);
+
+    final may01Top = tester.getTopLeft(find.text('01')).dy;
+    final may05Top = tester.getTopLeft(find.text('05')).dy;
+    expect(may01Top, lessThan(may05Top));
   });
 
   testWidgets(
     'summary page locks the approved boundary before implementation',
     (tester) async {
-      await tester.pumpWidget(ShiftLedgerApp(state: buildMonthListState()));
+      await tester.pumpWidget(ShiftLedgerApp(state: buildSummaryState()));
 
       await tester.tap(find.text('汇总'));
       await tester.pumpAndSettle();
 
+      final summaryExportAction = find.descendant(
+        of: find.byType(Scaffold),
+        matching: find.widgetWithText(FilledButton, '导出'),
+      );
+
       expect(find.text('收入组成'), findsOneWidget);
       expect(find.text('计薪依据'), findsOneWidget);
-      expect(find.text('导出'), findsWidgets);
+      expect(summaryExportAction, findsOneWidget);
       expect(find.text('按天查看'), findsNothing);
       expect(find.text('查看明细'), findsNothing);
       expect(find.text('全部日期'), findsNothing);
