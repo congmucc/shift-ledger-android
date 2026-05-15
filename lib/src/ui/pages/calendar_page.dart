@@ -894,30 +894,6 @@ class _MonthListState extends State<_MonthList> {
         if (widget.matchesDay(day)) day,
     ]..sort((a, b) => a.compareTo(b));
     final visibleDays = days.take(_visibleCount).toList();
-    if (days.isEmpty) {
-      return LedgerCard(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.filter == _CalendarFilter.all
-                  ? '本月暂无记录'
-                  : '本月暂无${widget.filter.label}记录',
-            ),
-            const SizedBox(height: 8),
-            FilledButton(
-              onPressed: () => showEditWorkEntrySheet(
-                context,
-                widget.state,
-                day: widget.range.start,
-              ),
-              child: const Text('新增第一段'),
-            ),
-          ],
-        ),
-      );
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -946,20 +922,45 @@ class _MonthListState extends State<_MonthList> {
           ),
         ),
         const SizedBox(height: 8),
-        for (final day in visibleDays)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: () => widget.onSelect(day),
-              borderRadius: BorderRadius.circular(18),
-              child: _MonthListRow(day: day, state: widget.state),
+        if (days.isEmpty)
+          LedgerCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.filter == _CalendarFilter.all
+                      ? '本月暂无记录'
+                      : '本月暂无${widget.filter.label}记录',
+                ),
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () => showEditWorkEntrySheet(
+                    context,
+                    widget.state,
+                    day: widget.range.start,
+                  ),
+                  child: const Text('新增第一段'),
+                ),
+              ],
             ),
-          ),
-        if (_visibleCount < days.length)
-          OutlinedButton(
-            onPressed: () => setState(() => _visibleCount += 10),
-            child: Text('继续加载 ${days.length - _visibleCount} 天记录'),
-          ),
+          )
+        else ...[
+          for (final day in visibleDays)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                onTap: () => widget.onSelect(day),
+                borderRadius: BorderRadius.circular(18),
+                child: _MonthListRow(day: day, state: widget.state),
+              ),
+            ),
+          if (_visibleCount < days.length)
+            OutlinedButton(
+              onPressed: () => setState(() => _visibleCount += 10),
+              child: Text('继续加载 ${days.length - _visibleCount} 天记录'),
+            ),
+        ],
       ],
     );
   }
