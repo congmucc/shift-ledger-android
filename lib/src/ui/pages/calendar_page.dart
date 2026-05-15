@@ -19,6 +19,7 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _month;
   late DateTime _selectedDay;
   bool _listMode = false;
+  _CalendarFilter _filter = _CalendarFilter.all;
 
   @override
   void initState() {
@@ -81,15 +82,36 @@ class _CalendarPageState extends State<CalendarPage> {
           onSelectionChanged: (values) =>
               setState(() => _listMode = values.first),
         ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final filter in _CalendarFilter.values)
+              _CalendarFilterChip(
+                label: filter.label,
+                selected: _filter == filter,
+                onSelected: () => _changeFilter(filter),
+              ),
+          ],
+        ),
         const SizedBox(height: 12),
         if (_listMode)
-          _MonthList(state: widget.state, range: range, onSelect: _selectDay)
+          _MonthList(
+            state: widget.state,
+            range: range,
+            onSelect: _selectDay,
+            filter: _filter,
+            matchesDay: _matchesCurrentFilter,
+          )
         else
           _MonthGrid(
             state: widget.state,
             month: _month,
             selectedDay: _selectedDay,
             onSelect: _selectDay,
+            onMonthChanged: _selectMonth,
+            matchesDay: _matchesCurrentFilter,
           ),
         SectionHeader(
           title:
@@ -109,8 +131,11 @@ class _CalendarPageState extends State<CalendarPage> {
   });
 
   void _jumpToToday() => setState(() {
-    _selectedDay = widget.state.now;
     _month = DateTime(widget.state.now.year, widget.state.now.month);
+    _selectedDay = _resolvedSelectionForMonth(
+      _month,
+      preferredDay: widget.state.now,
+    );
   });
 
   void _selectMonth(DateTime month) => setState(() => _applyMonth(month));
@@ -119,10 +144,63 @@ class _CalendarPageState extends State<CalendarPage> {
     final targetMonth = DateTime(month.year, month.month);
     _month = targetMonth;
     final today = dateOnly(widget.state.now);
-    _selectedDay =
+    final defaultSelection =
         targetMonth.year == today.year && targetMonth.month == today.month
         ? today
         : targetMonth;
+    _selectedDay = _resolvedSelectionForMonth(
+      targetMonth,
+      preferredDay: defaultSelection,
+    );
+  }
+
+  void _changeFilter(_CalendarFilter filter) => setState(() {
+    _filter = filter;
+    if (!_matchesCurrentFilter(_selectedDay)) {
+      final firstMatch = _firstMatchingDayInMonth(_month);
+      if (firstMatch != null) _selectedDay = firstMatch;
+    }
+  });
+
+  bool _matchesCurrentFilter(DateTime day) =>
+      _matchesFilter(day, filter: _filter);
+
+  bool _matchesFilter(DateTime day, {required _CalendarFilter filter}) {
+    final date = dateOnly(day);
+    final entries = widget.state.entriesForDay(date);
+    final summary = widget.state.summaryFor(DateRange.custom(date, date));
+    return switch (filter) {
+      _CalendarFilter.all => entries.isNotEmpty,
+      _CalendarFilter.overtime => summary.overtimeHours > 0,
+      _CalendarFilter.night => summary.nightHours > 0,
+      _CalendarFilter.note => entries.any((entry) => entry.hasNote),
+      _CalendarFilter.longDuration => summary.totalHours > 12,
+    };
+  }
+
+  DateTime _resolvedSelectionForMonth(
+    DateTime month, {
+    required DateTime preferredDay,
+  }) {
+    final normalizedPreferred = dateOnly(preferredDay);
+    if (_matchesCurrentFilter(normalizedPreferred) &&
+        normalizedPreferred.year == month.year &&
+        normalizedPreferred.month == month.month) {
+      return normalizedPreferred;
+    }
+    return _firstMatchingDayInMonth(month) ?? normalizedPreferred;
+  }
+
+  DateTime? _firstMatchingDayInMonth(DateTime month) {
+    final range = DateRange.month(month.year, month.month);
+    for (
+      var day = range.start;
+      day.isBefore(range.endExclusive);
+      day = day.add(const Duration(days: 1))
+    ) {
+      if (_matchesCurrentFilter(day)) return day;
+    }
+    return null;
   }
 
   Future<void> _showMonthPicker() async {
@@ -211,11 +289,15 @@ class _MonthGrid extends StatelessWidget {
     required this.month,
     required this.selectedDay,
     required this.onSelect,
+    required this.onMonthChanged,
+    required this.matchesDay,
   });
   final LedgerState state;
   final DateTime month;
   final DateTime selectedDay;
   final ValueChanged<DateTime> onSelect;
+  final ValueChanged<DateTime> onMonthChanged;
+  final bool Function(DateTime day) matchesDay;
 
   @override
   Widget build(BuildContext context) {
@@ -239,14 +321,8 @@ class _MonthGrid extends StatelessWidget {
             daysOfWeekHeight: 22,
             selectedDayPredicate: (day) => ymd(day) == ymd(selectedDay),
             onDaySelected: (selected, focused) => onSelect(selected),
-            onPageChanged: (focused) {
-              final today = dateOnly(state.now);
-              final target =
-                  focused.year == today.year && focused.month == today.month
-                  ? today
-                  : DateTime(focused.year, focused.month);
-              onSelect(target);
-            },
+            onPageChanged: (focused) =>
+                onMonthChanged(DateTime(focused.year, focused.month)),
             calendarStyle: const CalendarStyle(
               outsideDaysVisible: true,
               cellMargin: EdgeInsets.zero,
@@ -271,6 +347,7 @@ class _MonthGrid extends StatelessWidget {
               _LegendMark(color: LedgerColors.primaryBlue, label: '有工时'),
               _LegendMark(color: LedgerColors.successGreen, label: '加班'),
               _LegendMark(color: LedgerColors.nightIndigo, label: '夜班'),
+              _LegendMark(color: LedgerColors.errorRed, label: '超长'),
               _LegendMark(
                 color: LedgerColors.warningOrange,
                 label: '备注',
@@ -297,7 +374,9 @@ class _MonthGrid extends StatelessWidget {
     final hasNote = entries.any((entry) => entry.hasNote);
     final hasOvertime = summary.overtimeHours > 0;
     final hasNight = summary.nightHours > 0;
+    final hasLongDuration = summary.totalHours > 12;
     final hasWork = entries.isNotEmpty;
+    final visibleByFilter = matchesDay(day);
     final dateFill = selected
         ? LedgerColors.primaryBlue
         : hasNight
@@ -312,13 +391,15 @@ class _MonthGrid extends StatelessWidget {
         : inMonth
         ? LedgerColors.ink
         : LedgerColors.stone;
+    final showHours = visibleByFilter && summary.totalHours > 0;
+    final showMarkers = visibleByFilter;
     return Semantics(
       button: true,
       selected: selected,
       label:
-          '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasNote ? '，有备注' : ''}',
+          '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasLongDuration ? '，时长偏长' : ''}${hasNote ? '，有备注' : ''}',
       child: Opacity(
-        opacity: inMonth ? 1 : .45,
+        opacity: inMonth ? (visibleByFilter ? 1 : .58) : .34,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
           child: Column(
@@ -354,7 +435,7 @@ class _MonthGrid extends StatelessWidget {
               SizedBox(
                 height: 15,
                 child: Center(
-                  child: summary.totalHours > 0
+                  child: showHours
                       ? FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
@@ -381,11 +462,15 @@ class _MonthGrid extends StatelessWidget {
                   spacing: 3,
                   runSpacing: 2,
                   children: [
-                    if (hasWork) const _Dot(color: LedgerColors.primaryBlue),
-                    if (hasOvertime)
+                    if (showMarkers && hasWork)
+                      const _Dot(color: LedgerColors.primaryBlue),
+                    if (showMarkers && hasOvertime)
                       const _Dot(color: LedgerColors.successGreen),
-                    if (hasNight) const _Dot(color: LedgerColors.nightIndigo),
-                    if (hasNote)
+                    if (showMarkers && hasNight)
+                      const _Dot(color: LedgerColors.nightIndigo),
+                    if (showMarkers && hasLongDuration)
+                      const _Dot(color: LedgerColors.errorRed),
+                    if (showMarkers && hasNote)
                       const _NoteMarker(color: LedgerColors.warningOrange),
                   ],
                 ),
@@ -674,15 +759,61 @@ class _TodayLegendMarker extends StatelessWidget {
   );
 }
 
+enum _CalendarFilter { all, overtime, night, note, longDuration }
+
+extension on _CalendarFilter {
+  String get label => switch (this) {
+    _CalendarFilter.all => '全部',
+    _CalendarFilter.overtime => '加班',
+    _CalendarFilter.night => '夜班',
+    _CalendarFilter.note => '有备注',
+    _CalendarFilter.longDuration => '超长',
+  };
+}
+
+class _CalendarFilterChip extends StatelessWidget {
+  const _CalendarFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) => ChoiceChip(
+    label: Text(label),
+    selected: selected,
+    onSelected: (_) => onSelected(),
+    labelStyle: TextStyle(
+      color: selected ? Colors.white : LedgerColors.ink,
+      fontWeight: FontWeight.w700,
+    ),
+    side: BorderSide(
+      color: selected ? LedgerColors.primaryBlue : LedgerColors.hairlineStrong,
+    ),
+    backgroundColor: LedgerColors.surfaceRaised,
+    selectedColor: LedgerColors.primaryBlue,
+    visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  );
+}
+
 class _MonthList extends StatefulWidget {
   const _MonthList({
     required this.state,
     required this.range,
     required this.onSelect,
+    required this.filter,
+    required this.matchesDay,
   });
   final LedgerState state;
   final DateRange range;
   final ValueChanged<DateTime> onSelect;
+  final _CalendarFilter filter;
+  final bool Function(DateTime day) matchesDay;
 
   @override
   State<_MonthList> createState() => _MonthListState();
@@ -694,7 +825,8 @@ class _MonthListState extends State<_MonthList> {
   @override
   void didUpdateWidget(covariant _MonthList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.range.start != widget.range.start) {
+    if (oldWidget.range.start != widget.range.start ||
+        oldWidget.filter != widget.filter) {
       _visibleCount = 20;
     }
   }
@@ -707,7 +839,7 @@ class _MonthListState extends State<_MonthList> {
         day.isBefore(widget.range.endExclusive);
         day = day.add(const Duration(days: 1))
       )
-        if (widget.state.entriesForDay(day).isNotEmpty) day,
+        if (widget.matchesDay(day)) day,
     ];
     final visibleDays = days.take(_visibleCount).toList();
     if (days.isEmpty) {
@@ -716,7 +848,11 @@ class _MonthListState extends State<_MonthList> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('本月暂无记录'),
+            Text(
+              widget.filter == _CalendarFilter.all
+                  ? '本月暂无记录'
+                  : '本月暂无${widget.filter.label}记录',
+            ),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: () => showEditWorkEntrySheet(
