@@ -105,9 +105,16 @@ class LedgerCard extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? LedgerColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: color ?? LedgerColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: LedgerColors.hairline),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A0F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: child,
     );
@@ -184,17 +191,31 @@ class WorkEntryTile extends StatelessWidget {
     final isNight = entry.type == EntryType.night;
     final isOvertime =
         entry.type == EntryType.overtime || entry.isRestDayOvertime;
-    final chipColor = isNight
-        ? LedgerColors.nightSlate
+    final railColor = isNight
+        ? LedgerColors.nightIndigo
         : isOvertime
-        ? LedgerColors.overtimeMossSoft
-        : LedgerColors.workAmberSoft;
-    final chipText = isNight ? Colors.white : LedgerColors.ink;
+        ? LedgerColors.successGreen
+        : LedgerColors.primaryBlue;
+    final chipColor = isNight
+        ? LedgerColors.nightIndigoSoft
+        : isOvertime
+        ? LedgerColors.successGreenSoft
+        : LedgerColors.primaryBlueSoft;
+    final chipText = isNight ? LedgerColors.nightIndigo : LedgerColors.ink;
     return LedgerCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: 4,
+            height: 44,
+            margin: const EdgeInsets.only(top: 2, right: 10),
+            decoration: BoxDecoration(
+              color: railColor,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,7 +396,7 @@ class SettingTile extends StatelessWidget {
               Text(
                 trailing!,
                 style: const TextStyle(
-                  color: LedgerColors.warningCopper,
+                  color: LedgerColors.primaryBlue,
                   fontWeight: FontWeight.w700,
                 ),
               ),

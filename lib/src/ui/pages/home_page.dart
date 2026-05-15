@@ -29,11 +29,9 @@ class HomePage extends StatelessWidget {
     return PageFrame(
       title: '今日记录',
       children: [
-        MetricCard(
-          label: '今日已记录',
-          value: hoursText(todaySummary.totalHours),
-          subtext:
-              '${todayEntries.length}段 · 加班 ${hoursText(todaySummary.overtimeHours)} · ${todayEntries.any((e) => e.hasNote) ? '有备注' : '无备注'}',
+        _TodayOverviewCard(
+          entries: todayEntries,
+          summary: todaySummary,
           onTap: () => showEditWorkEntrySheet(context, state, day: state.now),
         ),
         const SectionHeader(title: '今天分段'),
@@ -170,6 +168,154 @@ class HomePage extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TodayOverviewCard extends StatelessWidget {
+  const _TodayOverviewCard({
+    required this.entries,
+    required this.summary,
+    required this.onTap,
+  });
+
+  final List<WorkEntry> entries;
+  final LedgerSummary summary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <_SummaryChipData>[
+      if (summary.regularHours > 0)
+        _SummaryChipData(
+          label: '普通 ${hoursText(summary.regularHours)}',
+          background: LedgerColors.primaryBlueSoft,
+          foreground: const Color(0xFF1D4ED8),
+          border: const Color(0xFFBFDBFE),
+        ),
+      if (summary.overtimeHours > 0)
+        _SummaryChipData(
+          label: '加班 ${hoursText(summary.overtimeHours)}',
+          background: LedgerColors.successGreenSoft,
+          foreground: const Color(0xFF166534),
+          border: const Color(0xFFBBF7D0),
+        ),
+      if (summary.nightShiftCount > 0)
+        _SummaryChipData(
+          label: '夜班 ${summary.nightShiftCount}次',
+          background: LedgerColors.nightIndigoSoft,
+          foreground: LedgerColors.nightIndigo,
+          border: const Color(0xFFDDD6FE),
+        ),
+      if (summary.allowance > 0)
+        _SummaryChipData(
+          label: '补贴 ${moneyText(summary.allowance)}',
+          background: LedgerColors.successGreenSoft,
+          foreground: const Color(0xFF166534),
+          border: const Color(0xFFBBF7D0),
+        ),
+      if (summary.deduction > 0)
+        _SummaryChipData(
+          label: '扣款 ${moneyText(summary.deduction)}',
+          background: LedgerColors.warningOrangeSoft,
+          foreground: const Color(0xFF9A3412),
+          border: const Color(0xFFFED7AA),
+        ),
+      _SummaryChipData(
+        label: '${entries.length}段',
+        background: LedgerColors.surfaceSoft,
+        foreground: LedgerColors.muted,
+        border: LedgerColors.hairline,
+      ),
+    ];
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: LedgerCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '今日已记录',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                if (entries.isNotEmpty)
+                  const _SummaryChip(
+                    data: _SummaryChipData(
+                      label: '已完成',
+                      background: LedgerColors.successGreenSoft,
+                      foreground: Color(0xFF166534),
+                      border: Color(0xFFBBF7D0),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FittedValueText(
+              hoursText(summary.totalHours),
+              style: const TextStyle(
+                color: LedgerColors.ink,
+                fontSize: 52,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -2.4,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+              maxScale: 1.04,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [for (final chip in chips) _SummaryChip(data: chip)],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryChipData {
+  const _SummaryChipData({
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+  final Color border;
+}
+
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip({required this.data});
+
+  final _SummaryChipData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: data.background,
+        border: Border.all(color: data.border),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        data.label,
+        style: TextStyle(
+          color: data.foreground,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

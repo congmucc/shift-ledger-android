@@ -3,8 +3,69 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
+import 'package:shift_ledger/src/ui/theme.dart';
 
 void main() {
+  testWidgets('uses iOS Neutral palette for the app shell', (tester) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
+
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.theme?.scaffoldBackgroundColor, const Color(0xFFFFFFFF));
+    expect(LedgerColors.paper, const Color(0xFFFFFFFF));
+    expect(LedgerColors.workAmber, const Color(0xFF007AFF));
+    expect(LedgerColors.overtimeMoss, const Color(0xFF34C759));
+    expect(LedgerColors.warningCopper, const Color(0xFF007AFF));
+  });
+
+  testWidgets(
+    'home summarizes multiple overtime segments with wrapping chips',
+    (tester) async {
+      final day = DateTime(2026, 5, 13);
+      final rule = PayRule.defaultHourly(hourlyRate: 35);
+      final state = LedgerState(
+        now: day,
+        payRules: [rule],
+        entries: [
+          WorkEntry.create(
+            id: 'regular',
+            workDate: day,
+            startDateTime: DateTime(2026, 5, 13, 9),
+            endDateTime: DateTime(2026, 5, 13, 12),
+            payRule: rule,
+            locationName: '门店 A',
+          ),
+          WorkEntry.create(
+            id: 'overtime_1',
+            workDate: day,
+            startDateTime: DateTime(2026, 5, 13, 13),
+            endDateTime: DateTime(2026, 5, 13, 14),
+            type: EntryType.overtime,
+            payRule: rule,
+          ),
+          WorkEntry.create(
+            id: 'overtime_2',
+            workDate: day,
+            startDateTime: DateTime(2026, 5, 13, 20),
+            endDateTime: DateTime(2026, 5, 13, 22),
+            type: EntryType.overtime,
+            payRule: rule,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      expect(find.text('普通 3h'), findsOneWidget);
+      expect(find.text('加班 3h'), findsOneWidget);
+      expect(find.text('3段'), findsOneWidget);
+      expect(find.text('13:00 — 14:00'), findsOneWidget);
+      expect(find.text('20:00 — 22:00'), findsOneWidget);
+      expect(find.text('夜班 0次'), findsNothing);
+    },
+  );
+
   testWidgets('main navigation exposes home calendar add summary settings', (
     tester,
   ) async {

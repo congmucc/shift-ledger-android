@@ -123,7 +123,7 @@ class _SummaryPageState extends State<SummaryPage> {
               _BreakdownRow(
                 label: '普通',
                 value: hoursText(summary.regularHours),
-                color: LedgerColors.workAmber,
+                color: LedgerColors.primaryBlue,
                 fraction: summary.totalHours == 0
                     ? 0
                     : summary.regularHours / summary.totalHours,
@@ -132,7 +132,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 label: '加班',
                 value:
                     '${hoursText(summary.overtimeHours)} · ${summary.overtimeDays}天',
-                color: LedgerColors.overtimeMoss,
+                color: LedgerColors.successGreen,
                 fraction: summary.totalHours == 0
                     ? 0
                     : summary.overtimeHours / summary.totalHours,
@@ -141,7 +141,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 label: '夜班',
                 value:
                     '${summary.nightShiftCount}次 · ${hoursText(summary.nightHours)}',
-                color: LedgerColors.nightSlate,
+                color: LedgerColors.nightIndigo,
                 fraction: summary.totalHours == 0
                     ? 0
                     : summary.nightHours / summary.totalHours,
@@ -361,7 +361,7 @@ class _RangeSelector extends StatelessWidget {
               const Icon(
                 Icons.filter_alt_outlined,
                 size: 18,
-                color: LedgerColors.warningCopper,
+                color: LedgerColors.primaryBlue,
               ),
               const SizedBox(width: 8),
               Text('范围', style: Theme.of(context).textTheme.labelMedium),
@@ -428,10 +428,12 @@ class _RangeModePill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: selected ? LedgerColors.workAmberSoft : LedgerColors.surface,
+        color: selected ? LedgerColors.primaryBlueSoft : LedgerColors.surface,
         borderRadius: BorderRadius.circular(9),
         border: Border.all(
-          color: selected ? LedgerColors.workAmberSoft : LedgerColors.hairline,
+          color: selected
+              ? LedgerColors.primaryBlueSoft
+              : LedgerColors.hairline,
         ),
       ),
       child: Row(
@@ -905,7 +907,7 @@ class _ExpandDetailsButton extends StatelessWidget {
         visualDensity: VisualDensity.compact,
         minimumSize: const Size(44, 30),
         padding: const EdgeInsets.symmetric(horizontal: 0),
-        foregroundColor: LedgerColors.warningCopper,
+        foregroundColor: LedgerColors.primaryBlue,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       onPressed: onTap,

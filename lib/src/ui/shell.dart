@@ -56,12 +56,12 @@ class _LedgerShellState extends State<LedgerShell> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: LedgerColors.surface,
+                  color: LedgerColors.surfaceRaised,
                   borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: LedgerColors.hairline),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x1A5D3E1E),
+                      color: Color(0x140F172A),
                       blurRadius: 24,
                       offset: Offset(0, 12),
                     ),
@@ -93,7 +93,7 @@ class _LedgerShellState extends State<LedgerShell> {
                               width: 56,
                               height: 56,
                               decoration: const BoxDecoration(
-                                color: LedgerColors.charcoal,
+                                color: LedgerColors.primaryBlue,
                                 shape: BoxShape.circle,
                               ),
                               child: const Center(
@@ -159,9 +159,7 @@ class _NavButton extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: selected
-                    ? LedgerColors.warningCopper
-                    : LedgerColors.muted,
+                color: selected ? LedgerColors.primaryBlue : LedgerColors.muted,
                 size: 22,
               ),
               const SizedBox(height: 2),
@@ -172,7 +170,9 @@ class _NavButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textScaler: cappedTextScaler(context, maxScale: 1.2),
                   style: TextStyle(
-                    color: selected ? LedgerColors.ink : LedgerColors.muted,
+                    color: selected
+                        ? LedgerColors.primaryBlue
+                        : LedgerColors.muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),

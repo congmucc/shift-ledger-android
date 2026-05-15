@@ -3,40 +3,52 @@ import 'package:flutter/material.dart';
 const double ledgerContentMaxWidth = 960;
 
 class LedgerColors {
-  static const paper = Color(0xFFF8F1E7);
-  static const surface = Color(0xFFFFFCF6);
-  static const surfaceSoft = Color(0xFFEFE2D1);
-  static const surfaceRaised = Color(0xFFFFF8EE);
-  static const hairline = Color(0xFFDFD1BF);
-  static const hairlineStrong = Color(0xFFCDBBA7);
-  static const ink = Color(0xFF17130F);
-  static const charcoal = Color(0xFF273C35);
-  static const muted = Color(0xFF6F665C);
-  static const stone = Color(0xFFA99B8B);
-  static const workAmber = Color(0xFFB8652F);
-  static const workAmberSoft = Color(0xFFE9C29B);
-  static const overtimeMoss = Color(0xFF2F765C);
-  static const overtimeMossSoft = Color(0xFF98C7AC);
-  static const nightSlate = Color(0xFF273C35);
-  static const nightSlateSoft = Color(0xFF8EA39A);
-  static const warningCopper = Color(0xFF8F4D18);
-  static const errorBrick = Color(0xFF9D3D32);
-  static const infoBlue = Color(0xFF5D7182);
+  static const background = Color(0xFFFFFFFF);
+  static const canvas = Color(0xFFF9FAFB);
+  static const surface = Color(0xFFFAFAFA);
+  static const surfaceSoft = Color(0xFFF3F4F6);
+  static const surfaceRaised = Color(0xFFFFFFFF);
+  static const hairline = Color(0xFFE5E7EB);
+  static const hairlineStrong = Color(0xFFD1D5DB);
+  static const ink = Color(0xFF111827);
+  static const charcoal = Color(0xFF111827);
+  static const muted = Color(0xFF6B7280);
+  static const stone = Color(0xFF9CA3AF);
+  static const primaryBlue = Color(0xFF007AFF);
+  static const primaryBlueSoft = Color(0xFFE5F1FF);
+  static const successGreen = Color(0xFF34C759);
+  static const successGreenSoft = Color(0xFFDCFCE7);
+  static const nightIndigo = Color(0xFF5856D6);
+  static const nightIndigoSoft = Color(0xFFEDE9FE);
+  static const warningOrange = Color(0xFFFF9500);
+  static const warningOrangeSoft = Color(0xFFFFF7ED);
+  static const errorRed = Color(0xFFFF3B30);
+  static const errorRedSoft = Color(0xFFFEE2E2);
+  static const paper = background;
+  static const workAmber = primaryBlue;
+  static const workAmberSoft = primaryBlueSoft;
+  static const overtimeMoss = successGreen;
+  static const overtimeMossSoft = successGreenSoft;
+  static const nightSlate = nightIndigo;
+  static const nightSlateSoft = nightIndigoSoft;
+  static const warningCopper = primaryBlue;
+  static const errorBrick = errorRed;
+  static const infoBlue = primaryBlue;
 }
 
 ThemeData buildLedgerTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: LedgerColors.workAmber,
+    seedColor: LedgerColors.primaryBlue,
     brightness: Brightness.light,
-    surface: LedgerColors.surface,
-    primary: LedgerColors.warningCopper,
-    secondary: LedgerColors.overtimeMoss,
-    error: LedgerColors.errorBrick,
+    surface: LedgerColors.surfaceRaised,
+    primary: LedgerColors.primaryBlue,
+    secondary: LedgerColors.successGreen,
+    error: LedgerColors.errorRed,
   );
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: LedgerColors.paper,
+    scaffoldBackgroundColor: LedgerColors.background,
     fontFamily: 'ShiftLedgerCJK',
     fontFamilyFallback: const [
       'PingFang SC',
@@ -94,15 +106,18 @@ ThemeData buildLedgerTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(
-          color: LedgerColors.warningCopper,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: LedgerColors.primaryBlue, width: 2),
       ),
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: LedgerColors.charcoal,
+      backgroundColor: LedgerColors.ink,
       contentTextStyle: TextStyle(color: Colors.white),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: LedgerColors.primaryBlue,
+        foregroundColor: Colors.white,
+      ),
     ),
   );
 }
