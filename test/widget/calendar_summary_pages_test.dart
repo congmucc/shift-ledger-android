@@ -95,6 +95,27 @@ void main() {
   });
 
   testWidgets(
+    'calendar list mode keeps chronology header for filter-empty months',
+    (tester) async {
+      await tester.pumpWidget(ShiftLedgerApp(state: buildMonthListState()));
+
+      await tester.tap(find.text('日历'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('列表'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '有备注'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1日 → 31日'), findsOneWidget);
+      expect(find.text('本月暂无有备注记录'), findsOneWidget);
+
+      final headerTop = tester.getTopLeft(find.text('1日 → 31日')).dy;
+      final emptyTop = tester.getTopLeft(find.text('本月暂无有备注记录')).dy;
+      expect(headerTop, lessThan(emptyTop));
+    },
+  );
+
+  testWidgets(
     'summary page locks the approved boundary before implementation',
     (tester) async {
       await tester.pumpWidget(ShiftLedgerApp(state: buildSummaryState()));
