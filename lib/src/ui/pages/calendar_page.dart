@@ -32,6 +32,10 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget build(BuildContext context) {
     final range = DateRange.month(_month.year, _month.month);
     final summary = widget.state.summaryFor(range);
+    final selectedMatchesFilter =
+        _filter.isAll || _matchesCurrentFilter(_selectedDay);
+    final monthHasFilterMatch =
+        _filter.isAll || _firstMatchingDayInMonth(_month) != null;
     return PageFrame(
       title: '工时日历',
       trailing: IconButton(
@@ -114,12 +118,46 @@ class _CalendarPageState extends State<CalendarPage> {
             matchesDay: _matchesCurrentFilter,
           ),
         SectionHeader(
-          title:
-              '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情',
+          title: !_filter.isAll && !monthHasFilterMatch
+              ? '${_month.month} 月暂无${_filter.label}记录'
+              : '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情${selectedMatchesFilter ? '' : '（未命中${_filter.label}）'}',
           actionLabel: '补一段',
           onAction: () =>
               showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
         ),
+        if (!_filter.isAll && !selectedMatchesFilter) ...[
+          LedgerCard(
+            padding: const EdgeInsets.all(12),
+            color: LedgerColors.warningOrangeSoft,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 1),
+                  child: Icon(
+                    Icons.filter_alt_outlined,
+                    size: 18,
+                    color: LedgerColors.warningOrange,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    monthHasFilterMatch
+                        ? '当前筛选为“${_filter.label}”，这一天不在筛选结果中；下面仍保留原始详情，方便继续查看或补录。'
+                        : '当前月份暂无“${_filter.label}”记录；下面仍保留所选日期的原始详情，避免筛选上下文混淆。',
+                    style: const TextStyle(
+                      color: LedgerColors.ink,
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         _DayDetails(state: widget.state, day: _selectedDay),
       ],
     );
@@ -377,8 +415,11 @@ class _MonthGrid extends StatelessWidget {
     final hasLongDuration = summary.totalHours > 12;
     final hasWork = entries.isNotEmpty;
     final visibleByFilter = matchesDay(day);
+    final isQuietDay = !visibleByFilter && !selected;
     final dateFill = selected
         ? LedgerColors.primaryBlue
+        : !visibleByFilter
+        ? Colors.transparent
         : hasNight
         ? LedgerColors.nightIndigoSoft.withValues(alpha: .9)
         : hasOvertime
@@ -388,6 +429,8 @@ class _MonthGrid extends StatelessWidget {
         : Colors.transparent;
     final dateTextColor = selected
         ? Colors.white
+        : isQuietDay
+        ? (today ? LedgerColors.primaryBlue : LedgerColors.muted)
         : inMonth
         ? LedgerColors.ink
         : LedgerColors.stone;
@@ -399,7 +442,7 @@ class _MonthGrid extends StatelessWidget {
       label:
           '${today ? '今日，' : ''}${day.month}月${day.day}日，${hoursText(summary.totalHours)}，${entries.length}段${hasOvertime ? '，有加班' : ''}${hasNight ? '，有夜班' : ''}${hasLongDuration ? '，时长偏长' : ''}${hasNote ? '，有备注' : ''}',
       child: Opacity(
-        opacity: inMonth ? (visibleByFilter ? 1 : .58) : .34,
+        opacity: inMonth ? (visibleByFilter ? 1 : .42) : .24,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
           child: Column(
@@ -425,8 +468,10 @@ class _MonthGrid extends StatelessWidget {
                     color: today && !selected
                         ? LedgerColors.primaryBlue
                         : dateTextColor,
-                    fontWeight: selected || today || hasWork
+                    fontWeight: selected || today
                         ? FontWeight.w900
+                        : visibleByFilter && hasWork
+                        ? FontWeight.w800
                         : FontWeight.w700,
                     fontSize: today ? 11 : 13,
                   ),
@@ -762,6 +807,8 @@ class _TodayLegendMarker extends StatelessWidget {
 enum _CalendarFilter { all, overtime, night, note, longDuration }
 
 extension on _CalendarFilter {
+  bool get isAll => this == _CalendarFilter.all;
+
   String get label => switch (this) {
     _CalendarFilter.all => '全部',
     _CalendarFilter.overtime => '加班',
@@ -783,21 +830,26 @@ class _CalendarFilterChip extends StatelessWidget {
   final VoidCallback onSelected;
 
   @override
-  Widget build(BuildContext context) => ChoiceChip(
-    label: Text(label),
-    selected: selected,
-    onSelected: (_) => onSelected(),
-    labelStyle: TextStyle(
-      color: selected ? Colors.white : LedgerColors.ink,
-      fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 44),
+    child: ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : LedgerColors.ink,
+        fontWeight: FontWeight.w700,
+      ),
+      side: BorderSide(
+        color: selected
+            ? LedgerColors.primaryBlue
+            : LedgerColors.hairlineStrong,
+      ),
+      backgroundColor: LedgerColors.surfaceRaised,
+      selectedColor: LedgerColors.primaryBlue,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
     ),
-    side: BorderSide(
-      color: selected ? LedgerColors.primaryBlue : LedgerColors.hairlineStrong,
-    ),
-    backgroundColor: LedgerColors.surfaceRaised,
-    selectedColor: LedgerColors.primaryBlue,
-    visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
   );
 }
 
