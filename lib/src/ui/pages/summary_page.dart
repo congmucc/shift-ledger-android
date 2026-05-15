@@ -46,12 +46,15 @@ class _SummaryPageState extends State<SummaryPage> {
           onPickStart: _mode == '自定义' ? _pickCustomStart : null,
           onPickEnd: _mode == '自定义' ? _pickCustomEnd : null,
         ),
+        const SizedBox(height: 12),
         _SummaryOverview(
           summary: summary,
           payrollBasisSummary:
               '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
         ),
+        const SizedBox(height: 12),
         _IncomeCompositionCard(summary: summary),
+        const SizedBox(height: 12),
         _PayrollBasisCard(
           range: range,
           rule: defaultRule,
@@ -422,8 +425,14 @@ class _SummaryOverview extends StatelessWidget {
             runSpacing: 6,
             children: [
               _StatChip('出勤', '${summary.attendanceDays}天'),
-              _StatChip('加班', '${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}'),
-              _StatChip('夜班', '${summary.nightShiftCount}次 / ${hoursText(summary.nightHours)}'),
+              _StatChip(
+                '加班',
+                '${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}',
+              ),
+              _StatChip(
+                '夜班',
+                '${summary.nightShiftCount}次 / ${hoursText(summary.nightHours)}',
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -613,9 +622,8 @@ class _PayrollBasisCard extends StatelessWidget {
   }
 }
 
-String _factorText(double value) => '${value.toStringAsFixed(
-  value.truncateToDouble() == value ? 0 : 1,
-)}x';
+String _factorText(double value) =>
+    '${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)}x';
 
 String _nightRuleValueText(NightRule rule) {
   return switch (rule.mode) {
