@@ -467,6 +467,242 @@ class NoticeCard extends StatelessWidget {
   }
 }
 
+Future<bool?> showLedgerConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmText,
+  String cancelText = '取消',
+  bool destructive = false,
+  IconData? icon,
+}) {
+  final resolvedIcon = icon ??
+      (destructive ? Icons.warning_amber_rounded : Icons.help_outline_rounded);
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => LedgerConfirmDialog(
+      title: title,
+      message: message,
+      confirmText: confirmText,
+      cancelText: cancelText,
+      destructive: destructive,
+      icon: resolvedIcon,
+    ),
+  );
+}
+
+Future<void> showLedgerInfoDialog(
+  BuildContext context, {
+  required String title,
+  required Widget content,
+  String closeText = '关闭',
+  IconData icon = Icons.info_outline_rounded,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => LedgerInfoDialog(
+      title: title,
+      content: content,
+      closeText: closeText,
+      icon: icon,
+    ),
+  );
+}
+
+class LedgerDialogShell extends StatelessWidget {
+  const LedgerDialogShell({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackgroundColor,
+    this.body,
+    this.actions = const [],
+    this.maxWidth = 460,
+    this.maxHeightFactor = .82,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackgroundColor;
+  final Widget? body;
+  final List<Widget> actions;
+  final double maxWidth;
+  final double maxHeightFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.sizeOf(context).height * maxHeightFactor;
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: LedgerColors.paper,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: LedgerColors.hairline),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x140F172A),
+                blurRadius: 32,
+                offset: Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: iconBackgroundColor,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(icon, color: iconColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (body != null) ...[
+                const SizedBox(height: 12),
+                Flexible(child: SingleChildScrollView(child: body!)),
+              ],
+              if (actions.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: actions,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LedgerConfirmDialog extends StatelessWidget {
+  const LedgerConfirmDialog({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.confirmText,
+    required this.cancelText,
+    required this.icon,
+    this.destructive = false,
+  });
+
+  final String title;
+  final String message;
+  final String confirmText;
+  final String cancelText;
+  final IconData icon;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = destructive ? LedgerColors.errorBrick : LedgerColors.primaryBlue;
+    final accentSoft =
+        destructive ? LedgerColors.warningOrangeSoft : LedgerColors.primaryBlueSoft;
+    return LedgerDialogShell(
+      title: title,
+      icon: icon,
+      iconColor: accent,
+      iconBackgroundColor: accentSoft,
+      maxWidth: 460,
+      body: _ConfirmDialogBody(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(cancelText),
+        ),
+        FilledButton(
+          style: destructive
+              ? FilledButton.styleFrom(backgroundColor: LedgerColors.errorBrick)
+              : null,
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(confirmText),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConfirmDialogBody extends StatelessWidget {
+  const _ConfirmDialogBody(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      message,
+      style: const TextStyle(
+        color: LedgerColors.muted,
+        fontSize: 14,
+        height: 1.45,
+      ),
+    );
+  }
+}
+
+class LedgerInfoDialog extends StatelessWidget {
+  const LedgerInfoDialog({
+    super.key,
+    required this.title,
+    required this.content,
+    required this.closeText,
+    required this.icon,
+  });
+
+  final String title;
+  final Widget content;
+  final String closeText;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return LedgerDialogShell(
+      title: title,
+      icon: icon,
+      iconColor: LedgerColors.primaryBlue,
+      iconBackgroundColor: LedgerColors.primaryBlueSoft,
+      maxWidth: 520,
+      body: content,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(closeText),
+        ),
+      ],
+    );
+  }
+}
+
 class SettingTile extends StatelessWidget {
   const SettingTile({
     super.key,

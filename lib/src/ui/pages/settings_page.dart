@@ -606,22 +606,12 @@ class SettingsPage extends StatelessWidget {
         ).showSnackBar(const SnackBar(content: Text('还没有本地备份')));
         return;
       }
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('恢复备份？'),
-          content: Text('将用 $path 覆盖当前账本。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('确认恢复'),
-            ),
-          ],
-        ),
+      final confirmed = await showLedgerConfirmDialog(
+        context,
+        title: '恢复备份？',
+        message: '将用 $path 覆盖当前账本。',
+        confirmText: '确认恢复',
+        icon: Icons.restore_page_outlined,
       );
       if (confirmed != true) return;
       if (!context.mounted) return;
@@ -718,26 +708,14 @@ class SettingsPage extends StatelessWidget {
     DeletedDayRecord item,
   ) async {
     final existingCount = state.entriesForDay(item.day).length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('恢复 ${ymd(item.day)}？'),
-        content: Text(
-          existingCount == 0
-              ? '会恢复 ${item.segmentCount} 段、合计 ${hoursText(item.totalHours)}。'
-              : '这一天现在已有 $existingCount 段。恢复会把删除的 ${item.segmentCount} 段合并回来，不覆盖现有记录。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认恢复'),
-          ),
-        ],
-      ),
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '恢复 ${ymd(item.day)}？',
+      message: existingCount == 0
+          ? '会恢复 ${item.segmentCount} 段、合计 ${hoursText(item.totalHours)}。'
+          : '这一天现在已有 $existingCount 段。恢复会把删除的 ${item.segmentCount} 段合并回来，不覆盖现有记录。',
+      confirmText: '确认恢复',
+      icon: Icons.restore_from_trash_outlined,
     );
     if (confirmed != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -765,22 +743,15 @@ class SettingsPage extends StatelessWidget {
     required String title,
     required String content,
     required String confirmText,
-  }) => showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: Text(content),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(confirmText),
-        ),
-      ],
-    ),
+    bool destructive = false,
+    IconData? icon,
+  }) => showLedgerConfirmDialog(
+    context,
+    title: title,
+    message: content,
+    confirmText: confirmText,
+    destructive: destructive,
+    icon: icon,
   );
 }
 
@@ -1202,22 +1173,12 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
 
   Future<void> _confirmRestoreCurrentTemplate() async {
     if (!_template.isBuiltIn) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('恢复当前模板？'),
-        content: Text('会把“${_template.name}”恢复成系统默认值；你自己新增的模板不会被改动。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认恢复'),
-          ),
-        ],
-      ),
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '恢复当前模板？',
+      message: '会把“${_template.name}”恢复成系统默认值；你自己新增的模板不会被改动。',
+      confirmText: '确认恢复',
+      icon: Icons.restore_outlined,
     );
     if (confirmed != true || !mounted) return;
     final restored = widget.state.restoreShiftTemplate(_template.id);
@@ -1286,25 +1247,13 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   }
 
   Future<void> _confirmDeleteTemplate() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除模板？'),
-        content: Text('只删除“${_template.name}”这个模板，已经保存的工时记录不会被删除。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: LedgerColors.errorBrick,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认删除'),
-          ),
-        ],
-      ),
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '删除模板？',
+      message: '只删除“${_template.name}”这个模板，已经保存的工时记录不会被删除。',
+      confirmText: '确认删除',
+      destructive: true,
+      icon: Icons.delete_outline,
     );
     if (confirmed != true || !mounted) return;
     final deleted = widget.state.deleteShiftTemplate(_template.id);
@@ -2047,22 +1996,12 @@ class _WebDavSheetState extends State<WebDavSheet> {
   }
 
   Future<void> _backup() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('备份到坚果云？'),
-        content: const Text('会把当前记录、班次模板、计薪规则和非敏感设置上传到远端备份文件。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认备份'),
-          ),
-        ],
-      ),
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '备份到坚果云？',
+      message: '会把当前记录、班次模板、计薪规则和非敏感设置上传到远端备份文件。',
+      confirmText: '确认备份',
+      icon: Icons.cloud_upload_outlined,
     );
     if (confirmed != true || !mounted) return;
     await _run(() async {
@@ -2091,22 +2030,12 @@ class _WebDavSheetState extends State<WebDavSheet> {
     });
   }
 
-  Future<bool?> _confirmRestore() => showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('从坚果云恢复？'),
-      content: const Text('这会用远端备份覆盖当前记录、模板和规则；应用授权密码不会随备份恢复，需要重新输入。'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('确认恢复'),
-        ),
-      ],
-    ),
+  Future<bool?> _confirmRestore() => showLedgerConfirmDialog(
+    context,
+    title: '从坚果云恢复？',
+    message: '这会用远端备份覆盖当前记录、模板和规则；应用授权密码不会随备份恢复，需要重新输入。',
+    confirmText: '确认恢复',
+    icon: Icons.cloud_download_outlined,
   );
 
   Future<void> _list() async {
@@ -2114,23 +2043,12 @@ class _WebDavSheetState extends State<WebDavSheet> {
       final config = _config();
       final listing = await WebDavClient().listBackups(config);
       if (!mounted) return;
-      showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('导入/导出列表'),
-          content: SingleChildScrollView(
-            child: Text(
-              listing.length > 1200
-                  ? '${listing.substring(0, 1200)}…'
-                  : listing,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('关闭'),
-            ),
-          ],
+      showLedgerInfoDialog(
+        context,
+        title: '导入/导出列表',
+        icon: Icons.inventory_2_outlined,
+        content: Text(
+          listing.length > 1200 ? '${listing.substring(0, 1200)}…' : listing,
         ),
       );
     });

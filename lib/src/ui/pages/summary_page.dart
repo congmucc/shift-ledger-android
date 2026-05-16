@@ -119,22 +119,12 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 
   Future<void> _exportCsv(DateRange range) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('导出 CSV？'),
-        content: const Text('会打开系统保存面板，请选择 CSV 保存位置；取消保存不会改动账本。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认导出'),
-          ),
-        ],
-      ),
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '导出 CSV？',
+      message: '会打开系统保存面板，请选择 CSV 保存位置；取消保存不会改动账本。',
+      confirmText: '确认导出',
+      icon: Icons.file_download_outlined,
     );
     if (confirmed != true || _exporting || !mounted) return;
     setState(() => _exporting = true);

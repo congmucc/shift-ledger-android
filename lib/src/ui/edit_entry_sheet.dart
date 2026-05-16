@@ -433,25 +433,13 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _confirmDeleteSegment(WorkEntry entry) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除本段？'),
-        content: Text('只删除 ${entry.timeRangeLabel} 这一段，其他分段和当天备注保留。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: LedgerColors.errorBrick,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认删除'),
-          ),
-        ],
-      ),
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '删除本段？',
+      message: '只删除 ${entry.timeRangeLabel} 这一段，其他分段和当天备注保留。',
+      confirmText: '确认删除',
+      destructive: true,
+      icon: Icons.delete_outline,
     );
     if (confirmed != true || !mounted) return;
     setState(() => _segments.removeWhere((item) => item.id == entry.id));
@@ -463,28 +451,15 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     final summary = widget.state.summaryFor(
       DateRange.custom(targetDay, targetDay),
     );
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('删除 ${ymd(targetDay)} 全部记录？'),
-        content: Text(
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '删除 ${ymd(targetDay)} 全部记录？',
+      message:
           '将删除 ${entries.length} 段、合计 ${hoursText(summary.totalHours)}。'
           '删除后，这一天的备注、补贴和扣款都会从汇总与 CSV 中移除。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: LedgerColors.errorBrick,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认删除'),
-          ),
-        ],
-      ),
+      confirmText: '确认删除',
+      destructive: true,
+      icon: Icons.delete_sweep_outlined,
     );
     if (confirmed != true || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -507,22 +482,13 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
 
   Future<void> _save() async {
     if (_hasOverlaps()) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('时间有重叠，仍然保存？'),
-          content: const Text('同一天存在重叠分段。个人账本允许特殊情况，但建议先核对开始/结束时间。'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('返回修改'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('仍然保存'),
-            ),
-          ],
-        ),
+      final confirmed = await showLedgerConfirmDialog(
+        context,
+        title: '时间有重叠，仍然保存？',
+        message: '同一天存在重叠分段。个人账本允许特殊情况，但建议先核对开始/结束时间。',
+        confirmText: '仍然保存',
+        cancelText: '返回修改',
+        icon: Icons.schedule_outlined,
       );
       if (confirmed != true || !mounted) return;
     }
@@ -604,124 +570,126 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     final stackedFields =
         MediaQuery.of(context).size.width < 520 ||
         MediaQuery.textScalerOf(context).scale(1) > 1.3;
-    return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      title: const Text('编辑本段'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${widget.entry.timeRangeLabel} · ${hoursText(widget.entry.netHours)}',
-                style: const TextStyle(color: LedgerColors.muted, fontSize: 13),
-              ),
+    return LedgerDialogShell(
+      title: '编辑本段',
+      icon: Icons.tune_rounded,
+      iconColor: LedgerColors.primaryBlue,
+      iconBackgroundColor: LedgerColors.primaryBlueSoft,
+      maxWidth: 520,
+      maxHeightFactor: .88,
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${widget.entry.timeRangeLabel} · ${hoursText(widget.entry.netHours)}',
+              style: const TextStyle(color: LedgerColors.muted, fontSize: 13),
             ),
-            const SizedBox(height: 10),
-            _buildFieldPair(
-              stacked: stackedFields,
-              first: TextField(
-                controller: _start,
-                keyboardType: TextInputType.datetime,
-                decoration: InputDecoration(
-                  labelText: '开始 HH:mm',
-                  suffixIcon: IconButton(
-                    tooltip: '选择开始时间',
-                    onPressed: () => _pickTime(_start),
-                    icon: const Icon(Icons.schedule_outlined),
-                  ),
-                ),
-              ),
-              second: TextField(
-                controller: _end,
-                keyboardType: TextInputType.datetime,
-                decoration: InputDecoration(
-                  labelText: '结束 HH:mm',
-                  suffixIcon: IconButton(
-                    tooltip: '选择结束时间',
-                    onPressed: () => _pickTime(_end),
-                    icon: const Icon(Icons.schedule_outlined),
-                  ),
+          ),
+          const SizedBox(height: 10),
+          _buildFieldPair(
+            stacked: stackedFields,
+            first: TextField(
+              controller: _start,
+              keyboardType: TextInputType.datetime,
+              decoration: InputDecoration(
+                labelText: '开始 HH:mm',
+                suffixIcon: IconButton(
+                  tooltip: '选择开始时间',
+                  onPressed: () => _pickTime(_start),
+                  icon: const Icon(Icons.schedule_outlined),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _break,
+            second: TextField(
+              controller: _end,
+              keyboardType: TextInputType.datetime,
+              decoration: InputDecoration(
+                labelText: '结束 HH:mm',
+                suffixIcon: IconButton(
+                  tooltip: '选择结束时间',
+                  onPressed: () => _pickTime(_end),
+                  icon: const Icon(Icons.schedule_outlined),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _break,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: '休息分钟'),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<EntryType>(
+            initialValue: _type,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: '类型'),
+            items: EntryType.values
+                .map(
+                  (type) =>
+                      DropdownMenuItem(value: type, child: Text(type.label)),
+                )
+                .toList(),
+            onChanged: (value) => setState(() => _type = value ?? _type),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<PayRule>(
+            initialValue: _rule,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: '计薪规则'),
+            items: widget.rules
+                .map(
+                  (rule) => DropdownMenuItem(
+                    value: rule,
+                    child: Text(
+                      '${rule.name} · ${rule.amountLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            selectedItemBuilder: (context) => widget.rules
+                .map(
+                  (rule) => Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${rule.name} · ${rule.amountLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) => setState(() => _rule = value ?? _rule),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _location,
+            decoration: const InputDecoration(labelText: '地点/岗位'),
+          ),
+          const SizedBox(height: 10),
+          _buildFieldPair(
+            stacked: stackedFields,
+            first: TextField(
+              controller: _allowance,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: '休息分钟'),
+              decoration: const InputDecoration(labelText: '补贴'),
             ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<EntryType>(
-              initialValue: _type,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: '类型'),
-              items: EntryType.values
-                  .map(
-                    (type) =>
-                        DropdownMenuItem(value: type, child: Text(type.label)),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _type = value ?? _type),
+            second: TextField(
+              controller: _deduction,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '扣款'),
             ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<PayRule>(
-              initialValue: _rule,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: '计薪规则'),
-              items: widget.rules
-                  .map(
-                    (rule) => DropdownMenuItem(
-                      value: rule,
-                      child: Text(
-                        '${rule.name} · ${rule.amountLabel}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              selectedItemBuilder: (context) => widget.rules
-                  .map(
-                    (rule) => Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        '${rule.name} · ${rule.amountLabel}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _rule = value ?? _rule),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _location,
-              decoration: const InputDecoration(labelText: '地点/岗位'),
-            ),
-            const SizedBox(height: 10),
-            _buildFieldPair(
-              stacked: stackedFields,
-              first: TextField(
-                controller: _allowance,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '补贴'),
-              ),
-              second: TextField(
-                controller: _deduction,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '扣款'),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _note,
-              decoration: const InputDecoration(labelText: '备注'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _note,
+            decoration: const InputDecoration(labelText: '备注'),
+          ),
+        ],
       ),
       actions: [
         TextButton(
