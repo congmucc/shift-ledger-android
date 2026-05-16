@@ -28,6 +28,7 @@ class _SummaryPageState extends State<SummaryPage> {
     final range = _range();
     final summary = widget.state.summaryFor(range);
     final defaultRule = widget.state.defaultRule;
+    final empty = summary.calculations.isEmpty;
     return PageFrame(
       title: '工时汇总',
       trailing: FilledButton.tonal(
@@ -47,6 +48,10 @@ class _SummaryPageState extends State<SummaryPage> {
           onPickEnd: _mode == '自定义' ? _pickCustomEnd : null,
         ),
         const SizedBox(height: 12),
+        if (empty) ...[
+          _SummaryEmptyState(mode: _mode),
+          const SizedBox(height: 12),
+        ],
         _SummaryOverview(
           summary: summary,
           payrollBasisSummary:
@@ -185,6 +190,30 @@ class _SummaryPageState extends State<SummaryPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _SummaryEmptyState extends StatelessWidget {
+  const _SummaryEmptyState({required this.mode});
+
+  final String mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final scopeLabel = switch (mode) {
+      '本周' => '本周',
+      '年度' => '今年',
+      '发薪周期' => '当前发薪周期',
+      '自定义' => '这个自定义范围',
+      _ => '这个月',
+    };
+    return NoticeCard(
+      icon: Icons.query_stats_outlined,
+      title: '$scopeLabel 还没有记录',
+      body: '先去首页补今天，或到日历页按天补录。这里会在有记录后自动显示收入组成、计薪加班、夜班和规则说明。',
+      iconBackgroundColor: LedgerColors.surfaceSoft,
+      iconColor: LedgerColors.primaryBlue,
+    );
   }
 }
 
@@ -543,6 +572,17 @@ class _IncomeCompositionCard extends StatelessWidget {
               ),
             ],
           ),
+          if (summary.calculations.isEmpty) ...[
+            const SizedBox(height: 2),
+            const Text(
+              '当前范围还没有可计算记录；收入拆分会在保存记录后自动生成。',
+              style: TextStyle(
+                color: LedgerColors.muted,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           _Line('基础收入', moneyText(summary.baseIncome)),
           _Line('计薪加班收入', moneyText(summary.overtimeIncome)),

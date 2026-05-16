@@ -20,6 +20,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rule = state.defaultRule;
+    final defaultTemplate = state.templates.first;
     final backupStatus = _backupStatusDisplay(
       webDavConfig: state.webDavConfig,
       autoConfig: state.autoBackupConfig,
@@ -34,12 +35,8 @@ class SettingsPage extends StatelessWidget {
             children: [
               SettingTile(
                 title: '班次模板',
-                subtitle: state.templates
-                    .map(
-                      (tpl) =>
-                          '${tpl.name} ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
-                    )
-                    .join(' · '),
+                subtitle:
+                    '默认 ${defaultTemplate.name} ${_time(defaultTemplate.startMinute)}-${_time(defaultTemplate.endMinute)} · 共 ${state.templates.length} 套模板',
                 trailing: '编辑',
                 onTap: () => _showTemplateInfo(context),
               ),
@@ -52,9 +49,8 @@ class SettingsPage extends StatelessWidget {
               ),
               SettingTile(
                 title: '规则历史',
-                subtitle: state.payRules
-                    .map((r) => '${r.baseType.label} ${r.amountLabel}')
-                    .join(' · '),
+                subtitle:
+                    '共 ${state.payRules.length} 个版本 · 当前 ${rule.baseType.label} ${rule.amountLabel}',
                 trailing: '${state.payRules.length}条',
                 onTap: () => _showRuleHistory(context),
               ),
@@ -92,7 +88,7 @@ class SettingsPage extends StatelessWidget {
               ),
               SettingTile(
                 title: '本地备份/恢复',
-                subtitle: '记录、模板、规则、非敏感设置',
+                subtitle: '系统保存面板 + 一份 App 私有最近备份',
                 trailing: '备份',
                 onTap: () => _showLocalBackupSheet(context),
               ),
@@ -216,55 +212,85 @@ class SettingsPage extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '夜班规则',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('关闭'),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: start,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: '开始小时'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: end,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: '结束小时'),
-                      ),
-                    ),
-                  ],
+                SheetHeaderBlock(
+                  title: '夜班规则',
+                  subtitle: '夜班补贴仍按当前规则计算，这里只决定什么时间段会被识别为夜班。',
+                  onClose: () => Navigator.pop(context),
                 ),
                 const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () {
-                    state.updateNightRule(
-                      state.nightRule.copyWith(
-                        startMinute:
-                            clampInt(int.tryParse(start.text) ?? 22, 0, 23) *
-                            60,
-                        endMinute:
-                            clampInt(int.tryParse(end.text) ?? 6, 0, 23) * 60,
+                NoticeCard(
+                  icon: Icons.nightlight_round,
+                  title: state.nightRule.label,
+                  body:
+                      '当前按 ${state.nightRule.mode.label} 计算；默认时段 ${_time(state.nightRule.startMinute)} — ${_time(state.nightRule.endMinute)}。',
+                ),
+                const SizedBox(height: 12),
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '夜班判定时段',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: const Text('保存'),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '输入 0-23 的整点。跨天班次只要落在这个区间，就会按夜班规则参与计算。',
+                        style: TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: start,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: '开始小时',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: end,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: '结束小时',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      state.updateNightRule(
+                        state.nightRule.copyWith(
+                          startMinute:
+                              clampInt(int.tryParse(start.text) ?? 22, 0, 23) *
+                              60,
+                          endMinute:
+                              clampInt(int.tryParse(end.text) ?? 6, 0, 23) * 60,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text('保存'),
+                  ),
                 ),
               ],
             ),
@@ -304,70 +330,91 @@ class SettingsPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '发薪周期',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('取消'),
-                      ),
-                    ],
+                  SheetHeaderBlock(
+                    title: '发薪周期',
+                    subtitle: '发薪周期会影响首页“本周期进度”、汇总默认范围和导出时的账本理解方式。',
+                    onClose: () => Navigator.pop(context),
+                    closeLabel: '取消',
                   ),
                   const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SegmentedButton<PayPeriodMode>(
-                      selected: {mode},
-                      segments: const [
-                        ButtonSegment(
-                          value: PayPeriodMode.naturalMonth,
-                          label: Text('自然月'),
+                  NoticeCard(
+                    icon: Icons.calendar_view_month_outlined,
+                    title: _payPeriodLabel(
+                      PayPeriod(mode: mode, monthStartDay: monthStartDay),
+                    ),
+                    body: mode == PayPeriodMode.monthlyStartDay
+                        ? '短月会自动落到当月最后一天，适合按公司结薪日查看整个周期。'
+                        : '自然月更适合个人记账；每月 1 日到月底自动形成一个周期。',
+                  ),
+                  const SizedBox(height: 12),
+                  LedgerCard(
+                    color: LedgerColors.surfaceRaised,
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '周期模式',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        ButtonSegment(
-                          value: PayPeriodMode.monthlyStartDay,
-                          label: Text('固定日'),
+                        const SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SegmentedButton<PayPeriodMode>(
+                            selected: {mode},
+                            segments: const [
+                              ButtonSegment(
+                                value: PayPeriodMode.naturalMonth,
+                                label: Text('自然月'),
+                              ),
+                              ButtonSegment(
+                                value: PayPeriodMode.monthlyStartDay,
+                                label: Text('固定日'),
+                              ),
+                            ],
+                            onSelectionChanged: (values) =>
+                                setSheetState(() => mode = values.first),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          enabled: mode == PayPeriodMode.monthlyStartDay,
+                          title: const Text('每月起始日'),
+                          subtitle: Text(
+                            '$monthStartDay 日；短月会自动落到当月最后一天',
+                            style: const TextStyle(color: LedgerColors.muted),
+                          ),
+                          trailing: const Icon(
+                            Icons.keyboard_arrow_up_outlined,
+                          ),
+                          onTap: mode == PayPeriodMode.monthlyStartDay
+                              ? () async {
+                                  final picked = await showLedgerMonthDayPicker(
+                                    context,
+                                    initialDay: monthStartDay,
+                                  );
+                                  if (picked != null && context.mounted) {
+                                    setSheetState(() => monthStartDay = picked);
+                                  }
+                                }
+                              : null,
                         ),
                       ],
-                      onSelectionChanged: (values) =>
-                          setSheetState(() => mode = values.first),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    enabled: mode == PayPeriodMode.monthlyStartDay,
-                    title: const Text('每月起始日'),
-                    subtitle: Text(
-                      '$monthStartDay 日；短月会自动落到当月最后一天',
-                      style: const TextStyle(color: LedgerColors.muted),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        state.updatePayPeriod(
+                          PayPeriod(mode: mode, monthStartDay: monthStartDay),
+                        );
+                        Navigator.pop(context);
+                      },
+                      child: const Text('保存'),
                     ),
-                    trailing: const Icon(Icons.keyboard_arrow_up_outlined),
-                    onTap: mode == PayPeriodMode.monthlyStartDay
-                        ? () async {
-                            final picked = await showLedgerMonthDayPicker(
-                              context,
-                              initialDay: monthStartDay,
-                            );
-                            if (picked != null && context.mounted) {
-                              setSheetState(() => monthStartDay = picked);
-                            }
-                          }
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () {
-                      state.updatePayPeriod(
-                        PayPeriod(mode: mode, monthStartDay: monthStartDay),
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: const Text('保存'),
                   ),
                 ],
               ),
@@ -419,38 +466,100 @@ class SettingsPage extends StatelessWidget {
   Future<void> _showLocalBackupSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '本地备份/恢复',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                '普通备份不包含坚果云应用授权密码；恢复前会覆盖当前记录、模板和规则。',
-                style: TextStyle(color: LedgerColors.muted),
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: repository == null
-                    ? null
-                    : () => _writeBackup(context),
-                child: const Text('创建本地备份'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: repository == null
-                    ? null
-                    : () => _restoreLatestBackup(context),
-                child: const Text('从最近本地备份恢复'),
-              ),
-            ],
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SheetHeaderBlock(
+                  title: '本地备份/恢复',
+                  subtitle: '本地备份适合手动留档；恢复会覆盖当前记录、模板和规则，但不包含 WebDAV 应用授权密码。',
+                  onClose: () => Navigator.pop(context),
+                ),
+                const SizedBox(height: 12),
+                const NoticeCard(
+                  icon: Icons.save_alt_rounded,
+                  title: '会保留一份 App 私有最近备份',
+                  body: '即使你取消系统文件保存，这份最近备份也会留在 App 内，用于“从最近本地备份恢复”。',
+                ),
+                const SizedBox(height: 12),
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '创建备份',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '会导出 JSON 文件，并同时更新一份最近本地备份，方便误操作后快速恢复。',
+                        style: TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: repository == null
+                              ? null
+                              : () => _writeBackup(context),
+                          child: const Text('创建本地备份'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '恢复最近本地备份',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '适合快速撤销大改动。恢复前建议先再导出一份当前数据，避免把最近录入内容覆盖掉。',
+                        style: TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: repository == null
+                              ? null
+                              : () => _restoreLatestBackup(context),
+                          child: const Text('从最近本地备份恢复'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -544,17 +653,17 @@ class SettingsPage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('最近删除', style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                const Text(
-                  '用于找回误删的整天记录；恢复会把删除的分段放回原日期，不覆盖后来新增记录。',
-                  style: TextStyle(color: LedgerColors.muted),
+                SheetHeaderBlock(
+                  title: '最近删除',
+                  subtitle: '用于找回误删的整天记录；恢复会把删除的分段放回原日期，不覆盖后来新增记录。',
+                  onClose: () => Navigator.pop(context),
                 ),
                 const SizedBox(height: 12),
                 if (deletedDays.isEmpty)
-                  const LedgerCard(
-                    color: LedgerColors.surfaceRaised,
-                    child: Text('没有可恢复记录。'),
+                  const NoticeCard(
+                    icon: Icons.delete_sweep_outlined,
+                    title: '没有可恢复记录',
+                    body: '整天删除后才会出现在这里；单段删除不会进入最近删除列表。',
                   )
                 else
                   Flexible(
@@ -1318,6 +1427,20 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final compact =
+        MediaQuery.of(context).size.width < 520 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.2;
+    final effectiveLabel = _effective.text.trim().isEmpty
+        ? ymd(widget.initialRule.effectiveFrom)
+        : _effective.text.trim();
+    final basePreview = switch (_type) {
+      PayBaseType.hourly =>
+        '按小时 · ${_hourly.text.trim().isEmpty ? moneyText(widget.initialRule.hourlyRate) : '¥${_hourly.text.trim()}/h'}',
+      PayBaseType.daily =>
+        '按天 · ${_daily.text.trim().isEmpty ? moneyText(widget.initialRule.dailyRate) : '¥${_daily.text.trim()}/天'}',
+      PayBaseType.monthly =>
+        '按月 · ${_monthly.text.trim().isEmpty ? moneyText(widget.initialRule.monthlyRate) : '¥${_monthly.text.trim()}/月'}',
+    };
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -1329,168 +1452,235 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '计薪规则',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('取消'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '这套规则只影响工资计算；记录是否显示为加班，取决于你选择的班次类型或加班模板。',
-                  style: TextStyle(
-                    color: LedgerColors.muted,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
+              SheetHeaderBlock(
+                title: '计薪规则',
+                subtitle: '这套规则只影响工资计算；记录是否显示为加班，取决于你选择的班次类型或加班模板。',
+                onClose: () => Navigator.pop(context),
+                closeLabel: '取消',
               ),
               const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<PayBaseType>(
-                  selected: {_type},
-                  segments: const [
-                    ButtonSegment(
-                      value: PayBaseType.hourly,
-                      label: Text('按小时'),
+              NoticeCard(
+                icon: Icons.payments_outlined,
+                title: _name.text.trim().isEmpty
+                    ? widget.initialRule.name
+                    : _name.text.trim(),
+                body: '$basePreview · $effectiveLabel 起',
+              ),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '版本信息',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    ButtonSegment(value: PayBaseType.daily, label: Text('按天')),
-                    ButtonSegment(
-                      value: PayBaseType.monthly,
-                      label: Text('按月'),
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: TextField(
+                        controller: _name,
+                        decoration: const InputDecoration(labelText: '规则名称'),
+                      ),
+                      second: TextField(
+                        controller: _effective,
+                        keyboardType: TextInputType.datetime,
+                        decoration: InputDecoration(
+                          labelText: '生效日期 YYYY-MM-DD',
+                          suffixIcon: IconButton(
+                            tooltip: '选择生效日期',
+                            onPressed: _pickEffectiveDate,
+                            icon: const Icon(Icons.calendar_month_outlined),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
-                  onSelectionChanged: (values) =>
-                      setState(() => _type = values.first),
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: '规则名称'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _effective,
-                keyboardType: TextInputType.datetime,
-                decoration: InputDecoration(
-                  labelText: '生效日期 YYYY-MM-DD',
-                  suffixIcon: IconButton(
-                    tooltip: '选择生效日期',
-                    onPressed: _pickEffectiveDate,
-                    icon: const Icon(Icons.calendar_month_outlined),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (_type == PayBaseType.hourly)
-                TextField(
-                  controller: _hourly,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '小时工资 ¥/h'),
-                ),
-              if (_type == PayBaseType.daily) ...[
-                TextField(
-                  controller: _daily,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '每日工资 ¥/天'),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SegmentedButton<DailyPayMode>(
-                    selected: {_dailyPayMode},
-                    segments: const [
-                      ButtonSegment(
-                        value: DailyPayMode.attendanceDay,
-                        label: Text('按出勤日'),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '计薪基础',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '先确定按小时 / 按天 / 按月，再填写对应的基础单价。',
+                      style: TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
                       ),
-                      ButtonSegment(
-                        value: DailyPayMode.shiftCount,
-                        label: Text('按班次数'),
+                    ),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SegmentedButton<PayBaseType>(
+                        selected: {_type},
+                        segments: const [
+                          ButtonSegment(
+                            value: PayBaseType.hourly,
+                            label: Text('按小时'),
+                          ),
+                          ButtonSegment(
+                            value: PayBaseType.daily,
+                            label: Text('按天'),
+                          ),
+                          ButtonSegment(
+                            value: PayBaseType.monthly,
+                            label: Text('按月'),
+                          ),
+                        ],
+                        onSelectionChanged: (values) =>
+                            setState(() => _type = values.first),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_type == PayBaseType.hourly)
+                      TextField(
+                        controller: _hourly,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '小时工资 ¥/h',
+                        ),
+                      ),
+                    if (_type == PayBaseType.daily) ...[
+                      TextField(
+                        controller: _daily,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '每日工资 ¥/天',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SegmentedButton<DailyPayMode>(
+                          selected: {_dailyPayMode},
+                          segments: const [
+                            ButtonSegment(
+                              value: DailyPayMode.attendanceDay,
+                              label: Text('按出勤日'),
+                            ),
+                            ButtonSegment(
+                              value: DailyPayMode.shiftCount,
+                              label: Text('按班次数'),
+                            ),
+                          ],
+                          onSelectionChanged: (values) =>
+                              setState(() => _dailyPayMode = values.first),
+                        ),
                       ),
                     ],
-                    onSelectionChanged: (values) =>
-                        setState(() => _dailyPayMode = values.first),
-                  ),
+                    if (_type == PayBaseType.monthly)
+                      TextField(
+                        controller: _monthly,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '月薪 ¥/月'),
+                      ),
+                  ],
                 ),
-              ],
-              if (_type == PayBaseType.monthly)
-                TextField(
-                  controller: _monthly,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '月薪 ¥/月'),
-                ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _standard,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: '普通工时上限 h/天',
+              ),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '补充规则',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '这些设置会影响工资拆分与休息日结算，但不会把普通班次自动改成“加班段”。',
+                      style: TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _overtime,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '计薪加班倍率'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _overtimeBase,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: '计薪加班基准 ¥/h',
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: TextField(
+                        controller: _standard,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '普通工时上限 h/天',
+                        ),
+                      ),
+                      second: TextField(
+                        controller: _overtime,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '计薪加班倍率'),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _restDayMultiplier,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '休息日倍率'),
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: TextField(
+                        controller: _overtimeBase,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '计薪加班基准 ¥/h',
+                        ),
+                      ),
+                      second: TextField(
+                        controller: _restDayMultiplier,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '休息日倍率'),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '历史处理：保存为新版本；旧记录继续使用记录内规则快照。',
-                  style: TextStyle(color: LedgerColors.muted),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              FilledButton(onPressed: _save, child: const Text('保存')),
+              const SizedBox(height: 12),
+              const NoticeCard(
+                icon: Icons.history_toggle_off_rounded,
+                title: '保存后会生成新版本',
+                body: '旧记录继续使用记录内规则快照，避免历史工资被新规则回写。',
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(onPressed: _save, child: const Text('保存')),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFieldPair({
+    required bool compact,
+    required Widget first,
+    required Widget second,
+  }) {
+    if (compact) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [first, const SizedBox(height: 10), second],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 10),
+        Expanded(child: second),
+      ],
     );
   }
 
@@ -1659,69 +1849,99 @@ class _WebDavSheetState extends State<WebDavSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '坚果云 WebDAV',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('关闭'),
-                  ),
-                ],
-              ),
-              const Text(
-                '手动备份即时执行；可选择开启省流量自动云备份。应用授权密码不会写入普通备份。',
-                style: TextStyle(color: LedgerColors.muted),
+              SheetHeaderBlock(
+                title: '坚果云 WebDAV',
+                subtitle: '手动备份即时执行；也可以开启省流量自动云备份。应用授权密码不会写入普通备份。',
+                onClose: () => Navigator.pop(context),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _url,
-                decoration: const InputDecoration(labelText: '服务器地址'),
+              const NoticeCard(
+                icon: Icons.cloud_sync_outlined,
+                title: '推荐使用应用授权密码',
+                body: '比账号主密码更安全；普通本地备份和导出文件都不会包含这项敏感信息。',
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _username,
-                decoration: const InputDecoration(labelText: '账号'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: '应用授权密码'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _remotePath,
-                decoration: const InputDecoration(labelText: '远端备份文件名'),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '连接信息',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _url,
+                      decoration: const InputDecoration(labelText: '服务器地址'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _username,
+                      decoration: const InputDecoration(labelText: '账号'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _password,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: '应用授权密码'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _remotePath,
+                      decoration: const InputDecoration(labelText: '远端备份文件名'),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               _buildAutoBackupSection(context),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton(
-                    onPressed: _busy ? null : _save,
-                    child: const Text('保存配置'),
-                  ),
-                  OutlinedButton(
-                    onPressed: _busy ? null : _backup,
-                    child: const Text('备份到坚果云'),
-                  ),
-                  OutlinedButton(
-                    onPressed: _busy ? null : _restore,
-                    child: const Text('从坚果云恢复'),
-                  ),
-                  OutlinedButton(
-                    onPressed: _busy ? null : _list,
-                    child: const Text('导入/导出列表'),
-                  ),
-                ],
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '手动操作',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '先保存配置，再按需手动备份、恢复或查看云端文件列表。',
+                      style: TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton(
+                          onPressed: _busy ? null : _save,
+                          child: const Text('保存配置'),
+                        ),
+                        OutlinedButton(
+                          onPressed: _busy ? null : _backup,
+                          child: const Text('备份到坚果云'),
+                        ),
+                        OutlinedButton(
+                          onPressed: _busy ? null : _restore,
+                          child: const Text('从坚果云恢复'),
+                        ),
+                        OutlinedButton(
+                          onPressed: _busy ? null : _list,
+                          child: const Text('导入/导出列表'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               if (_busy)
                 const Padding(

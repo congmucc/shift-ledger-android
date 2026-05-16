@@ -362,6 +362,111 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
+class SheetHeaderBlock extends StatelessWidget {
+  const SheetHeaderBlock({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.onClose,
+    this.closeLabel = '关闭',
+  });
+
+  final String title;
+  final String subtitle;
+  final String closeLabel;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+            TextButton(onPressed: onClose, child: Text(closeLabel)),
+          ],
+        ),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class NoticeCard extends StatelessWidget {
+  const NoticeCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.backgroundColor = LedgerColors.surfaceRaised,
+    this.iconBackgroundColor = LedgerColors.primaryBlueSoft,
+    this.iconColor = LedgerColors.primaryBlue,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final Color backgroundColor;
+  final Color iconBackgroundColor;
+  final Color iconColor;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return LedgerCard(
+      color: backgroundColor,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconBackgroundColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        ],
+      ),
+    );
+  }
+}
+
 class SettingTile extends StatelessWidget {
   const SettingTile({
     super.key,
