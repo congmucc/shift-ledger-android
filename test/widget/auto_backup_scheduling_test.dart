@@ -35,6 +35,56 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(repository.savedSnapshots, isNotEmpty);
   });
+
+  testWidgets('disabling auto backup cancels pending startup run', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13))
+      ..updateAutoBackupConfig(const AutoBackupConfig(enabled: true));
+    final service = _CountingAutoBackupService();
+
+    await tester.pumpWidget(
+      ShiftLedgerApp(
+        state: state,
+        repository: _MemoryRepository(),
+        autoBackupService: service,
+        autoBackupStartupDelay: const Duration(milliseconds: 20),
+        autoBackupChangeDebounce: const Duration(milliseconds: 50),
+      ),
+    );
+
+    state.updateAutoBackupConfig(const AutoBackupConfig(enabled: false));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 30));
+
+    expect(service.runs, 0);
+  });
+
+  testWidgets('disabling auto backup cancels pending debounced run', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13))
+      ..updateAutoBackupConfig(const AutoBackupConfig(enabled: true));
+    final service = _CountingAutoBackupService();
+
+    await tester.pumpWidget(
+      ShiftLedgerApp(
+        state: state,
+        repository: _MemoryRepository(),
+        autoBackupService: service,
+        autoBackupStartupDelay: const Duration(seconds: 1),
+        autoBackupChangeDebounce: const Duration(milliseconds: 20),
+      ),
+    );
+
+    state.addEntry(state.createTemplateEntry());
+    await tester.pump(const Duration(milliseconds: 10));
+    state.updateAutoBackupConfig(const AutoBackupConfig(enabled: false));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    expect(service.runs, 0);
+  });
 }
 
 class _MemoryRepository extends LocalLedgerRepository {

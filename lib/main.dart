@@ -74,6 +74,13 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
 
   void _handleStateChanged() {
     _scheduleSave();
+    if (!widget.state.autoBackupConfig.enabled) {
+      _autoBackupStartupTimer?.cancel();
+      _autoBackupStartupTimer = null;
+      _autoBackupChangeTimer?.cancel();
+      _autoBackupChangeTimer = null;
+      return;
+    }
     if (!_runningAutoBackup) {
       _scheduleAutoBackupAfterChange();
     }
@@ -89,7 +96,12 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
   }
 
   void _scheduleAutoBackupAfterChange() {
-    if (widget.repository == null || !widget.state.autoBackupConfig.enabled) {
+    if (widget.repository == null) {
+      return;
+    }
+    if (!widget.state.autoBackupConfig.enabled) {
+      _autoBackupChangeTimer?.cancel();
+      _autoBackupChangeTimer = null;
       return;
     }
     _autoBackupChangeTimer?.cancel();
@@ -100,7 +112,11 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
   }
 
   Future<void> _runAutoBackup() async {
-    if (widget.repository == null || _runningAutoBackup) return;
+    if (widget.repository == null ||
+        _runningAutoBackup ||
+        !widget.state.autoBackupConfig.enabled) {
+      return;
+    }
     _runningAutoBackup = true;
     try {
       await widget.autoBackupService.run(state: widget.state);
