@@ -135,4 +135,50 @@ void main() {
     expect(find.text('查看明细'), findsNothing);
     expect(find.text('全部日期'), findsNothing);
   });
+
+  testWidgets('summary page explains empty ranges without losing structure', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 15))),
+    );
+
+    await tester.tap(find.text('汇总'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('计算说明'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('收入组成'), findsOneWidget);
+    expect(
+      find.textContaining('当前范围还没有可计算记录；收入拆分会在保存记录后自动生成'),
+      findsOneWidget,
+    );
+    expect(find.text('计薪依据'), findsWidgets);
+  });
+
+  testWidgets('calendar keeps a clear empty day detail for unrecorded days', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 15))),
+    );
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('新增分段'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('今日 · 5 月 15 日 · 暂无记录'), findsOneWidget);
+    expect(find.text('这一天还没有记录'), findsOneWidget);
+    expect(find.text('新增分段'), findsOneWidget);
+    expect(find.textContaining('如果这天只是休息，可以直接留空'), findsOneWidget);
+  });
 }
