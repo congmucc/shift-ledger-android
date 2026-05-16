@@ -520,7 +520,7 @@ class ShiftTemplate {
     name: '标准班次',
     startMinute: 9 * 60,
     endMinute: 18 * 60,
-    breakMinutes: 0,
+    breakMinutes: 60,
     defaultPayRuleId: payRuleId,
   );
 

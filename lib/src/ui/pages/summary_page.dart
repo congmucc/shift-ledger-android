@@ -167,7 +167,7 @@ class _SummaryPageState extends State<SummaryPage> {
               Text('收入组成', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 12),
               _Line('基础收入', moneyText(summary.baseIncome)),
-              _Line('加班收入', moneyText(summary.overtimeIncome)),
+              _Line('计薪加班收入', moneyText(summary.overtimeIncome)),
               _Line('夜班收入', moneyText(summary.nightIncome)),
               _Line('补贴', moneyText(summary.allowance)),
               _Line('扣款', '-${moneyText(summary.deduction)}'),
@@ -426,7 +426,7 @@ class _SummaryOverview extends StatelessWidget {
             children: [
               _StatChip('出勤', '${summary.attendanceDays}天'),
               _StatChip(
-                '加班',
+                '计薪加班',
                 '${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}',
               ),
               _StatChip(
@@ -545,7 +545,7 @@ class _IncomeCompositionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _Line('基础收入', moneyText(summary.baseIncome)),
-          _Line('加班收入', moneyText(summary.overtimeIncome)),
+          _Line('计薪加班收入', moneyText(summary.overtimeIncome)),
           _Line('夜班收入', moneyText(summary.nightIncome)),
           _Line('补贴', moneyText(summary.allowance)),
           _Line('扣款', '-${moneyText(summary.deduction)}'),
@@ -589,7 +589,7 @@ class _PayrollBasisCard extends StatelessWidget {
                 '${rule.name} · ${rule.baseType.label} · ${rule.amountLabel}',
           ),
           SettingTile(
-            title: '加班计算',
+            title: '计薪加班计算',
             subtitle:
                 '超过 ${hoursText(rule.overtimeThresholdHours)} 后按 ${_factorText(rule.overtimeMultiplier)} · 基数 $overtimeBase/h',
           ),

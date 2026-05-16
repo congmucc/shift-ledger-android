@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../app/ledger_state.dart';
 import '../../domain/models.dart';
 import '../edit_entry_sheet.dart';
+import '../record_ui_summary.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -49,7 +52,7 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  '会先带出默认 09:00-18:00，可在保存前调整。',
+                  '会先带出默认 09:00-18:00，并预设 60 分钟休息；保存前都可以改。',
                   style: TextStyle(color: LedgerColors.muted),
                 ),
               ],
@@ -83,7 +86,7 @@ class HomePage extends StatelessWidget {
                   _MiniStat(label: '总工时', value: hoursText(period.totalHours)),
                   _MiniStat(label: '出勤', value: '${period.attendanceDays}天'),
                   _MiniStat(
-                    label: '加班',
+                    label: '计薪加班',
                     value: hoursText(period.overtimeHours),
                   ),
                   _MiniStat(label: '夜班', value: '${period.nightShiftCount}次'),
@@ -187,24 +190,29 @@ class _TodayOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final recordSummary = summarizeRecordEntries(entries);
+    final extraPayrollOvertime = math.max(
+      0.0,
+      summary.overtimeHours - recordSummary.manualOvertimeHours,
+    );
     final chips = <_SummaryChipData>[
-      if (summary.regularHours > 0)
+      if (recordSummary.regularHours > 0)
         _SummaryChipData(
-          label: '普通 ${hoursText(summary.regularHours)}',
+          label: '普通 ${hoursText(recordSummary.regularHours)}',
           background: LedgerColors.primaryBlueSoft,
           foreground: const Color(0xFF1D4ED8),
           border: const Color(0xFFBFDBFE),
         ),
-      if (summary.overtimeHours > 0)
+      if (recordSummary.manualOvertimeHours > 0)
         _SummaryChipData(
-          label: '加班 ${hoursText(summary.overtimeHours)}',
+          label: '加班段 ${hoursText(recordSummary.manualOvertimeHours)}',
           background: LedgerColors.successGreenSoft,
           foreground: const Color(0xFF166534),
           border: const Color(0xFFBBF7D0),
         ),
-      if (summary.nightShiftCount > 0)
+      if (recordSummary.nightDays > 0)
         _SummaryChipData(
-          label: '夜班 ${summary.nightShiftCount}次',
+          label: '夜班 ${recordSummary.nightDays}次',
           background: LedgerColors.nightIndigoSoft,
           foreground: LedgerColors.nightIndigo,
           border: const Color(0xFFDDD6FE),
@@ -275,6 +283,17 @@ class _TodayOverviewCard extends StatelessWidget {
               runSpacing: 7,
               children: [for (final chip in chips) _SummaryChip(data: chip)],
             ),
+            if (extraPayrollOvertime > 0) ...[
+              const SizedBox(height: 10),
+              Text(
+                '工资估算里另有 ${hoursText(extraPayrollOvertime)} 会按“计薪加班”计算，但记录类型仍保持普通班次。',
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 12,
+                  height: 1.35,
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -103,14 +103,14 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('列表'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ChoiceChip, '有备注'));
+      await tester.tap(find.text('有备注'));
       await tester.pumpAndSettle();
 
       expect(find.text('1日 → 31日'), findsOneWidget);
-      expect(find.text('本月暂无有备注记录'), findsOneWidget);
+      expect(find.text('这个月还没有有备注'), findsOneWidget);
 
       final headerTop = tester.getTopLeft(find.text('1日 → 31日')).dy;
-      final emptyTop = tester.getTopLeft(find.text('本月暂无有备注记录')).dy;
+      final emptyTop = tester.getTopLeft(find.text('这个月还没有有备注')).dy;
       expect(headerTop, lessThan(emptyTop));
     },
   );

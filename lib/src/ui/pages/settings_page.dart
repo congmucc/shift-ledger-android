@@ -59,9 +59,9 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _showRuleHistory(context),
               ),
               SettingTile(
-                title: '加班规则',
+                title: '计薪加班规则',
                 subtitle:
-                    '超过 ${rule.overtimeThresholdHours.toStringAsFixed(0)}h · ${rule.overtimeMultiplier}x · 不重复计算',
+                    '超过 ${rule.overtimeThresholdHours.toStringAsFixed(0)}h 后按 ${rule.overtimeMultiplier}x 结算，不改变记录类型',
                 trailing: '编辑',
                 onTap: () => showPayRuleSheet(context, state, rule),
               ),
@@ -178,7 +178,7 @@ class SettingsPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '标准 ${rule.standardHoursPerDay.toStringAsFixed(0)}h/天 · 加班 ${rule.overtimeMultiplier}x · 休息日 ${rule.restDayMultiplier}x',
+                          '普通上限 ${rule.standardHoursPerDay.toStringAsFixed(0)}h/天 · 计薪加班 ${rule.overtimeMultiplier}x · 休息日 ${rule.restDayMultiplier}x',
                           style: const TextStyle(color: LedgerColors.muted),
                         ),
                       ],
@@ -723,6 +723,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final compact =
+        MediaQuery.of(context).size.width < 520 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.2;
+    final isDefaultTemplate = _template == widget.state.templates.first;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -745,10 +749,6 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _createTemplate,
-                    child: const Text('新增'),
-                  ),
-                  TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text('关闭'),
                   ),
@@ -759,196 +759,273 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                 style: TextStyle(color: LedgerColors.muted),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<ShiftTemplate>(
-                initialValue: _template,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: '选择模板'),
-                items: widget.state.templates
-                    .map(
-                      (tpl) => DropdownMenuItem(
-                        value: tpl,
-                        child: Text(
-                          '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '正在编辑',
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
-                selectedItemBuilder: (context) => widget.state.templates
-                    .map(
-                      (tpl) => Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() {
-                    _template = value;
-                    _load(value);
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: '模板名称'),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _start,
-                      keyboardType: TextInputType.datetime,
-                      decoration: InputDecoration(
-                        labelText: '开始 HH:mm',
-                        suffixIcon: IconButton(
-                          tooltip: '选择开始时间',
-                          onPressed: () => _pickTime(_start),
-                          icon: const Icon(Icons.schedule_outlined),
-                        ),
+                        if (isDefaultTemplate)
+                          _templateFlag(
+                            label: '默认',
+                            background: LedgerColors.primaryBlueSoft,
+                            foreground: LedgerColors.primaryBlue,
+                          ),
+                        if (_template.isBuiltIn) ...[
+                          const SizedBox(width: 6),
+                          _templateFlag(
+                            label: '内置',
+                            background: LedgerColors.surfaceSoft,
+                            foreground: LedgerColors.muted,
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _template.name,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_time(_template.startMinute)} — ${_time(_template.endMinute)} · ${_template.type.label}',
+                      style: const TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _end,
-                      keyboardType: TextInputType.datetime,
-                      decoration: InputDecoration(
-                        labelText: '结束 HH:mm',
-                        suffixIcon: IconButton(
-                          tooltip: '选择结束时间',
-                          onPressed: () => _pickTime(_end),
-                          icon: const Icon(Icons.schedule_outlined),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _break,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '休息分钟'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: DropdownButtonFormField<EntryType>(
-                      initialValue: _type,
-                      decoration: const InputDecoration(labelText: '班次类型'),
-                      items: EntryType.values
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<ShiftTemplate>(
+                      initialValue: _template,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: '切换正在编辑的模板'),
+                      items: widget.state.templates
                           .map(
-                            (type) => DropdownMenuItem(
-                              value: type,
-                              child: Text(type.label),
+                            (tpl) => DropdownMenuItem(
+                              value: tpl,
+                              child: Text(
+                                '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)} · ${tpl.type.label}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           )
                           .toList(),
-                      onChanged: (value) =>
-                          setState(() => _type = value ?? _type),
+                      selectedItemBuilder: (context) => widget.state.templates
+                          .map(
+                            (tpl) => Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)} · ${tpl.type.label}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _template = value;
+                          _load(value);
+                        });
+                      },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _location,
-                decoration: const InputDecoration(
-                  labelText: '地点/岗位默认值',
-                  helperText: '新增记录时自动带入；没有固定地点就留空。',
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _allowance,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: '默认补贴',
-                        helperText: '默认 0',
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _createTemplate,
+                        icon: const Icon(Icons.add),
+                        label: const Text('基于当前模板新增副本'),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _deduction,
-                      keyboardType: TextInputType.number,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '基础信息',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _name,
+                      decoration: const InputDecoration(labelText: '模板名称'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _location,
                       decoration: const InputDecoration(
-                        labelText: '默认扣款',
-                        helperText: '默认 0',
+                        labelText: '地点/岗位默认值',
+                        helperText: '新增记录时自动带入；没有固定地点就留空。',
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text('内置模板恢复', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 6),
-              const Text(
-                '内置模板不能删除；如果改乱了，可以恢复当前这个模板的默认值。',
-                style: TextStyle(color: LedgerColors.muted),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _template.isBuiltIn
-                      ? _confirmRestoreCurrentTemplate
-                      : null,
-                  icon: const Icon(Icons.restore_outlined),
-                  label: const Text('恢复当前内置模板'),
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: TextField(
+                        controller: _break,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: '休息分钟'),
+                      ),
+                      second: DropdownButtonFormField<EntryType>(
+                        initialValue: _type,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: '班次类型'),
+                        items: EntryType.values
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _type = value ?? _type),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: LedgerColors.errorBrick,
-                  ),
-                  onPressed:
-                      _template.isBuiltIn || widget.state.templates.length <= 1
-                      ? null
-                      : _confirmDeleteTemplate,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('删除模板'),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '时间与默认金额',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: TextField(
+                        controller: _start,
+                        keyboardType: TextInputType.datetime,
+                        decoration: InputDecoration(
+                          labelText: '开始 HH:mm',
+                          suffixIcon: IconButton(
+                            tooltip: '选择开始时间',
+                            onPressed: () => _pickTime(_start),
+                            icon: const Icon(Icons.schedule_outlined),
+                          ),
+                        ),
+                      ),
+                      second: TextField(
+                        controller: _end,
+                        keyboardType: TextInputType.datetime,
+                        decoration: InputDecoration(
+                          labelText: '结束 HH:mm',
+                          suffixIcon: IconButton(
+                            tooltip: '选择结束时间',
+                            onPressed: () => _pickTime(_end),
+                            icon: const Icon(Icons.schedule_outlined),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: TextField(
+                        controller: _allowance,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '默认补贴',
+                          helperText: '默认 0',
+                        ),
+                      ),
+                      second: TextField(
+                        controller: _deduction,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '默认扣款',
+                          helperText: '默认 0',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _template == widget.state.templates.first
-                          ? null
-                          : _setAsDefault,
-                      child: const Text('设为默认'),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '模板操作',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _save,
-                      child: const Text('保存模板'),
+                    const SizedBox(height: 6),
+                    Text(
+                      _template.isBuiltIn
+                          ? '内置模板不能删除；如果改乱了，可以只恢复当前这个模板。'
+                          : '自定义模板可以删除；已保存的历史记录不会受影响。',
+                      style: const TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    if (_template.isBuiltIn)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _confirmRestoreCurrentTemplate,
+                          icon: const Icon(Icons.restore_outlined),
+                          label: const Text('恢复当前内置模板'),
+                        ),
+                      ),
+                    if (_template.isBuiltIn) const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: LedgerColors.errorBrick,
+                        ),
+                        onPressed:
+                            _template.isBuiltIn ||
+                                widget.state.templates.length <= 1
+                            ? null
+                            : _confirmDeleteTemplate,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('删除模板'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: OutlinedButton(
+                        onPressed: isDefaultTemplate ? null : _setAsDefault,
+                        child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
+                      ),
+                      second: FilledButton(
+                        onPressed: _save,
+                        child: const Text('保存模板'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -970,6 +1047,48 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   void _setAsDefault() {
     widget.state.setDefaultShiftTemplate(_template.id);
     setState(() {});
+  }
+
+  Widget _buildFieldPair({
+    required bool compact,
+    required Widget first,
+    required Widget second,
+  }) {
+    if (compact) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [first, const SizedBox(height: 10), second],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 10),
+        Expanded(child: second),
+      ],
+    );
+  }
+
+  Widget _templateFlag({
+    required String label,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmRestoreCurrentTemplate() async {
@@ -1225,6 +1344,19 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '这套规则只影响工资计算；记录是否显示为加班，取决于你选择的班次类型或加班模板。',
+                  style: TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SegmentedButton<PayBaseType>(
@@ -1308,7 +1440,9 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                     child: TextField(
                       controller: _standard,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '标准工时 h/天'),
+                      decoration: const InputDecoration(
+                        labelText: '普通工时上限 h/天',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1316,7 +1450,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                     child: TextField(
                       controller: _overtime,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '加班倍率'),
+                      decoration: const InputDecoration(labelText: '计薪加班倍率'),
                     ),
                   ),
                 ],
@@ -1328,7 +1462,9 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                     child: TextField(
                       controller: _overtimeBase,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: '加班基准 ¥/h'),
+                      decoration: const InputDecoration(
+                        labelText: '计薪加班基准 ¥/h',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),

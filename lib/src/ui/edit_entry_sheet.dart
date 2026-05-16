@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/ledger_state.dart';
 import '../domain/models.dart';
 import 'pickers.dart';
+import 'record_ui_summary.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -47,10 +48,14 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final compactActions =
+        MediaQuery.of(context).size.width < 420 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.15;
     final summaryRule = widget.state.ruleForDate(
       _day,
       preferredRuleId: _segments.isEmpty ? null : _segments.first.payRuleId,
     );
+    final dayRecordSummary = summarizeRecordEntries(_segments);
     final deleteTargetDay = _originalDay;
     final canDeleteDay =
         ymd(_day) == ymd(deleteTargetDay) &&
@@ -86,34 +91,65 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   ),
                 ],
               ),
+              Text(
+                widget.state.entriesForDay(_originalDay).isEmpty
+                    ? '先补这一天的分段，保存后会自动进入汇总、列表和日历。'
+                    : '这里会一起编辑当天所有分段，保存后统一覆盖这一天的记录。',
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
               const SizedBox(height: 12),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('日期', style: Theme.of(context).textTheme.labelMedium),
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            ymd(_day),
-                            style: Theme.of(context).textTheme.titleMedium,
+                            '日期',
+                            style: Theme.of(context).textTheme.labelMedium,
                           ),
                         ),
-                        TextButton(
+                        _MetaChip(
+                          label: '${dayRecordSummary.segmentCount}段',
+                          background: LedgerColors.surfaceSoft,
+                          foreground: LedgerColors.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        _MetaChip(
+                          label: '合计 ${hoursText(dayRecordSummary.totalHours)}',
+                          background: LedgerColors.primaryBlueSoft,
+                          foreground: LedgerColors.primaryBlue,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Text(
+                          ymd(_day),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        OutlinedButton(
                           onPressed: () => _moveDay(-1),
                           child: const Text('昨天'),
                         ),
-                        TextButton(
+                        OutlinedButton(
                           onPressed: () => _moveDay(1),
                           child: const Text('明天'),
                         ),
-                        IconButton(
-                          tooltip: '选择日期',
+                        OutlinedButton.icon(
                           onPressed: _pickDay,
                           icon: const Icon(Icons.calendar_month_outlined),
+                          label: const Text('选择日期'),
                         ),
                       ],
                     ),
@@ -124,10 +160,47 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                       '${summaryRule.name} · ${summaryRule.baseType.label} ${summaryRule.amountLabel}',
                       style: const TextStyle(color: LedgerColors.muted),
                     ),
+                    if (summaryRule.overtimeThresholdHours > 0) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '超过 ${hoursText(summaryRule.overtimeThresholdHours)} 后会按计薪规则拆分，但不会自动把普通班次显示成“加班段”。',
+                        style: const TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '当天分段',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (dayRecordSummary.manualOvertimeHours > 0)
+                    _MetaChip(
+                      label:
+                          '加班段 ${hoursText(dayRecordSummary.manualOvertimeHours)}',
+                      background: LedgerColors.successGreenSoft,
+                      foreground: LedgerColors.successGreen,
+                    ),
+                  if (dayRecordSummary.nightHours > 0) ...[
+                    const SizedBox(width: 6),
+                    _MetaChip(
+                      label: '夜班 ${hoursText(dayRecordSummary.nightHours)}',
+                      background: LedgerColors.nightIndigoSoft,
+                      foreground: LedgerColors.nightIndigo,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
               for (final entry in _segments) ...[
                 WorkEntryTile(
                   entry: entry,
@@ -138,35 +211,49 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 ),
                 const SizedBox(height: 10),
               ],
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _addSegment,
-                      icon: const Icon(Icons.add),
-                      label: const Text('新增分段'),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '编辑操作',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _save,
-                      child: const Text('保存'),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '新增分段适合补休息日加班、夜班或临时外出；保存时会按时间顺序整理。',
+                      style: TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    _buildActionButtons(
+                      compact: compactActions,
+                      primary: FilledButton(
+                        onPressed: _save,
+                        child: const Text('保存'),
+                      ),
+                      secondary: OutlinedButton.icon(
+                        onPressed: _addSegment,
+                        icon: const Icon(Icons.add),
+                        label: const Text('新增分段'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (canDeleteDay) ...[
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
                       foregroundColor: LedgerColors.errorBrick,
+                      side: const BorderSide(color: LedgerColors.errorRed),
                     ),
                     onPressed: () => setState(
                       () => _showDangerActions = !_showDangerActions,
@@ -187,19 +274,46 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '只删除打开编辑时的原日期。改到其他日期后，请先保存或关闭，再回到目标日期删除。',
-                          style: TextStyle(color: LedgerColors.muted),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: LedgerColors.warningOrangeSoft,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.delete_sweep_outlined,
+                                color: LedgerColors.errorBrick,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                '只删除打开编辑时的原日期。改到其他日期后，请先保存或关闭，再回到目标日期删除。',
+                                style: TextStyle(
+                                  color: LedgerColors.muted,
+                                  fontSize: 13,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: LedgerColors.errorBrick,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: LedgerColors.errorBrick,
+                              foregroundColor: Colors.white,
                             ),
                             onPressed: _confirmDeleteDay,
-                            child: Text(
+                            icon: const Icon(Icons.delete_outline),
+                            label: Text(
                               '删除 ${ymd(deleteTargetDay)} 全部记录'
                               '（${deleteTargetEntries.length}段 · ${hoursText(deleteTargetSummary.totalHours)}）',
                             ),
@@ -214,6 +328,30 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildActionButtons({
+    required bool compact,
+    required Widget primary,
+    required Widget secondary,
+  }) {
+    if (compact) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(width: double.infinity, child: primary),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: secondary),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: secondary),
+        const SizedBox(width: 10),
+        Expanded(child: primary),
+      ],
     );
   }
 
@@ -467,11 +605,20 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
         MediaQuery.of(context).size.width < 520 ||
         MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       title: const Text('编辑本段'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${widget.entry.timeRangeLabel} · ${hoursText(widget.entry.netHours)}',
+                style: const TextStyle(color: LedgerColors.muted, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 10),
             _buildFieldPair(
               stacked: stackedFields,
               first: TextField(
@@ -508,6 +655,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
             const SizedBox(height: 10),
             DropdownButtonFormField<EntryType>(
               initialValue: _type,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: '类型'),
               items: EntryType.values
                   .map(
@@ -593,11 +741,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     if (stacked) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          first,
-          const SizedBox(height: 10),
-          second,
-        ],
+        children: [first, const SizedBox(height: 10), second],
       );
     }
     return Row(
@@ -674,5 +818,36 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
       return null;
     }
     return [hour, minute];
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }

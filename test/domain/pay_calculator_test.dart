@@ -340,12 +340,12 @@ void main() {
       },
     );
 
-    test('built-in shift templates default to zero break minutes', () {
+    test('built-in shift templates keep standard lunch break defaults', () {
       final state = LedgerState.empty(now: DateTime(2026, 5, 20));
 
       expect(
         ShiftTemplate.standard(payRuleId: state.defaultRule.id).breakMinutes,
-        0,
+        60,
       );
       expect(
         ShiftTemplate.overtime(payRuleId: state.defaultRule.id).breakMinutes,
@@ -356,7 +356,15 @@ void main() {
         0,
       );
       expect(
-        state.templates.map((template) => template.breakMinutes),
+        state.templates
+            .firstWhere((template) => template.id == ShiftTemplate.standardId)
+            .breakMinutes,
+        60,
+      );
+      expect(
+        state.templates
+            .where((template) => template.id != ShiftTemplate.standardId)
+            .map((template) => template.breakMinutes),
         everyElement(0),
       );
     });
@@ -387,7 +395,7 @@ void main() {
           ),
           isA<ShiftTemplate>()
               .having((template) => template.name, 'name', '标准班次')
-              .having((template) => template.breakMinutes, 'breakMinutes', 0)
+              .having((template) => template.breakMinutes, 'breakMinutes', 60)
               .having(
                 (template) => template.defaultLocationName,
                 'location',

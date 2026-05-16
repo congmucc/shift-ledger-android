@@ -110,9 +110,14 @@ class LedgerCard extends StatelessWidget {
         border: Border.all(color: LedgerColors.hairline),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A0F172A),
-            blurRadius: 18,
-            offset: Offset(0, 8),
+            color: Color(0x080F172A),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Color(0x050F172A),
+            blurRadius: 2,
+            offset: Offset(0, 1),
           ),
         ],
       ),
@@ -372,12 +377,14 @@ class SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasAction = onTap != null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
@@ -387,19 +394,44 @@ class SettingTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: LedgerColors.muted),
                   ),
                 ],
               ),
             ),
             if (trailing != null)
-              Text(
-                trailing!,
-                style: const TextStyle(
-                  color: LedgerColors.primaryBlue,
-                  fontWeight: FontWeight.w700,
+              Container(
+                margin: const EdgeInsets.only(left: 10, top: 1),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: LedgerColors.primaryBlueSoft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  trailing!,
+                  style: const TextStyle(
+                    color: LedgerColors.primaryBlue,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
                 ),
               ),
+            if (hasAction) ...[
+              const SizedBox(width: 8),
+              const Padding(
+                padding: EdgeInsets.only(top: 3),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: LedgerColors.stone,
+                ),
+              ),
+            ],
           ],
         ),
       ),

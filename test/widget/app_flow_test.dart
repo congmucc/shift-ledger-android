@@ -60,11 +60,50 @@ void main() {
       await tester.pumpWidget(ShiftLedgerApp(state: state));
 
       expect(find.text('普通 3h'), findsOneWidget);
-      expect(find.text('加班 3h'), findsOneWidget);
+      expect(find.text('加班段 3h'), findsOneWidget);
       expect(find.text('3段'), findsOneWidget);
       expect(find.text('13:00 — 14:00'), findsOneWidget);
       expect(find.text('20:00 — 22:00'), findsOneWidget);
       expect(find.text('夜班 0次'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'regular shifts stay visually regular while payroll overtime stays explanatory',
+    (tester) async {
+      final day = DateTime(2026, 5, 13);
+      final rule = PayRule.defaultHourly(hourlyRate: 35);
+      final state = LedgerState(
+        now: day,
+        payRules: [rule],
+        entries: [
+          WorkEntry.create(
+            id: 'regular_long',
+            workDate: day,
+            startDateTime: DateTime(2026, 5, 13, 9),
+            endDateTime: DateTime(2026, 5, 13, 19),
+            breakMinutes: 60,
+            type: EntryType.regular,
+            payRule: rule,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      expect(find.text('普通 9h'), findsOneWidget);
+      expect(find.text('加班段 1h'), findsNothing);
+      expect(find.textContaining('工资估算里另有 1h'), findsOneWidget);
+
+      await tester.tap(find.text('汇总'));
+      await tester.pumpAndSettle();
+      expect(find.text('计薪加班 1天 / 1h'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('计薪加班计算'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('计薪加班计算'), findsOneWidget);
     },
   );
 
@@ -136,10 +175,12 @@ void main() {
     await tester.tap(find.text('危险操作'));
     await tester.pumpAndSettle();
     expect(find.textContaining('删除 2026-05-13 全部记录'), findsOneWidget);
+    await tester.ensureVisible(find.text('明天'));
     await tester.tap(find.text('明天'));
     await tester.pumpAndSettle();
     expect(find.text('危险操作'), findsNothing);
     expect(find.textContaining('删除 2026-05-13 全部记录'), findsNothing);
+    await tester.ensureVisible(find.text('昨天'));
     await tester.tap(find.text('昨天'));
     await tester.pumpAndSettle();
     expect(find.text('危险操作'), findsOneWidget);
@@ -194,6 +235,7 @@ void main() {
     expect(find.text('今天还没有记录。'), findsOneWidget);
     expect(find.text('补今天'), findsOneWidget);
     expect(find.textContaining('默认 09:00-18:00'), findsOneWidget);
+    expect(find.textContaining('60 分钟休息'), findsOneWidget);
     expect(find.text('创建 09:00-18:00 记录'), findsNothing);
   });
 
@@ -359,7 +401,7 @@ void main() {
       expect(find.text('按小时'), findsWidgets);
       expect(find.text('按天'), findsWidgets);
       expect(find.text('按月'), findsWidgets);
-      expect(find.text('加班基准 ¥/h'), findsOneWidget);
+      expect(find.text('计薪加班基准 ¥/h'), findsOneWidget);
       expect(find.text('休息日倍率'), findsOneWidget);
       await tester.tap(find.text('取消').last);
       await tester.pumpAndSettle();
@@ -415,6 +457,11 @@ void main() {
     await tester.tap(find.text('今天'));
     await tester.pumpAndSettle();
     expect(find.text('2026 年 5 月'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('calendar-legend-today-marker')),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.byKey(const Key('calendar-legend-today-marker')),
       findsOneWidget,
@@ -688,7 +735,7 @@ void main() {
         ),
         isA<ShiftTemplate>()
             .having((template) => template.name, 'name', '标准班次')
-            .having((template) => template.breakMinutes, 'breakMinutes', 0),
+            .having((template) => template.breakMinutes, 'breakMinutes', 60),
       );
     },
   );
