@@ -362,6 +362,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('当前状态'), findsOneWidget);
     expect(find.textContaining('自动备份正常；最近成功 2026-05-14 08:30'), findsWidgets);
+    expect(find.text('连接状态'), findsOneWidget);
+  });
+
+  testWidgets('night rule sheet uses time pickers instead of raw hour inputs', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    final nightRuleTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '夜班规则');
+    nightRuleTile.onTap!.call();
+    await tester.pumpAndSettle();
+
+    expect(find.text('开始时间'), findsOneWidget);
+    expect(find.text('结束时间'), findsOneWidget);
+    expect(find.text('开始小时'), findsNothing);
+    expect(find.text('结束小时'), findsNothing);
   });
 
   testWidgets(
@@ -423,7 +444,8 @@ void main() {
         ),
       );
       expect(autoSwitch.value, isFalse);
-      await tester.tap(find.text('自动云备份'));
+      await tester.ensureVisible(find.byType(SwitchListTile));
+      await tester.tap(find.byType(SwitchListTile));
       await tester.pumpAndSettle();
       expect(find.textContaining('需重新授权'), findsWidgets);
       await tester.ensureVisible(find.text('从坚果云恢复'));
@@ -835,7 +857,8 @@ void main() {
       find.widgetWithText(TextField, '应用授权密码'),
       'app-pass',
     );
-    await tester.tap(find.text('自动云备份'));
+    await tester.ensureVisible(find.byType(SwitchListTile));
+    await tester.tap(find.byType(SwitchListTile));
     await tester.pumpAndSettle();
 
     expect(state.webDavConfig.isConfigured, isTrue);

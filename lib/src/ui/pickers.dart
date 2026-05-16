@@ -39,6 +39,7 @@ Future<DateTime?> showLedgerDatePicker(
 Future<int?> showLedgerTimePicker(
   BuildContext context, {
   required int initialMinute,
+  int minuteInterval = 5,
 }) async {
   var selected = DateTime(2026, 1, 1, initialMinute ~/ 60, initialMinute % 60);
   return showModalBottomSheet<int>(
@@ -53,7 +54,7 @@ Future<int?> showLedgerTimePicker(
         child: CupertinoDatePicker(
           mode: CupertinoDatePickerMode.time,
           use24hFormat: true,
-          minuteInterval: 5,
+          minuteInterval: minuteInterval,
           initialDateTime: selected,
           onDateTimeChanged: (value) => selected = value,
         ),

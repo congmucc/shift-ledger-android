@@ -458,6 +458,71 @@ class EntryTypeSegmentedField extends StatelessWidget {
   }
 }
 
+class LedgerPickerButtonField extends StatelessWidget {
+  const LedgerPickerButtonField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.icon = Icons.tune_rounded,
+    this.helperText,
+    this.enabled = true,
+  });
+
+  final String label;
+  final String value;
+  final String? helperText;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = enabled ? LedgerColors.muted : LedgerColors.stone;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        if (helperText != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            helperText!,
+            style: TextStyle(
+              color: muted,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: enabled ? onTap : null,
+            child: Row(
+              children: [
+                Icon(icon, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: enabled ? LedgerColors.ink : LedgerColors.stone,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded, size: 18),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class NoticeCard extends StatelessWidget {
   const NoticeCard({
     super.key,

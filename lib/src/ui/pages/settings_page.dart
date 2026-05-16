@@ -191,108 +191,117 @@ class SettingsPage extends StatelessWidget {
   }
 
   void _showNightRuleSheet(BuildContext context) {
-    final start = TextEditingController(
-      text: (state.nightRule.startMinute ~/ 60).toString(),
-    );
-    final end = TextEditingController(
-      text: (state.nightRule.endMinute ~/ 60).toString(),
-    );
+    var startMinute = state.nightRule.startMinute;
+    var endMinute = state.nightRule.endMinute;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SheetHeaderBlock(
-                  title: '夜班规则',
-                  subtitle: '夜班补贴仍按当前规则计算，这里只决定什么时间段会被识别为夜班。',
-                  onClose: () => Navigator.pop(context),
-                ),
-                const SizedBox(height: 12),
-                NoticeCard(
-                  icon: Icons.nightlight_round,
-                  title: state.nightRule.label,
-                  body:
-                      '当前按 ${state.nightRule.mode.label} 计算；默认时段 ${_time(state.nightRule.startMinute)} — ${_time(state.nightRule.endMinute)}。',
-                ),
-                const SizedBox(height: 12),
-                LedgerCard(
-                  color: LedgerColors.surfaceRaised,
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '夜班判定时段',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        '输入 0-23 的整点。跨天班次只要落在这个区间，就会按夜班规则参与计算。',
-                        style: TextStyle(
-                          color: LedgerColors.muted,
-                          fontSize: 13,
-                          height: 1.35,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SheetHeaderBlock(
+                    title: '夜班规则',
+                    subtitle: '夜班补贴仍按当前规则计算，这里只决定什么时间段会被识别为夜班。',
+                    onClose: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(height: 12),
+                  NoticeCard(
+                    icon: Icons.nightlight_round,
+                    title: '${_time(startMinute)} — ${_time(endMinute)}',
+                    body:
+                        '当前按 ${state.nightRule.mode.label} 计算；跨天班次只要落在这个区间，就会按夜班规则参与计算。',
+                  ),
+                  const SizedBox(height: 12),
+                  LedgerCard(
+                    color: LedgerColors.surfaceRaised,
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '夜班判定时段',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: start,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: '开始小时',
+                        const SizedBox(height: 6),
+                        const Text(
+                          '建议保持整点，便于和班次模板保持一致。',
+                          style: TextStyle(
+                            color: LedgerColors.muted,
+                            fontSize: 13,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: LedgerPickerButtonField(
+                                label: '开始时间',
+                                value: _time(startMinute),
+                                icon: Icons.bedtime_outlined,
+                                onTap: () async {
+                                  final picked = await showLedgerTimePicker(
+                                    context,
+                                    initialMinute: startMinute,
+                                    minuteInterval: 60,
+                                  );
+                                  if (picked == null || !context.mounted) return;
+                                  setSheetState(() => startMinute = picked);
+                                },
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: end,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: '结束小时',
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: LedgerPickerButtonField(
+                                label: '结束时间',
+                                value: _time(endMinute),
+                                icon: Icons.wb_sunny_outlined,
+                                onTap: () async {
+                                  final picked = await showLedgerTimePicker(
+                                    context,
+                                    initialMinute: endMinute,
+                                    minuteInterval: 60,
+                                  );
+                                  if (picked == null || !context.mounted) return;
+                                  setSheetState(() => endMinute = picked);
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      state.updateNightRule(
-                        state.nightRule.copyWith(
-                          startMinute:
-                              clampInt(int.tryParse(start.text) ?? 22, 0, 23) *
-                              60,
-                          endMinute:
-                              clampInt(int.tryParse(end.text) ?? 6, 0, 23) * 60,
+                          ],
                         ),
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: const Text('保存'),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        state.updateNightRule(
+                          state.nightRule.copyWith(
+                            startMinute: startMinute,
+                            endMinute: endMinute,
+                          ),
+                        );
+                        Navigator.pop(context);
+                      },
+                      child: const Text('保存'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -372,33 +381,26 @@ class SettingsPage extends StatelessWidget {
                                 label: Text('固定日'),
                               ),
                             ],
-                            onSelectionChanged: (values) =>
-                                setSheetState(() => mode = values.first),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
+                        onSelectionChanged: (values) =>
+                            setSheetState(() => mode = values.first),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                        LedgerPickerButtonField(
+                          label: '每月起始日',
+                          value: '$monthStartDay 日',
+                          helperText: '29、30、31 遇到短月时自动按当月最后一天计算。',
+                          icon: Icons.event_repeat_outlined,
                           enabled: mode == PayPeriodMode.monthlyStartDay,
-                          title: const Text('每月起始日'),
-                          subtitle: Text(
-                            '$monthStartDay 日；短月会自动落到当月最后一天',
-                            style: const TextStyle(color: LedgerColors.muted),
-                          ),
-                          trailing: const Icon(
-                            Icons.keyboard_arrow_up_outlined,
-                          ),
-                          onTap: mode == PayPeriodMode.monthlyStartDay
-                              ? () async {
-                                  final picked = await showLedgerMonthDayPicker(
-                                    context,
-                                    initialDay: monthStartDay,
-                                  );
-                                  if (picked != null && context.mounted) {
-                                    setSheetState(() => monthStartDay = picked);
-                                  }
-                                }
-                              : null,
+                          onTap: () async {
+                            final picked = await showLedgerMonthDayPicker(
+                              context,
+                              initialDay: monthStartDay,
+                            );
+                            if (picked != null && context.mounted) {
+                              setSheetState(() => monthStartDay = picked);
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -1854,6 +1856,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
   late final TextEditingController _password;
   late final TextEditingController _remotePath;
   bool _busy = false;
+  bool _showPassword = false;
 
   @override
   void initState() {
@@ -1878,6 +1881,11 @@ class _WebDavSheetState extends State<WebDavSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final displayStatus = _displayAutoBackupStatus();
+    final connectionStatus = _backupStatusDisplay(
+      webDavConfig: _config(),
+      autoConfig: widget.state.autoBackupConfig.copyWith(lastStatus: displayStatus),
+    );
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -1903,6 +1911,20 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 body: '比账号主密码更安全；普通本地备份和导出文件都不会包含这项敏感信息。',
               ),
               const SizedBox(height: 12),
+              NoticeCard(
+                icon: _config().isConfigured
+                    ? Icons.cloud_done_outlined
+                    : Icons.cloud_off_outlined,
+                title: '连接状态',
+                body: '${connectionStatus.summary}。${connectionStatus.detail}',
+                iconBackgroundColor: _config().isConfigured
+                    ? LedgerColors.successGreenSoft
+                    : LedgerColors.warningOrangeSoft,
+                iconColor: _config().isConfigured
+                    ? LedgerColors.successGreen
+                    : LedgerColors.warningOrange,
+              ),
+              const SizedBox(height: 12),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
                 padding: const EdgeInsets.all(14),
@@ -1916,23 +1938,45 @@ class _WebDavSheetState extends State<WebDavSheet> {
                     const SizedBox(height: 10),
                     TextField(
                       controller: _url,
-                      decoration: const InputDecoration(labelText: '服务器地址'),
+                      decoration: const InputDecoration(
+                        labelText: '服务器地址',
+                        helperText: '坚果云一般是 https://dav.jianguoyun.com/dav/',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _username,
-                      decoration: const InputDecoration(labelText: '账号'),
+                      decoration: const InputDecoration(
+                        labelText: '账号',
+                        helperText: '通常是坚果云登录邮箱或用户名。',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _password,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: '应用授权密码'),
+                      obscureText: !_showPassword,
+                      decoration: InputDecoration(
+                        labelText: '应用授权密码',
+                        helperText: '建议使用应用授权密码，而不是账号主密码。',
+                        suffixIcon: IconButton(
+                          tooltip: _showPassword ? '隐藏密码' : '显示密码',
+                          onPressed: () =>
+                              setState(() => _showPassword = !_showPassword),
+                          icon: Icon(
+                            _showPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _remotePath,
-                      decoration: const InputDecoration(labelText: '远端备份文件名'),
+                      decoration: const InputDecoration(
+                        labelText: '远端备份文件名',
+                        helperText: '例如 shift-ledger-backup.json，可按账本区分。',
+                      ),
                     ),
                   ],
                 ),
@@ -1960,25 +2004,41 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    Column(
                       children: [
-                        FilledButton(
-                          onPressed: _busy ? null : _save,
-                          child: const Text('保存配置'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _busy ? null : _save,
+                            child: const Text('保存配置'),
+                          ),
                         ),
-                        OutlinedButton(
-                          onPressed: _busy ? null : _backup,
-                          child: const Text('备份到坚果云'),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _busy ? null : _backup,
+                            icon: const Icon(Icons.cloud_upload_outlined),
+                            label: const Text('备份到坚果云'),
+                          ),
                         ),
-                        OutlinedButton(
-                          onPressed: _busy ? null : _restore,
-                          child: const Text('从坚果云恢复'),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _busy ? null : _restore,
+                            icon: const Icon(Icons.cloud_download_outlined),
+                            label: const Text('从坚果云恢复'),
+                          ),
                         ),
-                        OutlinedButton(
-                          onPressed: _busy ? null : _list,
-                          child: const Text('导入/导出列表'),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _busy ? null : _list,
+                            icon: const Icon(Icons.inventory_2_outlined),
+                            label: const Text('导入/导出列表'),
+                          ),
                         ),
                       ],
                     ),

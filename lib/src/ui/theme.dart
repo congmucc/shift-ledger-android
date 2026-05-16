@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 
 const double ledgerContentMaxWidth = 960;
+const String ledgerFontFamily = 'ShiftLedgerCJK';
+const List<String> ledgerFontFallback = [
+  'PingFang SC',
+  'Hiragino Sans GB',
+  'Heiti SC',
+  'Noto Sans CJK SC',
+  'Noto Sans SC',
+  'Microsoft YaHei',
+  'Arial Unicode MS',
+  'sans-serif',
+];
 
 class LedgerColors {
   static const background = Color(0xFFF9FAFB);
@@ -49,17 +60,8 @@ ThemeData buildLedgerTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: LedgerColors.background,
-    fontFamily: 'ShiftLedgerCJK',
-    fontFamilyFallback: const [
-      'PingFang SC',
-      'Hiragino Sans GB',
-      'Heiti SC',
-      'Noto Sans CJK SC',
-      'Noto Sans SC',
-      'Microsoft YaHei',
-      'Arial Unicode MS',
-      'sans-serif',
-    ],
+    fontFamily: ledgerFontFamily,
+    fontFamilyFallback: ledgerFontFallback,
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
         fontSize: 28,
@@ -136,7 +138,12 @@ ThemeData buildLedgerTheme() {
         minimumSize: const Size(0, 46),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          fontFamily: ledgerFontFamily,
+          fontFamilyFallback: ledgerFontFallback,
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -146,7 +153,12 @@ ThemeData buildLedgerTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         side: const BorderSide(color: LedgerColors.hairlineStrong),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          fontFamily: ledgerFontFamily,
+          fontFamilyFallback: ledgerFontFallback,
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -154,7 +166,12 @@ ThemeData buildLedgerTheme() {
         foregroundColor: LedgerColors.primaryBlue,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          fontFamily: ledgerFontFamily,
+          fontFamilyFallback: ledgerFontFallback,
+        ),
       ),
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
@@ -166,7 +183,12 @@ ThemeData buildLedgerTheme() {
         side: const BorderSide(color: LedgerColors.hairlineStrong),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          fontFamily: ledgerFontFamily,
+          fontFamilyFallback: ledgerFontFallback,
+        ),
       ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
