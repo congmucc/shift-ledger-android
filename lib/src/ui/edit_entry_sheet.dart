@@ -463,44 +463,41 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final stackedFields =
+        MediaQuery.of(context).size.width < 520 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return AlertDialog(
       title: const Text('编辑本段'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _start,
-                    keyboardType: TextInputType.datetime,
-                    decoration: InputDecoration(
-                      labelText: '开始 HH:mm',
-                      suffixIcon: IconButton(
-                        tooltip: '选择开始时间',
-                        onPressed: () => _pickTime(_start),
-                        icon: const Icon(Icons.schedule_outlined),
-                      ),
-                    ),
+            _buildFieldPair(
+              stacked: stackedFields,
+              first: TextField(
+                controller: _start,
+                keyboardType: TextInputType.datetime,
+                decoration: InputDecoration(
+                  labelText: '开始 HH:mm',
+                  suffixIcon: IconButton(
+                    tooltip: '选择开始时间',
+                    onPressed: () => _pickTime(_start),
+                    icon: const Icon(Icons.schedule_outlined),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _end,
-                    keyboardType: TextInputType.datetime,
-                    decoration: InputDecoration(
-                      labelText: '结束 HH:mm',
-                      suffixIcon: IconButton(
-                        tooltip: '选择结束时间',
-                        onPressed: () => _pickTime(_end),
-                        icon: const Icon(Icons.schedule_outlined),
-                      ),
-                    ),
+              ),
+              second: TextField(
+                controller: _end,
+                keyboardType: TextInputType.datetime,
+                decoration: InputDecoration(
+                  labelText: '结束 HH:mm',
+                  suffixIcon: IconButton(
+                    tooltip: '选择结束时间',
+                    onPressed: () => _pickTime(_end),
+                    icon: const Icon(Icons.schedule_outlined),
                   ),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
@@ -523,12 +520,29 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
             const SizedBox(height: 10),
             DropdownButtonFormField<PayRule>(
               initialValue: _rule,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: '计薪规则'),
               items: widget.rules
                   .map(
                     (rule) => DropdownMenuItem(
                       value: rule,
-                      child: Text('${rule.name} · ${rule.amountLabel}'),
+                      child: Text(
+                        '${rule.name} · ${rule.amountLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              selectedItemBuilder: (context) => widget.rules
+                  .map(
+                    (rule) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${rule.name} · ${rule.amountLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(),
@@ -540,24 +554,18 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               decoration: const InputDecoration(labelText: '地点/岗位'),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _allowance,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '补贴'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _deduction,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '扣款'),
-                  ),
-                ),
-              ],
+            _buildFieldPair(
+              stacked: stackedFields,
+              first: TextField(
+                controller: _allowance,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: '补贴'),
+              ),
+              second: TextField(
+                controller: _deduction,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: '扣款'),
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
@@ -573,6 +581,30 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
           child: const Text('取消'),
         ),
         FilledButton(onPressed: _save, child: const Text('保存本段')),
+      ],
+    );
+  }
+
+  Widget _buildFieldPair({
+    required bool stacked,
+    required Widget first,
+    required Widget second,
+  }) {
+    if (stacked) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          first,
+          const SizedBox(height: 10),
+          second,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 10),
+        Expanded(child: second),
       ],
     );
   }

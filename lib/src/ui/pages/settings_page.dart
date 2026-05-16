@@ -319,20 +319,23 @@ class SettingsPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  SegmentedButton<PayPeriodMode>(
-                    selected: {mode},
-                    segments: const [
-                      ButtonSegment(
-                        value: PayPeriodMode.naturalMonth,
-                        label: Text('自然月'),
-                      ),
-                      ButtonSegment(
-                        value: PayPeriodMode.monthlyStartDay,
-                        label: Text('固定日'),
-                      ),
-                    ],
-                    onSelectionChanged: (values) =>
-                        setSheetState(() => mode = values.first),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SegmentedButton<PayPeriodMode>(
+                      selected: {mode},
+                      segments: const [
+                        ButtonSegment(
+                          value: PayPeriodMode.naturalMonth,
+                          label: Text('自然月'),
+                        ),
+                        ButtonSegment(
+                          value: PayPeriodMode.monthlyStartDay,
+                          label: Text('固定日'),
+                        ),
+                      ],
+                      onSelectionChanged: (values) =>
+                          setSheetState(() => mode = values.first),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ListTile(
@@ -758,6 +761,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<ShiftTemplate>(
                 initialValue: _template,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: '选择模板'),
                 items: widget.state.templates
                     .map(
@@ -765,6 +769,20 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         value: tpl,
                         child: Text(
                           '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                selectedItemBuilder: (context) => widget.state.templates
+                    .map(
+                      (tpl) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )
@@ -1207,15 +1225,24 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                   ),
                 ],
               ),
-              SegmentedButton<PayBaseType>(
-                selected: {_type},
-                segments: const [
-                  ButtonSegment(value: PayBaseType.hourly, label: Text('按小时')),
-                  ButtonSegment(value: PayBaseType.daily, label: Text('按天')),
-                  ButtonSegment(value: PayBaseType.monthly, label: Text('按月')),
-                ],
-                onSelectionChanged: (values) =>
-                    setState(() => _type = values.first),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<PayBaseType>(
+                  selected: {_type},
+                  segments: const [
+                    ButtonSegment(
+                      value: PayBaseType.hourly,
+                      label: Text('按小时'),
+                    ),
+                    ButtonSegment(value: PayBaseType.daily, label: Text('按天')),
+                    ButtonSegment(
+                      value: PayBaseType.monthly,
+                      label: Text('按月'),
+                    ),
+                  ],
+                  onSelectionChanged: (values) =>
+                      setState(() => _type = values.first),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -1249,20 +1276,23 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                   decoration: const InputDecoration(labelText: '每日工资 ¥/天'),
                 ),
                 const SizedBox(height: 10),
-                SegmentedButton<DailyPayMode>(
-                  selected: {_dailyPayMode},
-                  segments: const [
-                    ButtonSegment(
-                      value: DailyPayMode.attendanceDay,
-                      label: Text('按出勤日'),
-                    ),
-                    ButtonSegment(
-                      value: DailyPayMode.shiftCount,
-                      label: Text('按班次数'),
-                    ),
-                  ],
-                  onSelectionChanged: (values) =>
-                      setState(() => _dailyPayMode = values.first),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<DailyPayMode>(
+                    selected: {_dailyPayMode},
+                    segments: const [
+                      ButtonSegment(
+                        value: DailyPayMode.attendanceDay,
+                        label: Text('按出勤日'),
+                      ),
+                      ButtonSegment(
+                        value: DailyPayMode.shiftCount,
+                        label: Text('按班次数'),
+                      ),
+                    ],
+                    onSelectionChanged: (values) =>
+                        setState(() => _dailyPayMode = values.first),
+                  ),
                 ),
               ],
               if (_type == PayBaseType.monthly)

@@ -245,77 +245,101 @@ class _CalendarPageState extends State<CalendarPage> {
     var pickerYear = _month.year;
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
       builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        builder: (context, setSheetState) {
+          final mediaQuery = MediaQuery.of(context);
+          final textScale = MediaQuery.textScalerOf(context).scale(1);
+          final tileHeight = textScale >= 1.8
+              ? 92.0
+              : textScale >= 1.35
+              ? 78.0
+              : 60.0;
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: mediaQuery.size.height * 0.82,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '选择年月',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('完成'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => setSheetState(() => pickerYear--),
-                      icon: const Icon(Icons.chevron_left),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          '$pickerYear 年',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setSheetState(() => pickerYear++),
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  childAspectRatio: 2.1,
-                  children: [
-                    for (var month = 1; month <= 12; month++)
-                      Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setState(
-                              () => _applyMonth(DateTime(pickerYear, month)),
-                            );
-                            Navigator.pop(context);
-                          },
+                    Row(
+                      children: [
+                        Expanded(
                           child: Text(
-                            '$month月\n${hoursText(widget.state.summaryFor(DateRange.month(pickerYear, month)).totalHours)}',
+                            '选择年月',
+                            style: Theme.of(context).textTheme.headlineMedium,
                           ),
                         ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('完成'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => setSheetState(() => pickerYear--),
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              '$pickerYear 年',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => setSheetState(() => pickerYear++),
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                mainAxisExtent: tileHeight,
+                              ),
+                          itemCount: 12,
+                          itemBuilder: (context, index) {
+                            final month = index + 1;
+                            return OutlinedButton(
+                              onPressed: () {
+                                setState(
+                                  () => _applyMonth(DateTime(pickerYear, month)),
+                                );
+                                Navigator.pop(context);
+                              },
+                              child: Text(
+                                '$month月\n${hoursText(widget.state.summaryFor(DateRange.month(pickerYear, month)).totalHours)}',
+                                textAlign: TextAlign.center,
+                              ),
+                            );
+                          },
+                        ),
                       ),
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

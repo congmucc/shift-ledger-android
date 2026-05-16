@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
+import 'package:shift_ledger/src/ui/edit_entry_sheet.dart';
 import 'package:shift_ledger/src/ui/theme.dart';
+import 'package:shift_ledger/src/ui/widgets.dart';
 
 void main() {
   testWidgets('uses iOS Neutral palette for the app shell', (tester) async {
@@ -417,6 +419,91 @@ void main() {
       find.byKey(const Key('calendar-legend-today-marker')),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('calendar month picker stays usable at large text scale', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2026 年 5 月'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('选择年月'), findsOneWidget);
+    expect(find.textContaining('1月'), findsWidgets);
+    expect(find.textContaining('12月'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings segmented sheets stay usable at large text scale', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    final payPeriodTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '发薪周期');
+    payPeriodTile.onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.text('自然月'), findsOneWidget);
+    expect(find.text('固定日'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('取消').last);
+    await tester.pumpAndSettle();
+
+    final payRuleTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '计薪规则');
+    payRuleTile.onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.text('按小时'), findsWidgets);
+    expect(find.text('按天'), findsWidgets);
+    expect(find.text('按月'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('segment editor dialog stays usable at large text scale', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    final entry = WorkEntry.create(
+      id: 'segment_probe',
+      workDate: DateTime(2026, 5, 13),
+      startDateTime: DateTime(2026, 5, 13, 9),
+      endDateTime: DateTime(2026, 5, 13, 18),
+      payRule: rule,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SegmentEditorDialog(entry: entry, rules: [rule]),
+        ),
+      ),
+    );
+
+    expect(find.text('编辑本段'), findsOneWidget);
+    expect(find.text('开始 HH:mm'), findsOneWidget);
+    expect(find.text('结束 HH:mm'), findsOneWidget);
+    expect(find.text('保存本段'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
