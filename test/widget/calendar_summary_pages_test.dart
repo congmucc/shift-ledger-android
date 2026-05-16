@@ -115,25 +115,24 @@ void main() {
     },
   );
 
-  testWidgets(
-    'summary page locks the approved boundary before implementation',
-    (tester) async {
-      await tester.pumpWidget(ShiftLedgerApp(state: buildSummaryState()));
+  testWidgets('summary page keeps the approved aggregate boundary', (
+    tester,
+  ) async {
+    await tester.pumpWidget(ShiftLedgerApp(state: buildSummaryState()));
 
-      await tester.tap(find.text('汇总'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('汇总'));
+    await tester.pumpAndSettle();
 
-      final summaryExportAction = find.descendant(
-        of: find.byType(Scaffold),
-        matching: find.widgetWithText(FilledButton, '导出'),
-      );
+    final summaryExportAction = find.descendant(
+      of: find.byType(Scaffold),
+      matching: find.widgetWithText(FilledButton, '导出'),
+    );
 
-      expect(find.text('收入组成'), findsOneWidget);
-      expect(find.text('计薪依据'), findsOneWidget);
-      expect(summaryExportAction, findsOneWidget);
-      expect(find.text('按天查看'), findsNothing);
-      expect(find.text('查看明细'), findsNothing);
-      expect(find.text('全部日期'), findsNothing);
-    },
-  );
+    expect(find.text('收入组成'), findsOneWidget);
+    expect(find.text('计薪依据'), findsOneWidget);
+    expect(summaryExportAction, findsOneWidget);
+    expect(find.text('按天查看'), findsNothing);
+    expect(find.text('查看明细'), findsNothing);
+    expect(find.text('全部日期'), findsNothing);
+  });
 }
