@@ -958,29 +958,17 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                     const SizedBox(height: 10),
                     _buildFieldPair(
                       compact: compact,
-                      first: TextField(
-                        controller: _start,
-                        keyboardType: TextInputType.datetime,
-                        decoration: InputDecoration(
-                          labelText: '开始 HH:mm',
-                          suffixIcon: IconButton(
-                            tooltip: '选择开始时间',
-                            onPressed: () => _pickTime(_start),
-                            icon: const Icon(Icons.schedule_outlined),
-                          ),
-                        ),
+                      first: LedgerPickerButtonField(
+                        label: '开始时间',
+                        value: _start.text,
+                        icon: Icons.schedule_outlined,
+                        onTap: () => _pickTime(_start),
                       ),
-                      second: TextField(
-                        controller: _end,
-                        keyboardType: TextInputType.datetime,
-                        decoration: InputDecoration(
-                          labelText: '结束 HH:mm',
-                          suffixIcon: IconButton(
-                            tooltip: '选择结束时间',
-                            onPressed: () => _pickTime(_end),
-                            icon: const Icon(Icons.schedule_outlined),
-                          ),
-                        ),
+                      second: LedgerPickerButtonField(
+                        label: '结束时间',
+                        value: _end.text,
+                        icon: Icons.schedule_outlined,
+                        onTap: () => _pickTime(_end),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1368,7 +1356,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     final minute = _parseTime(controller.text) ?? _template.startMinute;
     final picked = await showLedgerTimePicker(context, initialMinute: minute);
     if (picked == null || !mounted) return;
-    controller.text = _time(picked);
+    setState(() => controller.text = _time(picked));
   }
 
   int? _parseTime(String value) {
@@ -1530,17 +1518,11 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                         controller: _name,
                         decoration: const InputDecoration(labelText: '规则名称'),
                       ),
-                      second: TextField(
-                        controller: _effective,
-                        keyboardType: TextInputType.datetime,
-                        decoration: InputDecoration(
-                          labelText: '生效日期 YYYY-MM-DD',
-                          suffixIcon: IconButton(
-                            tooltip: '选择生效日期',
-                            onPressed: _pickEffectiveDate,
-                            icon: const Icon(Icons.calendar_month_outlined),
-                          ),
-                        ),
+                      second: LedgerPickerButtonField(
+                        label: '生效日期',
+                        value: _effective.text,
+                        icon: Icons.calendar_month_outlined,
+                        onTap: _pickEffectiveDate,
                       ),
                     ),
                   ],
@@ -1766,7 +1748,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
       initialDate: current ?? widget.initialRule.effectiveFrom,
     );
     if (picked == null || !mounted) return;
-    _effective.text = ymd(picked);
+    setState(() => _effective.text = ymd(picked));
   }
 }
 

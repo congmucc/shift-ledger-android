@@ -531,6 +531,9 @@ void main() {
     expect(find.text('加班'), findsWidgets);
     expect(find.text('夜班'), findsWidgets);
     expect(find.text('切换模板'), findsOneWidget);
+    expect(find.text('开始时间'), findsOneWidget);
+    expect(find.text('结束时间'), findsOneWidget);
+    expect(find.text('开始 HH:mm'), findsNothing);
     await tester.tap(find.text('关闭').last);
     await tester.pumpAndSettle();
 
@@ -553,6 +556,8 @@ void main() {
     expect(find.text('按小时'), findsWidgets);
     expect(find.text('按天'), findsWidgets);
     expect(find.text('按月'), findsWidgets);
+    expect(find.text('生效日期'), findsOneWidget);
+    expect(find.text('生效日期 YYYY-MM-DD'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -582,8 +587,9 @@ void main() {
     );
 
     expect(find.text('编辑本段'), findsOneWidget);
-    expect(find.text('开始 HH:mm'), findsOneWidget);
-    expect(find.text('结束 HH:mm'), findsOneWidget);
+    expect(find.text('开始时间'), findsOneWidget);
+    expect(find.text('结束时间'), findsOneWidget);
+    expect(find.text('开始 HH:mm'), findsNothing);
     expect(find.text('保存本段'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

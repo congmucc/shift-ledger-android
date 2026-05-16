@@ -590,29 +590,17 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
           const SizedBox(height: 10),
           _buildFieldPair(
             stacked: stackedFields,
-            first: TextField(
-              controller: _start,
-              keyboardType: TextInputType.datetime,
-              decoration: InputDecoration(
-                labelText: '开始 HH:mm',
-                suffixIcon: IconButton(
-                  tooltip: '选择开始时间',
-                  onPressed: () => _pickTime(_start),
-                  icon: const Icon(Icons.schedule_outlined),
-                ),
-              ),
+            first: LedgerPickerButtonField(
+              label: '开始时间',
+              value: _start.text,
+              icon: Icons.schedule_outlined,
+              onTap: () => _pickTime(_start),
             ),
-            second: TextField(
-              controller: _end,
-              keyboardType: TextInputType.datetime,
-              decoration: InputDecoration(
-                labelText: '结束 HH:mm',
-                suffixIcon: IconButton(
-                  tooltip: '选择结束时间',
-                  onPressed: () => _pickTime(_end),
-                  icon: const Icon(Icons.schedule_outlined),
-                ),
-              ),
+            second: LedgerPickerButtonField(
+              label: '结束时间',
+              value: _end.text,
+              icon: Icons.schedule_outlined,
+              onTap: () => _pickTime(_end),
             ),
           ),
           const SizedBox(height: 10),
@@ -760,8 +748,10 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
           (current?[1] ?? widget.entry.startDateTime.minute),
     );
     if (picked == null || !mounted) return;
-    controller.text =
-        '${(picked ~/ 60).toString().padLeft(2, '0')}:${(picked % 60).toString().padLeft(2, '0')}';
+    setState(() {
+      controller.text =
+          '${(picked ~/ 60).toString().padLeft(2, '0')}:${(picked % 60).toString().padLeft(2, '0')}';
+    });
   }
 
   List<int>? _parseTime(String value) {
