@@ -106,22 +106,51 @@ class _CalendarPageState extends State<CalendarPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.tune_rounded,
-                    size: 18,
-                    color: LedgerColors.primaryBlue,
-                  ),
-                  const SizedBox(width: 8),
-                  Text('快速筛选', style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
-                  if (!_filter.isAll)
-                    TextButton(
-                      onPressed: () => _changeFilter(_CalendarFilter.all),
-                      child: const Text('清除'),
-                    ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final showSwipeHint =
+                      _filter.isAll && constraints.maxWidth < 420;
+                  return Row(
+                    children: [
+                      const Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: LedgerColors.primaryBlue,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '快速筛选',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const Spacer(),
+                      if (showSwipeHint)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.swipe_left_alt_rounded,
+                              size: 16,
+                              color: LedgerColors.muted,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              '左右滑动',
+                              style: TextStyle(
+                                color: LedgerColors.muted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (!_filter.isAll)
+                        TextButton(
+                          onPressed: () => _changeFilter(_CalendarFilter.all),
+                          child: const Text('清除'),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 8),
               SingleChildScrollView(
@@ -163,12 +192,14 @@ class _CalendarPageState extends State<CalendarPage> {
             onMonthChanged: _selectMonth,
             matchesDay: _matchesCurrentFilter,
             filter: _filter,
-          ),
+        ),
         SectionHeader(
           title: !_filter.isAll && !monthHasFilterMatch
               ? '${_month.month} 月暂无${_filter.label}记录'
               : selectedEntries.isEmpty
-              ? '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日 · 暂无记录'
+              ? ymd(_selectedDay) == ymd(widget.state.now)
+                    ? '今日 · 暂无记录'
+                    : '${_selectedDay.month} 月 ${_selectedDay.day} 日 · 暂无记录'
               : '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情${selectedMatchesFilter ? '' : '（未命中${_filter.label}）'}',
           actionLabel: '补一段',
           onAction: () =>

@@ -162,7 +162,7 @@ void main() {
   testWidgets('calendar keeps a clear empty day detail for unrecorded days', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 15))),
@@ -170,13 +170,14 @@ void main() {
 
     await tester.tap(find.text('日历'));
     await tester.pumpAndSettle();
+    expect(find.text('左右滑动'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('新增分段'),
       240,
       scrollable: find.byType(Scrollable).first,
     );
 
-    expect(find.text('今日 · 5 月 15 日 · 暂无记录'), findsOneWidget);
+    expect(find.text('今日 · 暂无记录'), findsOneWidget);
     expect(find.text('这一天还没有记录'), findsOneWidget);
     expect(find.text('新增分段'), findsOneWidget);
     expect(find.textContaining('如果这天只是休息，可以直接留空'), findsOneWidget);
