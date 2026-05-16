@@ -100,7 +100,23 @@ ThemeData buildLedgerTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: LedgerColors.surface,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      helperMaxLines: 2,
+      labelStyle: const TextStyle(color: LedgerColors.muted),
+      helperStyle: const TextStyle(
+        color: LedgerColors.muted,
+        fontSize: 12,
+        height: 1.35,
+      ),
       border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: LedgerColors.hairline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: LedgerColors.hairline),
+      ),
+      disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: LedgerColors.hairline),
       ),
@@ -117,6 +133,48 @@ ThemeData buildLedgerTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: LedgerColors.primaryBlue,
         foregroundColor: Colors.white,
+        minimumSize: const Size(0, 46),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: LedgerColors.primaryBlue,
+        minimumSize: const Size(0, 46),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        side: const BorderSide(color: LedgerColors.hairlineStrong),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: LedgerColors.primaryBlue,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        foregroundColor: LedgerColors.muted,
+        selectedForegroundColor: LedgerColors.primaryBlue,
+        backgroundColor: LedgerColors.surfaceRaised,
+        selectedBackgroundColor: LedgerColors.primaryBlueSoft,
+        side: const BorderSide(color: LedgerColors.hairlineStrong),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: LedgerColors.paper,
+      surfaceTintColor: Colors.transparent,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
     ),
   );

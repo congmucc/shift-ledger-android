@@ -405,6 +405,59 @@ class SheetHeaderBlock extends StatelessWidget {
   }
 }
 
+class EntryTypeSegmentedField extends StatelessWidget {
+  const EntryTypeSegmentedField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.label = '类型',
+    this.helperText,
+  });
+
+  final EntryType value;
+  final ValueChanged<EntryType> onChanged;
+  final String label;
+  final String? helperText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelMedium),
+        if (helperText != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            helperText!,
+            style: const TextStyle(
+              color: LedgerColors.muted,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SegmentedButton<EntryType>(
+            showSelectedIcon: false,
+            selected: {value},
+            segments: EntryType.values
+                .map(
+                  (type) => ButtonSegment<EntryType>(
+                    value: type,
+                    label: Text(type.label),
+                  ),
+                )
+                .toList(),
+            onSelectionChanged: (values) => onChanged(values.first),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class NoticeCard extends StatelessWidget {
   const NoticeCard({
     super.key,

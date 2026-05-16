@@ -820,23 +820,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '班次模板',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('关闭'),
-                  ),
-                ],
-              ),
-              const Text(
-                '常用班次会用于新增工时记录；修改后不会回写已经保存的历史记录。',
-                style: TextStyle(color: LedgerColors.muted),
+              SheetHeaderBlock(
+                title: '班次模板',
+                subtitle: '常用班次会用于新增工时记录；修改后不会回写已经保存的历史记录。',
+                onClose: () => Navigator.pop(context),
               ),
               const SizedBox(height: 12),
               LedgerCard(
@@ -883,43 +870,27 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    DropdownButtonFormField<ShiftTemplate>(
-                      initialValue: _template,
-                      isExpanded: true,
-                      decoration: const InputDecoration(labelText: '切换正在编辑的模板'),
-                      items: widget.state.templates
-                          .map(
-                            (tpl) => DropdownMenuItem(
-                              value: tpl,
-                              child: Text(
-                                '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)} · ${tpl.type.label}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '当前共 ${widget.state.templates.length} 个模板，可快速切换后继续编辑。',
+                            style: const TextStyle(
+                              color: LedgerColors.muted,
+                              fontSize: 13,
+                              height: 1.35,
                             ),
-                          )
-                          .toList(),
-                      selectedItemBuilder: (context) => widget.state.templates
-                          .map(
-                            (tpl) => Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                '${tpl == widget.state.templates.first ? '默认 · ' : ''}${tpl.name} · ${_time(tpl.startMinute)}-${_time(tpl.endMinute)} · ${tpl.type.label}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _template = value;
-                          _load(value);
-                        });
-                      },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed: _pickTemplate,
+                          icon: const Icon(Icons.swap_horiz_rounded),
+                          label: const Text('切换模板'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -956,28 +927,17 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildFieldPair(
-                      compact: compact,
-                      first: TextField(
-                        controller: _break,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: '休息分钟'),
-                      ),
-                      second: DropdownButtonFormField<EntryType>(
-                        initialValue: _type,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: '班次类型'),
-                        items: EntryType.values
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(type.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) =>
-                            setState(() => _type = value ?? _type),
-                      ),
+                    TextField(
+                      controller: _break,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: '休息分钟'),
+                    ),
+                    const SizedBox(height: 10),
+                    EntryTypeSegmentedField(
+                      label: '班次类型',
+                      helperText: '直接决定记录回看时显示为普通、加班段还是夜班。',
+                      value: _type,
+                      onChanged: (value) => setState(() => _type = value),
                     ),
                   ],
                 ),
@@ -1147,6 +1107,139 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
         Expanded(child: second),
       ],
     );
+  }
+
+  Future<void> _pickTemplate() async {
+    final selected = await showModalBottomSheet<ShiftTemplate>(
+      context: context,
+      backgroundColor: LedgerColors.paper,
+      isScrollControlled: true,
+      builder: (context) {
+        final templates = widget.state.templates;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * .75,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SheetHeaderBlock(
+                    title: '选择模板',
+                    subtitle: '切换后继续编辑，不会影响已经保存的历史记录。',
+                    onClose: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: templates.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final tpl = templates[index];
+                        final isSelected = tpl.id == _template.id;
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => Navigator.pop(context, tpl),
+                            child: LedgerCard(
+                              color: isSelected
+                                  ? LedgerColors.primaryBlueSoft
+                                  : LedgerColors.surfaceRaised,
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? LedgerColors.primaryBlue
+                                          : LedgerColors.surfaceSoft,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      isSelected
+                                          ? Icons.check_rounded
+                                          : Icons.schedule_outlined,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : LedgerColors.primaryBlue,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                tpl.name,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium,
+                                              ),
+                                            ),
+                                            if (tpl == templates.first)
+                                              _templateFlag(
+                                                label: '默认',
+                                                background:
+                                                    LedgerColors.primaryBlueSoft,
+                                                foreground:
+                                                    LedgerColors.primaryBlue,
+                                              ),
+                                            if (tpl.isBuiltIn) ...[
+                                              const SizedBox(width: 6),
+                                              _templateFlag(
+                                                label: '内置',
+                                                background:
+                                                    LedgerColors.surfaceSoft,
+                                                foreground: LedgerColors.muted,
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${_time(tpl.startMinute)} — ${_time(tpl.endMinute)} · ${tpl.type.label} · 休息 ${tpl.breakMinutes} 分钟',
+                                          style: const TextStyle(
+                                            color: LedgerColors.muted,
+                                            fontSize: 13,
+                                            height: 1.35,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _template = selected;
+      _load(selected);
+    });
   }
 
   Widget _templateFlag({

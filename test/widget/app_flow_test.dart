@@ -500,6 +500,18 @@ void main() {
 
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
+    final templateTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '班次模板');
+    templateTile.onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.text('普通'), findsWidgets);
+    expect(find.text('加班'), findsWidgets);
+    expect(find.text('夜班'), findsWidgets);
+    expect(find.text('切换模板'), findsOneWidget);
+    await tester.tap(find.text('关闭').last);
+    await tester.pumpAndSettle();
+
     final payPeriodTile = tester
         .widgetList<SettingTile>(find.byType(SettingTile))
         .firstWhere((tile) => tile.title == '发薪周期');
@@ -657,9 +669,9 @@ void main() {
     await tester.tap(find.text('班次模板'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(DropdownButtonFormField<ShiftTemplate>));
+    await tester.tap(find.text('切换模板'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('周末店班').last);
+    await tester.tap(find.textContaining('周末店班'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, '地点/岗位默认值'), '南山店');
     await tester.enterText(find.widgetWithText(TextField, '默认补贴'), '0');
@@ -678,9 +690,9 @@ void main() {
 
     await tester.tap(find.text('班次模板'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButtonFormField<ShiftTemplate>));
+    await tester.tap(find.text('切换模板'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('周末店班').last);
+    await tester.tap(find.textContaining('周末店班'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('删除模板'));
     await tester.tap(find.text('删除模板'));
