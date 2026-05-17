@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../domain/models.dart';
@@ -24,7 +26,22 @@ void showLedgerSnackBar(
   String message, {
   SnackBarAction? action,
 }) {
-  showLedgerSnackBarOn(ScaffoldMessenger.of(context), message, action: action);
+  if (action != null) {
+    showLedgerSnackBarOn(
+      ScaffoldMessenger.of(context),
+      message,
+      action: action,
+    );
+    return;
+  }
+  final overlay =
+      Overlay.maybeOf(context, rootOverlay: true) ??
+      Navigator.maybeOf(context, rootNavigator: true)?.overlay;
+  if (overlay == null) {
+    showLedgerSnackBarOn(ScaffoldMessenger.of(context), message);
+    return;
+  }
+  _showLedgerTopToast(overlay, message);
 }
 
 void showLedgerSnackBarOn(
@@ -32,8 +49,113 @@ void showLedgerSnackBarOn(
   String message, {
   SnackBarAction? action,
 }) {
+  _hideLedgerTopToast();
   messenger.clearSnackBars();
   messenger.showSnackBar(SnackBar(content: Text(message), action: action));
+}
+
+OverlayEntry? _ledgerTopToastEntry;
+
+void _showLedgerTopToast(OverlayState overlay, String message) {
+  _hideLedgerTopToast();
+  _ledgerTopToastEntry = OverlayEntry(
+    builder: (context) =>
+        _LedgerTopToast(message: message, onDone: _hideLedgerTopToast),
+  );
+  overlay.insert(_ledgerTopToastEntry!);
+}
+
+void _hideLedgerTopToast() {
+  _ledgerTopToastEntry?.remove();
+  _ledgerTopToastEntry = null;
+}
+
+class _LedgerTopToast extends StatefulWidget {
+  const _LedgerTopToast({required this.message, required this.onDone});
+
+  final String message;
+  final VoidCallback onDone;
+
+  @override
+  State<_LedgerTopToast> createState() => _LedgerTopToastState();
+}
+
+class _LedgerTopToastState extends State<_LedgerTopToast> {
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _dismissTimer = Timer(const Duration(milliseconds: 2200), widget.onDone);
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
+    return IgnorePointer(
+      child: SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, topInset > 0 ? 8 : 12, 16, 0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: LedgerColors.ink,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x220F172A),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          widget.message,
+                          textScaler: cappedTextScaler(context, maxScale: 1.15),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class FittedValueText extends StatelessWidget {

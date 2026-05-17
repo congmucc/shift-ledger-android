@@ -276,7 +276,10 @@ class SettingsPage extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () {
-                        final messenger = ScaffoldMessenger.of(context);
+                        final rootContext = Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).context;
                         state.updateNightRule(
                           state.nightRule.copyWith(
                             startMinute: startMinute,
@@ -284,7 +287,7 @@ class SettingsPage extends StatelessWidget {
                           ),
                         );
                         Navigator.pop(context);
-                        showLedgerSnackBarOn(messenger, '夜班规则已保存');
+                        showLedgerSnackBar(rootContext, '夜班规则已保存');
                       },
                       child: const Text('保存'),
                     ),
@@ -399,12 +402,15 @@ class SettingsPage extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () {
-                        final messenger = ScaffoldMessenger.of(context);
+                        final rootContext = Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).context;
                         state.updatePayPeriod(
                           PayPeriod(mode: mode, monthStartDay: monthStartDay),
                         );
                         Navigator.pop(context);
-                        showLedgerSnackBarOn(messenger, '发薪周期已保存');
+                        showLedgerSnackBar(rootContext, '发薪周期已保存');
                       },
                       child: const Text('保存'),
                     ),
@@ -1274,7 +1280,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     if (deduction > 0) {
       defaultAdjustments.add(Adjustment.deduction('默认扣款', deduction));
     }
-    final messenger = ScaffoldMessenger.of(context);
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
     widget.state.updateShiftTemplate(
       _template.copyWith(
         name: nextName,
@@ -1288,7 +1294,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
       ),
     );
     Navigator.pop(context);
-    showLedgerSnackBarOn(messenger, '已保存模板“$nextName”');
+    showLedgerSnackBar(rootContext, '已保存模板“$nextName”');
   }
 
   Future<void> _confirmDeleteTemplate() async {
@@ -1664,7 +1670,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
 
   void _save() {
     final initial = widget.initialRule;
-    final messenger = ScaffoldMessenger.of(context);
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
     final rule = initial.copyWith(
       name: _name.text.trim().isEmpty ? initial.name : _name.text.trim(),
       baseType: _type,
@@ -1692,7 +1698,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
     );
     widget.state.savePayRule(rule);
     Navigator.pop(context);
-    showLedgerSnackBarOn(messenger, '计薪规则已保存');
+    showLedgerSnackBar(rootContext, '计薪规则已保存');
   }
 
   Future<void> _pickEffectiveDate() async {

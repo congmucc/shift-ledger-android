@@ -166,6 +166,31 @@ void main() {
     },
   );
 
+  testWidgets('completion feedback floats near the top edge', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: const SizedBox(height: 96),
+          body: Builder(
+            builder: (context) => Center(
+              child: FilledButton(
+                onPressed: () => showLedgerSnackBar(context, '已保存模板“白班”'),
+                child: const Text('触发提示'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('触发提示'));
+    await tester.pump();
+
+    final messageTop = tester.getTopLeft(find.text('已保存模板“白班”')).dy;
+    expect(messageTop, lessThan(120));
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('can add edit and delete a work record', (tester) async {
     final state = LedgerState.empty(now: DateTime(2026, 5, 13));
     await tester.pumpWidget(ShiftLedgerApp(state: state));

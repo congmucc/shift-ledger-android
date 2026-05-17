@@ -476,11 +476,12 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       );
       if (confirmed != true || !mounted) return;
     }
-    final messenger = ScaffoldMessenger.of(context);
+    if (!context.mounted) return;
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
     final savedDay = _day;
     widget.state.replaceDayEntries(_originalDay, _day, _segments);
     Navigator.pop(context);
-    showLedgerSnackBarOn(messenger, '已保存 ${ymd(savedDay)} 记录');
+    showLedgerSnackBar(rootContext, '已保存 ${ymd(savedDay)} 记录');
   }
 
   bool _hasOverlaps() {
