@@ -377,23 +377,24 @@ class SettingsPage extends StatelessWidget {
                                 setSheetState(() => mode = values.first),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        LedgerPickerButtonField(
-                          label: '每月起始日',
-                          value: '$monthStartDay 日',
-                          helperText: '29、30、31 遇到短月时自动按当月最后一天计算。',
-                          icon: Icons.event_repeat_outlined,
-                          enabled: mode == PayPeriodMode.monthlyStartDay,
-                          onTap: () async {
-                            final picked = await showLedgerMonthDayPicker(
-                              context,
-                              initialDay: monthStartDay,
-                            );
-                            if (picked != null && context.mounted) {
-                              setSheetState(() => monthStartDay = picked);
-                            }
-                          },
-                        ),
+                        if (mode == PayPeriodMode.monthlyStartDay) ...[
+                          const SizedBox(height: 10),
+                          LedgerPickerButtonField(
+                            label: '每月起始日',
+                            value: '$monthStartDay 日',
+                            helperText: '29、30、31 遇到短月时自动按当月最后一天计算。',
+                            icon: Icons.event_repeat_outlined,
+                            onTap: () async {
+                              final picked = await showLedgerMonthDayPicker(
+                                context,
+                                initialDay: monthStartDay,
+                              );
+                              if (picked != null && context.mounted) {
+                                setSheetState(() => monthStartDay = picked);
+                              }
+                            },
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -696,12 +697,12 @@ class SettingsPage extends StatelessWidget {
       icon: Icons.restore_from_trash_outlined,
     );
     if (confirmed != true || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     final restored = state.restoreDeletedDay(item.id);
     if (!context.mounted) return;
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
     Navigator.pop(context);
-    showLedgerSnackBarOn(
-      messenger,
+    showLedgerSnackBar(
+      rootContext,
       restored ? '已恢复 ${ymd(item.day)}' : '这条删除记录已不可恢复',
     );
   }

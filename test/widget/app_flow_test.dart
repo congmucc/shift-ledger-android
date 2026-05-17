@@ -427,6 +427,7 @@ void main() {
 
     expect(state.entriesForDay(DateTime(2026, 5, 13)).length, 2);
     expect(state.recentDeletedDays, isEmpty);
+    expect(find.text('已恢复 2026-05-13'), findsOneWidget);
   });
 
   testWidgets('settings summarizes configured backup status', (tester) async {
@@ -548,6 +549,10 @@ void main() {
     payPeriodTile.onTap!.call();
     await tester.pumpAndSettle();
     expect(find.byType(NoticeCard), findsNothing);
+    expect(find.text('每月起始日'), findsNothing);
+    await tester.tap(find.text('固定日'));
+    await tester.pumpAndSettle();
+    expect(find.text('每月起始日'), findsOneWidget);
     await tester.tap(find.text('取消').last);
     await tester.pumpAndSettle();
 
