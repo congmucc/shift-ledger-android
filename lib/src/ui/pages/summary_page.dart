@@ -51,23 +51,28 @@ class _SummaryPageState extends State<SummaryPage> {
         if (empty) ...[
           _SummaryEmptyState(mode: _mode),
           const SizedBox(height: 12),
+          _PayrollBasisCard(
+            range: range,
+            rule: defaultRule,
+            nightRule: widget.state.nightRule,
+            onExplain: () => _showIncomeBreakdown(summary),
+          ),
+        ] else ...[
+          _SummaryOverview(
+            summary: summary,
+            payrollBasisSummary:
+                '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
+          ),
+          const SizedBox(height: 12),
+          _IncomeCompositionCard(summary: summary),
+          const SizedBox(height: 12),
+          _PayrollBasisCard(
+            range: range,
+            rule: defaultRule,
+            nightRule: widget.state.nightRule,
+            onExplain: () => _showIncomeBreakdown(summary),
+          ),
         ],
-        _SummaryOverview(
-          summary: summary,
-          payrollBasisSummary:
-              '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
-        ),
-        const SizedBox(height: 12),
-        _IncomeCompositionCard(summary: summary),
-        const SizedBox(height: 12),
-        _PayrollBasisCard(
-          range: range,
-          rule: defaultRule,
-          nightRule: widget.state.nightRule,
-          exporting: _exporting,
-          onExplain: () => _showIncomeBreakdown(summary),
-          onExport: () => _exportCsv(range),
-        ),
       ],
     );
   }
@@ -177,9 +182,7 @@ class _SummaryPageState extends State<SummaryPage> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showLedgerSnackBar(context, message);
   }
 }
 
@@ -200,7 +203,7 @@ class _SummaryEmptyState extends StatelessWidget {
     return NoticeCard(
       icon: Icons.query_stats_outlined,
       title: '$scopeLabel 还没有记录',
-      body: '先去首页补今天，或到日历页按天补录。这里会在有记录后自动显示收入组成、计薪加班、夜班和规则说明。',
+      body: '先去首页补今天，或到日历补录。',
       iconBackgroundColor: LedgerColors.surfaceSoft,
       iconColor: LedgerColors.primaryBlue,
     );
@@ -412,7 +415,7 @@ class _SummaryOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -426,7 +429,9 @@ class _SummaryOverview extends StatelessWidget {
                   emphasized: true,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
+              Container(width: 1, height: 56, color: LedgerColors.hairline),
+              const SizedBox(width: 10),
               Expanded(
                 child: _MiniMetric(
                   label: '收入估算',
@@ -438,7 +443,7 @@ class _SummaryOverview extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -454,12 +459,12 @@ class _SummaryOverview extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             '备注 ${summary.noteDays} 天 · 偏长 ${summary.longDurationDays} 天 · 共 ${summary.calculations.length} 段',
             style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text('计薪依据', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 2),
           Text(
@@ -486,38 +491,30 @@ class _MiniMetric extends StatelessWidget {
   final bool emphasized;
 
   @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 60),
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-    decoration: BoxDecoration(
-      color: LedgerColors.surfaceRaised,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: LedgerColors.hairline),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 2),
-        FittedValueText(
-          value,
-          maxScale: 1.1,
-          style: TextStyle(
-            fontSize: emphasized ? 23 : 19,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.8,
-            color: LedgerColors.ink,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(label, style: Theme.of(context).textTheme.labelMedium),
+      const SizedBox(height: 4),
+      FittedValueText(
+        value,
+        maxScale: 1.1,
+        style: TextStyle(
+          fontSize: emphasized ? 23 : 19,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.8,
+          color: LedgerColors.ink,
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
-        FittedValueText(
-          subtext,
-          maxScale: 1.06,
-          style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-        ),
-      ],
-    ),
+      ),
+      const SizedBox(height: 2),
+      FittedValueText(
+        subtext,
+        maxScale: 1.06,
+        style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
+      ),
+    ],
   );
 }
 
@@ -557,7 +554,7 @@ class _IncomeCompositionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   '收入组成',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
             ],
@@ -565,7 +562,7 @@ class _IncomeCompositionCard extends StatelessWidget {
           if (summary.calculations.isEmpty) ...[
             const SizedBox(height: 2),
             const Text(
-              '当前范围还没有可计算记录；收入拆分会在保存记录后自动生成。',
+              '保存记录后自动生成收入拆分。',
               style: TextStyle(
                 color: LedgerColors.muted,
                 fontSize: 12,
@@ -591,17 +588,13 @@ class _PayrollBasisCard extends StatelessWidget {
     required this.range,
     required this.rule,
     required this.nightRule,
-    required this.exporting,
     required this.onExplain,
-    required this.onExport,
   });
 
   final DateRange range;
   final PayRule rule;
   final NightRule nightRule;
-  final bool exporting;
   final VoidCallback onExplain;
-  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -611,7 +604,7 @@ class _PayrollBasisCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('计薪依据', style: Theme.of(context).textTheme.headlineMedium),
+          Text('计薪依据', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
           SettingTile(
             title: '默认规则',
@@ -629,22 +622,12 @@ class _PayrollBasisCard extends StatelessWidget {
                 '${nightRule.label} · ${nightRule.mode.label} · ${_nightRuleValueText(nightRule)}',
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onExplain,
-                  child: const Text('计算说明'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: exporting ? null : onExport,
-                  child: Text(exporting ? '导出中' : '导出 CSV'),
-                ),
-              ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onExplain,
+              child: const Text('计算说明'),
+            ),
           ),
         ],
       ),

@@ -17,7 +17,6 @@ Future<DateTime?> showLedgerDatePicker(
     builder: (context) => StatefulBuilder(
       builder: (context, setSheetState) => _PickerSheet(
         title: '选择日期',
-        helper: '当前选择：${cnDateText(selected)}',
         onConfirm: () => Navigator.pop(context, selected),
         child: SizedBox(
           height: 216,

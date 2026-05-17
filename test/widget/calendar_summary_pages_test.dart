@@ -108,6 +108,8 @@ void main() {
 
       expect(find.text('1日 → 31日'), findsOneWidget);
       expect(find.text('这个月还没有有备注'), findsOneWidget);
+      expect(find.text('切回“全部”或直接补一段。'), findsOneWidget);
+      expect(find.textContaining('你可以先切回“全部”'), findsNothing);
 
       final headerTop = tester.getTopLeft(find.text('1日 → 31日')).dy;
       final emptyTop = tester.getTopLeft(find.text('这个月还没有有备注')).dy;
@@ -131,33 +133,29 @@ void main() {
     expect(find.text('收入组成'), findsOneWidget);
     expect(find.text('计薪依据'), findsOneWidget);
     expect(summaryExportAction, findsOneWidget);
+    expect(find.text('导出 CSV'), findsNothing);
     expect(find.text('按天查看'), findsNothing);
     expect(find.text('查看明细'), findsNothing);
     expect(find.text('全部日期'), findsNothing);
   });
 
-  testWidgets('summary page explains empty ranges without losing structure', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 15))),
-    );
+  testWidgets(
+    'summary page collapses record-dependent sections for empty ranges',
+    (tester) async {
+      await tester.pumpWidget(
+        ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 15))),
+      );
 
-    await tester.tap(find.text('汇总'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('计算说明'),
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-
-    expect(find.text('收入组成'), findsOneWidget);
-    expect(
-      find.textContaining('当前范围还没有可计算记录；收入拆分会在保存记录后自动生成'),
-      findsOneWidget,
-    );
-    expect(find.text('计薪依据'), findsWidgets);
-  });
+      await tester.tap(find.text('汇总'));
+      await tester.pumpAndSettle();
+      expect(find.text('先去首页补今天，或到日历补录。'), findsOneWidget);
+      expect(find.text('收入组成'), findsNothing);
+      expect(find.text('总工时'), findsNothing);
+      expect(find.text('收入估算'), findsNothing);
+      expect(find.text('计薪依据'), findsOneWidget);
+      expect(find.text('计算说明'), findsOneWidget);
+    },
+  );
 
   testWidgets('calendar keeps a clear empty day detail for unrecorded days', (
     tester,
@@ -180,6 +178,7 @@ void main() {
     expect(find.text('今日 · 暂无记录'), findsOneWidget);
     expect(find.text('这一天还没有记录'), findsOneWidget);
     expect(find.text('新增分段'), findsOneWidget);
-    expect(find.textContaining('如果这天只是休息，可以直接留空'), findsOneWidget);
+    expect(find.text('休息日可留空，需要时再补录。'), findsOneWidget);
+    expect(find.textContaining('如果这天只是休息，可以直接留空'), findsNothing);
   });
 }

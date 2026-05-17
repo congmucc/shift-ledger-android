@@ -55,15 +55,8 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _showRuleHistory(context),
               ),
               SettingTile(
-                title: '计薪加班规则',
-                subtitle:
-                    '超过 ${rule.overtimeThresholdHours.toStringAsFixed(0)}h 后按 ${rule.overtimeMultiplier}x 结算，不改变记录类型',
-                trailing: '编辑',
-                onTap: () => showPayRuleSheet(context, state, rule),
-              ),
-              SettingTile(
                 title: '夜班规则',
-                subtitle: '${state.nightRule.label} · 可改默认时段',
+                subtitle: state.nightRule.label,
                 trailing: '编辑',
                 onTap: () => _showNightRuleSheet(context),
               ),
@@ -82,13 +75,11 @@ class SettingsPage extends StatelessWidget {
             children: [
               SettingTile(
                 title: 'CSV 导出',
-                subtitle: '含规则快照与收入拆分',
                 trailing: '导出',
                 onTap: () => _exportCsv(context),
               ),
               SettingTile(
                 title: '本地备份/恢复',
-                subtitle: '系统保存面板 + 一份 App 私有最近备份',
                 trailing: '备份',
                 onTap: () => _showLocalBackupSheet(context),
               ),
@@ -153,7 +144,7 @@ class SettingsPage extends StatelessWidget {
                   ],
                 ),
                 const Text(
-                  '每次修改计薪规则都会生成新版本；历史记录继续使用保存时的规则快照，避免旧工资被新规则改写。',
+                  '历史记录沿用保存时快照。',
                   style: TextStyle(color: LedgerColors.muted),
                 ),
                 const SizedBox(height: 12),
@@ -213,15 +204,7 @@ class SettingsPage extends StatelessWidget {
                 children: [
                   SheetHeaderBlock(
                     title: '夜班规则',
-                    subtitle: '夜班补贴仍按当前规则计算，这里只决定什么时间段会被识别为夜班。',
                     onClose: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 12),
-                  NoticeCard(
-                    icon: Icons.nightlight_round,
-                    title: '${_time(startMinute)} — ${_time(endMinute)}',
-                    body:
-                        '当前按 ${state.nightRule.mode.label} 计算；跨天班次只要落在这个区间，就会按夜班规则参与计算。',
                   ),
                   const SizedBox(height: 12),
                   LedgerCard(
@@ -234,10 +217,10 @@ class SettingsPage extends StatelessWidget {
                           '夜班判定时段',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '建议保持整点，便于和班次模板保持一致。',
-                          style: TextStyle(
+                        const SizedBox(height: 4),
+                        Text(
+                          '${state.nightRule.mode.label} · 跨天记录按该区间判定',
+                          style: const TextStyle(
                             color: LedgerColors.muted,
                             fontSize: 13,
                             height: 1.35,
@@ -257,7 +240,9 @@ class SettingsPage extends StatelessWidget {
                                     initialMinute: startMinute,
                                     minuteInterval: 60,
                                   );
-                                  if (picked == null || !context.mounted) return;
+                                  if (picked == null || !context.mounted) {
+                                    return;
+                                  }
                                   setSheetState(() => startMinute = picked);
                                 },
                               ),
@@ -274,7 +259,9 @@ class SettingsPage extends StatelessWidget {
                                     initialMinute: endMinute,
                                     minuteInterval: 60,
                                   );
-                                  if (picked == null || !context.mounted) return;
+                                  if (picked == null || !context.mounted) {
+                                    return;
+                                  }
                                   setSheetState(() => endMinute = picked);
                                 },
                               ),
@@ -289,6 +276,7 @@ class SettingsPage extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () {
+                        final messenger = ScaffoldMessenger.of(context);
                         state.updateNightRule(
                           state.nightRule.copyWith(
                             startMinute: startMinute,
@@ -296,6 +284,7 @@ class SettingsPage extends StatelessWidget {
                           ),
                         );
                         Navigator.pop(context);
+                        showLedgerSnackBarOn(messenger, '夜班规则已保存');
                       },
                       child: const Text('保存'),
                     ),
@@ -341,19 +330,8 @@ class SettingsPage extends StatelessWidget {
                 children: [
                   SheetHeaderBlock(
                     title: '发薪周期',
-                    subtitle: '发薪周期会影响首页“本周期进度”、汇总默认范围和导出时的账本理解方式。',
                     onClose: () => Navigator.pop(context),
                     closeLabel: '取消',
-                  ),
-                  const SizedBox(height: 12),
-                  NoticeCard(
-                    icon: Icons.calendar_view_month_outlined,
-                    title: _payPeriodLabel(
-                      PayPeriod(mode: mode, monthStartDay: monthStartDay),
-                    ),
-                    body: mode == PayPeriodMode.monthlyStartDay
-                        ? '短月会自动落到当月最后一天，适合按公司结薪日查看整个周期。'
-                        : '自然月更适合个人记账；每月 1 日到月底自动形成一个周期。',
                   ),
                   const SizedBox(height: 12),
                   LedgerCard(
@@ -365,6 +343,17 @@ class SettingsPage extends StatelessWidget {
                         Text(
                           '周期模式',
                           style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _payPeriodLabel(
+                            PayPeriod(mode: mode, monthStartDay: monthStartDay),
+                          ),
+                          style: const TextStyle(
+                            color: LedgerColors.muted,
+                            fontSize: 13,
+                            height: 1.35,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         SingleChildScrollView(
@@ -381,11 +370,11 @@ class SettingsPage extends StatelessWidget {
                                 label: Text('固定日'),
                               ),
                             ],
-                        onSelectionChanged: (values) =>
-                            setSheetState(() => mode = values.first),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
+                            onSelectionChanged: (values) =>
+                                setSheetState(() => mode = values.first),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         LedgerPickerButtonField(
                           label: '每月起始日',
                           value: '$monthStartDay 日',
@@ -410,10 +399,12 @@ class SettingsPage extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () {
+                        final messenger = ScaffoldMessenger.of(context);
                         state.updatePayPeriod(
                           PayPeriod(mode: mode, monthStartDay: monthStartDay),
                         );
                         Navigator.pop(context);
+                        showLedgerSnackBarOn(messenger, '发薪周期已保存');
                       },
                       child: const Text('保存'),
                     ),
@@ -445,22 +436,19 @@ class SettingsPage extends StatelessWidget {
     );
     try {
       if (repository == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('CSV 已生成：${csv.length} 字符')));
+        showLedgerSnackBar(context, 'CSV 已生成：${csv.length} 字符');
         return;
       }
       final path = await repository!.writeCsv(csv);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(path == null ? '已取消保存 CSV' : 'CSV 已保存：$path')),
+        showLedgerSnackBar(
+          context,
+          path == null ? '已取消保存 CSV' : 'CSV 已保存：$path',
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('CSV 已生成但保存失败，请重试或更换保存位置')));
+        showLedgerSnackBar(context, 'CSV 已生成但保存失败，请重试或更换保存位置');
       }
     }
   }
@@ -485,14 +473,8 @@ class SettingsPage extends StatelessWidget {
               children: [
                 SheetHeaderBlock(
                   title: '本地备份/恢复',
-                  subtitle: '本地备份适合手动留档；恢复会覆盖当前记录、模板和规则，但不包含 WebDAV 应用授权密码。',
+                  subtitle: '恢复会覆盖当前记录、模板和规则。',
                   onClose: () => Navigator.pop(context),
-                ),
-                const SizedBox(height: 12),
-                const NoticeCard(
-                  icon: Icons.save_alt_rounded,
-                  title: '会保留一份 App 私有最近备份',
-                  body: '即使你取消系统文件保存，这份最近备份也会留在 App 内，用于“从最近本地备份恢复”。',
                 ),
                 const SizedBox(height: 12),
                 LedgerCard(
@@ -507,7 +489,7 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        '会导出 JSON 文件，并同时更新一份最近本地备份，方便误操作后快速恢复。',
+                        '会导出 JSON，并同步更新最近本地备份。',
                         style: TextStyle(
                           color: LedgerColors.muted,
                           fontSize: 13,
@@ -540,7 +522,7 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        '适合快速撤销大改动。恢复前建议先再导出一份当前数据，避免把最近录入内容覆盖掉。',
+                        '适合快速回退；恢复前可先再导出一份当前数据。',
                         style: TextStyle(
                           color: LedgerColors.muted,
                           fontSize: 13,
@@ -581,19 +563,14 @@ class SettingsPage extends StatelessWidget {
     try {
       final path = await repository!.writeBackup(state.toSnapshot());
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              path == null ? '已创建 App 私有备份；外部保存已取消' : '本地备份已保存：$path',
-            ),
-          ),
+        showLedgerSnackBar(
+          context,
+          path == null ? '已创建 App 私有备份；外部保存已取消' : '本地备份已保存：$path',
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('本地备份创建失败，请重试或更换保存位置')));
+        showLedgerSnackBar(context, '本地备份创建失败，请重试或更换保存位置');
       }
     }
   }
@@ -603,9 +580,7 @@ class SettingsPage extends StatelessWidget {
       final path = await repository!.latestBackupPath();
       if (!context.mounted) return;
       if (path == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('还没有本地备份')));
+        showLedgerSnackBar(context, '还没有本地备份');
         return;
       }
       final confirmed = await showLedgerConfirmDialog(
@@ -620,14 +595,10 @@ class SettingsPage extends StatelessWidget {
       final snapshot = await repository!.readBackup(path);
       state.restore(snapshot);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已从本地备份恢复')));
+      showLedgerSnackBar(context, '已从本地备份恢复');
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('读取本地备份失败，请确认备份文件仍可访问')));
+        showLedgerSnackBar(context, '读取本地备份失败，请确认备份文件仍可访问');
       }
     }
   }
@@ -647,7 +618,6 @@ class SettingsPage extends StatelessWidget {
               children: [
                 SheetHeaderBlock(
                   title: '最近删除',
-                  subtitle: '用于找回误删的整天记录；恢复会把删除的分段放回原日期，不覆盖后来新增记录。',
                   onClose: () => Navigator.pop(context),
                 ),
                 const SizedBox(height: 12),
@@ -655,7 +625,7 @@ class SettingsPage extends StatelessWidget {
                   const NoticeCard(
                     icon: Icons.delete_sweep_outlined,
                     title: '没有可恢复记录',
-                    body: '整天删除后才会出现在这里；单段删除不会进入最近删除列表。',
+                    body: '整天删除后会出现在这里。',
                   )
                 else
                   Flexible(
@@ -724,10 +694,9 @@ class SettingsPage extends StatelessWidget {
     final restored = state.restoreDeletedDay(item.id);
     if (!context.mounted) return;
     Navigator.pop(context);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(restored ? '已恢复 ${ymd(item.day)}' : '这条删除记录已不可恢复'),
-      ),
+    showLedgerSnackBarOn(
+      messenger,
+      restored ? '已恢复 ${ymd(item.day)}' : '这条删除记录已不可恢复',
     );
   }
 
@@ -776,6 +745,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   late final TextEditingController _allowance;
   late final TextEditingController _deduction;
   late EntryType _type;
+  String? _copyLockedTemplateId;
 
   @override
   void initState() {
@@ -805,9 +775,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final compact =
-        MediaQuery.of(context).size.width < 520 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.2;
+    final compact = useDenseTwoColumnLayout(context);
     final isDefaultTemplate = _template == widget.state.templates.first;
     return SafeArea(
       child: Padding(
@@ -824,7 +792,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
             children: [
               SheetHeaderBlock(
                 title: '班次模板',
-                subtitle: '常用班次会用于新增工时记录；修改后不会回写已经保存的历史记录。',
+                subtitle: '新增记录时会优先带出这里的班次。',
                 onClose: () => Navigator.pop(context),
               ),
               const SizedBox(height: 12),
@@ -876,7 +844,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       children: [
                         Expanded(
                           child: Text(
-                            '当前共 ${widget.state.templates.length} 个模板，可快速切换后继续编辑。',
+                            '共 ${widget.state.templates.length} 套模板',
                             style: const TextStyle(
                               color: LedgerColors.muted,
                               fontSize: 13,
@@ -888,18 +856,9 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         OutlinedButton.icon(
                           onPressed: _pickTemplate,
                           icon: const Icon(Icons.swap_horiz_rounded),
-                          label: const Text('切换模板'),
+                          label: const Text('切换'),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _createTemplate,
-                        icon: const Icon(Icons.add),
-                        label: const Text('基于当前模板新增副本'),
-                      ),
                     ),
                   ],
                 ),
@@ -912,48 +871,36 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '基础信息',
+                      '模板内容',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _name,
+                      onChanged: (_) => _clearCopyLock(),
                       decoration: const InputDecoration(labelText: '模板名称'),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _location,
-                      decoration: const InputDecoration(
-                        labelText: '地点/岗位默认值',
-                        helperText: '新增记录时自动带入；没有固定地点就留空。',
-                      ),
+                      onChanged: (_) => _clearCopyLock(),
+                      decoration: const InputDecoration(labelText: '地点 / 岗位'),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _break,
+                      onChanged: (_) => _clearCopyLock(),
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: '休息分钟'),
                     ),
                     const SizedBox(height: 10),
                     EntryTypeSegmentedField(
                       label: '班次类型',
-                      helperText: '直接决定记录回看时显示为普通、加班段还是夜班。',
                       value: _type,
-                      onChanged: (value) => setState(() => _type = value),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              LedgerCard(
-                color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '时间与默认金额',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      onChanged: (value) => setState(() {
+                        _type = value;
+                        _clearCopyLock();
+                      }),
                     ),
                     const SizedBox(height: 10),
                     _buildFieldPair(
@@ -976,19 +923,15 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       compact: compact,
                       first: TextField(
                         controller: _allowance,
+                        onChanged: (_) => _clearCopyLock(),
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: '默认补贴',
-                          helperText: '默认 0',
-                        ),
+                        decoration: const InputDecoration(labelText: '补贴'),
                       ),
                       second: TextField(
                         controller: _deduction,
+                        onChanged: (_) => _clearCopyLock(),
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: '默认扣款',
-                          helperText: '默认 0',
-                        ),
+                        decoration: const InputDecoration(labelText: '扣款'),
                       ),
                     ),
                   ],
@@ -1008,8 +951,8 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                     const SizedBox(height: 6),
                     Text(
                       _template.isBuiltIn
-                          ? '内置模板不能删除；如果改乱了，可以只恢复当前这个模板。'
-                          : '自定义模板可以删除；已保存的历史记录不会受影响。',
+                          ? '内置模板可恢复默认，不能删除。'
+                          : '删除不会影响已经保存的历史记录。',
                       style: const TextStyle(
                         color: LedgerColors.muted,
                         fontSize: 13,
@@ -1017,19 +960,16 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    if (_template.isBuiltIn)
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _confirmRestoreCurrentTemplate,
-                          icon: const Icon(Icons.restore_outlined),
-                          label: const Text('恢复当前内置模板'),
-                        ),
+                    _buildFieldPair(
+                      compact: compact,
+                      first: OutlinedButton.icon(
+                        onPressed: _copyLockedTemplateId == _template.id
+                            ? null
+                            : _createTemplate,
+                        icon: const Icon(Icons.add),
+                        label: const Text('新增副本'),
                       ),
-                    if (_template.isBuiltIn) const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
+                      second: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: LedgerColors.errorBrick,
                         ),
@@ -1043,13 +983,31 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildFieldPair(
-                      compact: compact,
-                      first: OutlinedButton(
-                        onPressed: isDefaultTemplate ? null : _setAsDefault,
-                        child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
+                    if (_template.isBuiltIn)
+                      _buildFieldPair(
+                        compact: compact,
+                        first: OutlinedButton(
+                          onPressed: isDefaultTemplate ? null : _setAsDefault,
+                          child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
+                        ),
+                        second: OutlinedButton.icon(
+                          onPressed: _confirmRestoreCurrentTemplate,
+                          icon: const Icon(Icons.restore_outlined),
+                          label: const Text('恢复当前内置模板'),
+                        ),
                       ),
-                      second: FilledButton(
+                    if (!_template.isBuiltIn)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: isDefaultTemplate ? null : _setAsDefault,
+                          child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
                         onPressed: _save,
                         child: const Text('保存模板'),
                       ),
@@ -1070,13 +1028,16 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     widget.state.updateShiftTemplate(copy);
     setState(() {
       _template = copy;
+      _copyLockedTemplateId = copy.id;
       _load(copy);
     });
+    _snack('已新增模板副本“${copy.name}”');
   }
 
   void _setAsDefault() {
     widget.state.setDefaultShiftTemplate(_template.id);
     setState(() {});
+    _snack('已设“${_template.name}”为默认模板');
   }
 
   Widget _buildFieldPair({
@@ -1119,7 +1080,6 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                 children: [
                   SheetHeaderBlock(
                     title: '选择模板',
-                    subtitle: '切换后继续编辑，不会影响已经保存的历史记录。',
                     onClose: () => Navigator.pop(context),
                   ),
                   const SizedBox(height: 12),
@@ -1174,16 +1134,16 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                                             Expanded(
                                               child: Text(
                                                 tpl.name,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium,
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.titleMedium,
                                               ),
                                             ),
                                             if (tpl == templates.first)
                                               _templateFlag(
                                                 label: '默认',
-                                                background:
-                                                    LedgerColors.primaryBlueSoft,
+                                                background: LedgerColors
+                                                    .primaryBlueSoft,
                                                 foreground:
                                                     LedgerColors.primaryBlue,
                                               ),
@@ -1228,6 +1188,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     if (selected == null || !mounted) return;
     setState(() {
       _template = selected;
+      _copyLockedTemplateId = null;
       _load(selected);
     });
   }
@@ -1266,9 +1227,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     if (confirmed != true || !mounted) return;
     final restored = widget.state.restoreShiftTemplate(_template.id);
     if (!restored) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('当前模板不支持恢复默认')));
+      showLedgerSnackBar(context, '当前模板不支持恢复默认');
       return;
     }
     setState(() {
@@ -1277,9 +1236,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
       );
       _load(_template);
     });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('已恢复“${_template.name}”默认模板')));
+    showLedgerSnackBar(context, '已恢复“${_template.name}”默认模板');
   }
 
   void _load(ShiftTemplate template) {
@@ -1305,6 +1262,9 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   void _save() {
     final start = _parseTime(_start.text) ?? _template.startMinute;
     final end = _parseTime(_end.text) ?? _template.endMinute;
+    final nextName = _name.text.trim().isEmpty
+        ? _template.name
+        : _name.text.trim();
     final defaultAdjustments = <Adjustment>[];
     final allowance = double.tryParse(_allowance.text) ?? 0;
     final deduction = double.tryParse(_deduction.text) ?? 0;
@@ -1314,9 +1274,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     if (deduction > 0) {
       defaultAdjustments.add(Adjustment.deduction('默认扣款', deduction));
     }
+    final messenger = ScaffoldMessenger.of(context);
     widget.state.updateShiftTemplate(
       _template.copyWith(
-        name: _name.text.trim().isEmpty ? _template.name : _name.text.trim(),
+        name: nextName,
         startMinute: start,
         endMinute: end,
         breakMinutes: asNonNegativeInt(_break.text, _template.breakMinutes),
@@ -1327,6 +1288,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
       ),
     );
     Navigator.pop(context);
+    showLedgerSnackBarOn(messenger, '已保存模板“$nextName”');
   }
 
   Future<void> _confirmDeleteTemplate() async {
@@ -1341,22 +1303,30 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     if (confirmed != true || !mounted) return;
     final deleted = widget.state.deleteShiftTemplate(_template.id);
     if (!deleted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('至少保留一个班次模板')));
+      _snack('至少保留一个班次模板');
       return;
     }
+    final deletedName = _template.name;
     setState(() {
       _template = widget.state.templates.first;
       _load(_template);
     });
+    _snack('已删除模板“$deletedName”');
   }
 
   Future<void> _pickTime(TextEditingController controller) async {
     final minute = _parseTime(controller.text) ?? _template.startMinute;
     final picked = await showLedgerTimePicker(context, initialMinute: minute);
     if (picked == null || !mounted) return;
-    setState(() => controller.text = _time(picked));
+    setState(() {
+      controller.text = _time(picked);
+      _clearCopyLock();
+    });
+  }
+
+  void _clearCopyLock() {
+    if (_copyLockedTemplateId == null) return;
+    _copyLockedTemplateId = null;
   }
 
   int? _parseTime(String value) {
@@ -1377,6 +1347,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
 
   String _time(int minutes) =>
       '${(minutes ~/ 60).toString().padLeft(2, '0')}:${(minutes % 60).toString().padLeft(2, '0')}';
+
+  void _snack(String message) {
+    showLedgerSnackBar(context, message);
+  }
 }
 
 Future<void> showPayRuleSheet(
@@ -1459,9 +1433,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final compact =
-        MediaQuery.of(context).size.width < 520 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.2;
+    final compact = useDenseTwoColumnLayout(context);
     final effectiveLabel = _effective.text.trim().isEmpty
         ? ymd(widget.initialRule.effectiveFrom)
         : _effective.text.trim();
@@ -1488,7 +1460,6 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
             children: [
               SheetHeaderBlock(
                 title: '计薪规则',
-                subtitle: '这套规则只影响工资计算；记录是否显示为加班，取决于你选择的班次类型或加班模板。',
                 onClose: () => Navigator.pop(context),
                 closeLabel: '取消',
               ),
@@ -1538,15 +1509,6 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                     Text(
                       '计薪基础',
                       style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '先确定按小时 / 按天 / 按月，再填写对应的基础单价。',
-                      style: TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
                     ),
                     const SizedBox(height: 10),
                     SingleChildScrollView(
@@ -1628,15 +1590,6 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                       '补充规则',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '这些设置会影响工资拆分与休息日结算，但不会把普通班次自动改成“加班段”。',
-                      style: TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
                     const SizedBox(height: 10),
                     _buildFieldPair(
                       compact: compact,
@@ -1676,7 +1629,6 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
               const NoticeCard(
                 icon: Icons.history_toggle_off_rounded,
                 title: '保存后会生成新版本',
-                body: '旧记录继续使用记录内规则快照，避免历史工资被新规则回写。',
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -1712,6 +1664,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
 
   void _save() {
     final initial = widget.initialRule;
+    final messenger = ScaffoldMessenger.of(context);
     final rule = initial.copyWith(
       name: _name.text.trim().isEmpty ? initial.name : _name.text.trim(),
       baseType: _type,
@@ -1739,6 +1692,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
     );
     widget.state.savePayRule(rule);
     Navigator.pop(context);
+    showLedgerSnackBarOn(messenger, '计薪规则已保存');
   }
 
   Future<void> _pickEffectiveDate() async {
@@ -1866,7 +1820,9 @@ class _WebDavSheetState extends State<WebDavSheet> {
     final displayStatus = _displayAutoBackupStatus();
     final connectionStatus = _backupStatusDisplay(
       webDavConfig: _config(),
-      autoConfig: widget.state.autoBackupConfig.copyWith(lastStatus: displayStatus),
+      autoConfig: widget.state.autoBackupConfig.copyWith(
+        lastStatus: displayStatus,
+      ),
     );
     return SafeArea(
       child: Padding(
@@ -1883,14 +1839,8 @@ class _WebDavSheetState extends State<WebDavSheet> {
             children: [
               SheetHeaderBlock(
                 title: '坚果云 WebDAV',
-                subtitle: '手动备份即时执行；也可以开启省流量自动云备份。应用授权密码不会写入普通备份。',
+                subtitle: '应用授权密码不会写入普通备份。',
                 onClose: () => Navigator.pop(context),
-              ),
-              const SizedBox(height: 12),
-              const NoticeCard(
-                icon: Icons.cloud_sync_outlined,
-                title: '推荐使用应用授权密码',
-                body: '比账号主密码更安全；普通本地备份和导出文件都不会包含这项敏感信息。',
               ),
               const SizedBox(height: 12),
               NoticeCard(
@@ -1922,7 +1872,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       controller: _url,
                       decoration: const InputDecoration(
                         labelText: '服务器地址',
-                        helperText: '坚果云一般是 https://dav.jianguoyun.com/dav/',
+                        hintText: 'https://dav.jianguoyun.com/dav/',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1930,7 +1880,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       controller: _username,
                       decoration: const InputDecoration(
                         labelText: '账号',
-                        helperText: '通常是坚果云登录邮箱或用户名。',
+                        hintText: '登录邮箱或用户名',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1939,7 +1889,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       obscureText: !_showPassword,
                       decoration: InputDecoration(
                         labelText: '应用授权密码',
-                        helperText: '建议使用应用授权密码，而不是账号主密码。',
+                        hintText: '使用应用授权密码',
                         suffixIcon: IconButton(
                           tooltip: _showPassword ? '隐藏密码' : '显示密码',
                           onPressed: () =>
@@ -1957,7 +1907,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       controller: _remotePath,
                       decoration: const InputDecoration(
                         labelText: '远端备份文件名',
-                        helperText: '例如 shift-ledger-backup.json，可按账本区分。',
+                        hintText: 'shift-ledger-backup.json',
                       ),
                     ),
                   ],
@@ -1976,16 +1926,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       '手动操作',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '先保存配置，再按需手动备份、恢复或查看云端文件列表。',
-                      style: TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Column(
                       children: [
                         SizedBox(
@@ -2067,7 +2008,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
           SwitchListTile(
             value: autoConfig.enabled,
             title: const Text('自动云备份'),
-            subtitle: const Text('推荐 · 最小间隔 1 小时 · 每天最多 6 次'),
+            subtitle: const Text('最小间隔 1 小时 · 每天最多 6 次'),
             onChanged: (value) {
               final currentConfig = _config();
               final configured = currentConfig.isConfigured;
@@ -2204,9 +2145,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showLedgerSnackBar(context, message);
   }
 }
 

@@ -122,6 +122,50 @@ void main() {
     expect(find.text('设置'), findsOneWidget);
   });
 
+  testWidgets(
+    'setting tiles use either a trailing action label or a chevron, not both',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                SettingTile(title: '班次模板', trailing: '编辑', onTap: () {}),
+                SettingTile(title: '最近删除', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final labeledTile = find
+          .ancestor(of: find.text('班次模板'), matching: find.byType(InkWell))
+          .first;
+      final plainTile = find
+          .ancestor(of: find.text('最近删除'), matching: find.byType(InkWell))
+          .first;
+
+      expect(
+        find.descendant(
+          of: labeledTile,
+          matching: find.byIcon(Icons.chevron_right_rounded),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: labeledTile, matching: find.text('编辑')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: plainTile,
+          matching: find.byIcon(Icons.chevron_right_rounded),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('can add edit and delete a work record', (tester) async {
     final state = LedgerState.empty(now: DateTime(2026, 5, 13));
     await tester.pumpWidget(ShiftLedgerApp(state: state));
@@ -134,6 +178,7 @@ void main() {
     await tester.tap(find.text('保存').last);
     await tester.pumpAndSettle();
     expect(state.entries.length, 1);
+    expect(find.text('已保存 2026-05-13 记录'), findsOneWidget);
     expect(find.textContaining('09:00 — 18:00'), findsWidgets);
 
     await tester.tap(find.byTooltip('编辑').first);
@@ -160,6 +205,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(state.entries, isEmpty);
   });
+
+  testWidgets(
+    'edit sheet removes generic save hints but keeps overwrite-specific warning',
+    (tester) async {
+      await tester.pumpWidget(
+        ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 13))),
+      );
+
+      await tester.tap(find.text('＋').last);
+      await tester.pumpAndSettle();
+      expect(find.text('保存后会显示到首页、日历、汇总。'), findsNothing);
+      await tester.tap(find.text('关闭'));
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(
+        ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+      );
+      await tester.tap(find.byTooltip('编辑').first);
+      await tester.pumpAndSettle();
+      expect(find.text('保存会覆盖当天记录。'), findsOneWidget);
+    },
+  );
 
   testWidgets('day delete is hidden after moving the edit sheet date', (
     tester,
@@ -220,22 +287,27 @@ void main() {
     expect(find.text('补其他日期'), findsOneWidget);
     expect(find.text('导出 CSV'), findsOneWidget);
     expect(find.text('模板、备份和规则'), findsOneWidget);
+    expect(find.textContaining('低频入口不放在首页主按钮里'), findsNothing);
+    expect(find.textContaining('去日历选择日期后补一段'), findsNothing);
+    expect(find.textContaining('去汇总页导出当前统计明细'), findsNothing);
+    expect(find.textContaining('去设置管理班次模板、计薪规则和备份'), findsNothing);
     await tester.tap(find.text('模板、备份和规则'));
     await tester.pumpAndSettle();
     expect(find.text('个人工时账本'), findsOneWidget);
   });
 
-  testWidgets('empty home uses补今天 with adjustable default hint', (
+  testWidgets('empty home collapses duplicate empty-state chrome', (
     tester,
   ) async {
     await tester.pumpWidget(
       ShiftLedgerApp(state: LedgerState.empty(now: DateTime(2026, 5, 13))),
     );
 
-    expect(find.text('今天还没有记录。'), findsOneWidget);
+    expect(find.text('今天还没有记录'), findsOneWidget);
+    expect(find.text('今天分段'), findsNothing);
     expect(find.text('补今天'), findsOneWidget);
-    expect(find.textContaining('默认 09:00-18:00'), findsOneWidget);
-    expect(find.textContaining('60 分钟休息'), findsOneWidget);
+    expect(find.textContaining('默认 09:00-18:00'), findsNothing);
+    expect(find.textContaining('60 分钟休息'), findsNothing);
     expect(find.text('创建 09:00-18:00 记录'), findsNothing);
   });
 
@@ -253,6 +325,7 @@ void main() {
     expect(find.text('计薪依据'), findsOneWidget);
     expect(find.text('查看明细'), findsNothing);
     expect(find.text('全部明细'), findsNothing);
+    expect(find.text('导出 CSV'), findsNothing);
     final summaryExportAction = find.descendant(
       of: find.byType(Scaffold),
       matching: find.widgetWithText(FilledButton, '导出'),
@@ -271,11 +344,14 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    expect(find.text('计薪加班规则'), findsNothing);
+    expect(find.text('含规则快照与收入拆分'), findsNothing);
+    expect(find.text('系统保存面板 + 一份 App 私有最近备份'), findsNothing);
     expect(find.text('本地备份/恢复'), findsOneWidget);
     expect(find.text('坚果云 WebDAV'), findsOneWidget);
     expect(find.text('未连接；可配置坚果云备份'), findsOneWidget);
     expect(find.text('最近删除'), findsOneWidget);
-    expect(find.text('没有可恢复记录'), findsOneWidget);
+    expect(find.text('没有可恢复记录'), findsWidgets);
   });
 
   testWidgets('deleted day can be restored from settings recent deleted', (
@@ -385,6 +461,84 @@ void main() {
     expect(find.text('结束小时'), findsNothing);
   });
 
+  testWidgets('settings save actions give immediate completion feedback', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+
+    final nightRuleTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '夜班规则');
+    nightRuleTile.onTap!.call();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('夜班规则已保存'), findsOneWidget);
+
+    final payPeriodTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '发薪周期');
+    payPeriodTile.onTap!.call();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('发薪周期已保存'), findsOneWidget);
+
+    final payRuleTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '计薪规则');
+    payRuleTile.onTap!.call();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存').last);
+    await tester.tap(find.text('保存').last);
+    await tester.pumpAndSettle();
+    expect(find.text('计薪规则已保存'), findsOneWidget);
+  });
+
+  testWidgets('dense settings sheets drop redundant top notice cards', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+
+    final nightRuleTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '夜班规则');
+    nightRuleTile.onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.byType(NoticeCard), findsNothing);
+    await tester.tap(find.text('关闭').last);
+    await tester.pumpAndSettle();
+
+    final payPeriodTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '发薪周期');
+    payPeriodTile.onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.byType(NoticeCard), findsNothing);
+    await tester.tap(find.text('取消').last);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('本地备份/恢复'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final backupTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '本地备份/恢复');
+    backupTile.onTap!.call();
+    await tester.pumpAndSettle();
+    expect(find.byType(NoticeCard), findsNothing);
+  });
+
   testWidgets(
     'calendar list and settings sheets expose review-critical details',
     (tester) async {
@@ -409,9 +563,9 @@ void main() {
       expect(find.text('保存模板'), findsOneWidget);
       expect(find.text('模板名称'), findsOneWidget);
       await tester.enterText(find.widgetWithText(TextField, '模板名称'), '白班');
-      expect(find.text('地点/岗位默认值'), findsOneWidget);
-      expect(find.text('默认补贴'), findsOneWidget);
-      expect(find.text('默认扣款'), findsOneWidget);
+      expect(find.text('地点 / 岗位'), findsOneWidget);
+      expect(find.text('补贴'), findsOneWidget);
+      expect(find.text('扣款'), findsOneWidget);
       await tester.ensureVisible(find.text('保存模板'));
       await tester.tap(find.text('保存模板'));
       await tester.pumpAndSettle();
@@ -425,6 +579,16 @@ void main() {
       expect(find.text('计薪加班基准 ¥/h'), findsOneWidget);
       expect(find.text('休息日倍率'), findsOneWidget);
       await tester.tap(find.text('取消').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('规则历史'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('每次修改计薪规则都会生成新版本；历史记录继续使用保存时的规则快照，避免旧工资被新规则改写。'),
+        findsNothing,
+      );
+      expect(find.text('历史记录沿用保存时快照。'), findsOneWidget);
+      await tester.tap(find.text('关闭').last);
       await tester.pumpAndSettle();
 
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
@@ -530,7 +694,7 @@ void main() {
     expect(find.text('普通'), findsWidgets);
     expect(find.text('加班'), findsWidgets);
     expect(find.text('夜班'), findsWidgets);
-    expect(find.text('切换模板'), findsOneWidget);
+    expect(find.text('切换'), findsOneWidget);
     expect(find.text('开始时间'), findsOneWidget);
     expect(find.text('结束时间'), findsOneWidget);
     expect(find.text('开始 HH:mm'), findsNothing);
@@ -560,6 +724,46 @@ void main() {
     expect(find.text('生效日期 YYYY-MM-DD'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'pay rule sheet stays dense on phone width and date picker stays quiet',
+    (tester) async {
+      final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      await tester.tap(find.text('设置'));
+      await tester.pumpAndSettle();
+      final payRuleTile = tester
+          .widgetList<SettingTile>(find.byType(SettingTile))
+          .firstWhere((tile) => tile.title == '计薪规则');
+      payRuleTile.onTap!.call();
+      await tester.pumpAndSettle();
+
+      bool sharesRow(String first, String second) {
+        return find
+            .ancestor(of: find.text(first), matching: find.byType(Row))
+            .evaluate()
+            .any((rowElement) {
+              final rowFinder = find.byElementPredicate(
+                (element) => element == rowElement,
+              );
+              return find
+                  .descendant(of: rowFinder, matching: find.text(second))
+                  .evaluate()
+                  .isNotEmpty;
+            });
+      }
+
+      expect(sharesRow('普通工时上限 h/天', '计薪加班倍率'), isTrue);
+      expect(sharesRow('计薪加班基准 ¥/h', '休息日倍率'), isTrue);
+
+      await tester.tap(find.text('生效日期'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('当前选择：'), findsNothing);
+    },
+  );
 
   testWidgets('segment editor dialog stays usable at large text scale', (
     tester,
@@ -685,6 +889,8 @@ void main() {
     tester,
   ) async {
     final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     state.updateShiftTemplate(
       ShiftTemplate.standard(
         payRuleId: state.defaultRule.id,
@@ -697,16 +903,26 @@ void main() {
     await tester.tap(find.text('班次模板'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('切换模板'));
+    await tester.tap(find.text('切换'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('周末店班'));
+    await tester.tap(find.text('周末店班'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, '地点/岗位默认值'), '南山店');
-    await tester.enterText(find.widgetWithText(TextField, '默认补贴'), '0');
-    await tester.enterText(find.widgetWithText(TextField, '默认扣款'), '5');
+    expect(find.text('默认补贴'), findsNothing);
+    expect(find.text('默认扣款'), findsNothing);
+    expect(find.text('默认 0'), findsNothing);
+    final startTop = tester.getTopLeft(find.text('开始时间')).dy;
+    final endTop = tester.getTopLeft(find.text('结束时间')).dy;
+    expect((startTop - endTop).abs(), lessThan(1));
+    final allowanceTop = tester.getTopLeft(find.text('补贴')).dy;
+    final deductionTop = tester.getTopLeft(find.text('扣款')).dy;
+    expect((allowanceTop - deductionTop).abs(), lessThan(1));
+    await tester.enterText(find.widgetWithText(TextField, '地点 / 岗位'), '南山店');
+    await tester.enterText(find.widgetWithText(TextField, '补贴'), '0');
+    await tester.enterText(find.widgetWithText(TextField, '扣款'), '5');
     await tester.ensureVisible(find.text('保存模板'));
     await tester.tap(find.text('保存模板'));
     await tester.pumpAndSettle();
+    expect(find.text('已保存模板“周末店班”'), findsOneWidget);
 
     final entry = state.createTemplateEntry(
       day: DateTime(2026, 5, 14),
@@ -718,9 +934,10 @@ void main() {
 
     await tester.tap(find.text('班次模板'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('切换模板'));
+    await tester.tap(find.text('切换'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('周末店班'));
+    expect(find.text('切换后继续编辑当前模板。'), findsNothing);
+    await tester.tap(find.text('周末店班'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('删除模板'));
     await tester.tap(find.text('删除模板'));
@@ -728,7 +945,63 @@ void main() {
     await tester.tap(find.text('确认删除'));
     await tester.pumpAndSettle();
     expect(state.templates.any((tpl) => tpl.id == 'tpl_custom'), isFalse);
+    expect(find.text('已删除模板“周末店班”'), findsOneWidget);
   });
+
+  testWidgets('creating a template copy gives immediate completion feedback', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('班次模板'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('新增副本'));
+    await tester.tap(find.text('新增副本'));
+    await tester.pumpAndSettle();
+    expect(find.text('已新增模板副本“标准班次 副本”'), findsOneWidget);
+
+    await tester.tap(find.text('新增副本'));
+    await tester.pumpAndSettle();
+
+    expect(
+      state.templates.any((template) => template.name == '标准班次 副本'),
+      isTrue,
+    );
+    expect(
+      state.templates.where((template) => template.name.contains('标准班次 副本')),
+      hasLength(1),
+    );
+  });
+
+  testWidgets(
+    'recent deleted sheet keeps only the necessary empty explanation',
+    (tester) async {
+      await tester.pumpWidget(
+        ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+      );
+
+      await tester.tap(find.text('设置'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('最近删除'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final recentDeletedTile = tester
+          .widgetList<SettingTile>(find.byType(SettingTile))
+          .firstWhere((tile) => tile.title == '最近删除');
+      recentDeletedTile.onTap!.call();
+      await tester.pumpAndSettle();
+
+      expect(find.text('用于恢复整天删除记录。'), findsNothing);
+      expect(find.text('没有可恢复记录'), findsWidgets);
+      expect(find.text('整天删除后会出现在这里。'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'built-in template keeps only single-template restore and cannot be deleted',
@@ -779,6 +1052,36 @@ void main() {
       );
     },
   );
+
+  testWidgets('segment editor keeps paired fields on one row at phone width', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    final entry = WorkEntry.create(
+      id: 'segment_dense_probe',
+      workDate: DateTime(2026, 5, 13),
+      startDateTime: DateTime(2026, 5, 13, 9),
+      endDateTime: DateTime(2026, 5, 13, 18),
+      payRule: rule,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SegmentEditorDialog(entry: entry, rules: [rule]),
+        ),
+      ),
+    );
+
+    final startTop = tester.getTopLeft(find.text('开始时间')).dy;
+    final endTop = tester.getTopLeft(find.text('结束时间')).dy;
+    expect((startTop - endTop).abs(), lessThan(1));
+    final allowanceTop = tester.getTopLeft(find.text('补贴')).dy;
+    final deductionTop = tester.getTopLeft(find.text('扣款')).dy;
+    expect((allowanceTop - deductionTop).abs(), lessThan(1));
+  });
 
   testWidgets(
     'moving a day onto another populated date preserves target entries and refreshes pay rule snapshot',

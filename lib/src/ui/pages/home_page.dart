@@ -37,28 +37,8 @@ class HomePage extends StatelessWidget {
           summary: todaySummary,
           onTap: () => showEditWorkEntrySheet(context, state, day: state.now),
         ),
-        const SectionHeader(title: '今天分段'),
-        if (todayEntries.isEmpty)
-          LedgerCard(
-            color: LedgerColors.surfaceRaised,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('今天还没有记录。'),
-                const SizedBox(height: 8),
-                FilledButton(
-                  onPressed: () => showEditWorkEntrySheet(context, state),
-                  child: const Text('补今天'),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  '会先带出默认 09:00-18:00，并预设 60 分钟休息；保存前都可以改。',
-                  style: TextStyle(color: LedgerColors.muted),
-                ),
-              ],
-            ),
-          )
-        else
+        if (todayEntries.isNotEmpty) ...[
+          const SectionHeader(title: '今天分段'),
           for (final entry in todayEntries) ...[
             WorkEntryTile(
               entry: entry,
@@ -67,6 +47,7 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
+        ],
         SectionHeader(
           title: '本周期进度',
           actionLabel: '查看汇总',
@@ -129,11 +110,6 @@ class HomePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('更多操作', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 8),
-              const Text(
-                '低频入口不放在首页主按钮里，避免打断今天记录。',
-                style: TextStyle(color: LedgerColors.muted),
-              ),
               const SizedBox(height: 12),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
@@ -141,7 +117,6 @@ class HomePage extends StatelessWidget {
                   children: [
                     SettingTile(
                       title: '补其他日期',
-                      subtitle: '去日历选择日期后补一段',
                       trailing: '日历',
                       onTap: () {
                         Navigator.pop(context);
@@ -150,7 +125,6 @@ class HomePage extends StatelessWidget {
                     ),
                     SettingTile(
                       title: '导出 CSV',
-                      subtitle: '去汇总页导出当前统计明细',
                       trailing: '汇总',
                       onTap: () {
                         Navigator.pop(context);
@@ -159,7 +133,6 @@ class HomePage extends StatelessWidget {
                     ),
                     SettingTile(
                       title: '模板、备份和规则',
-                      subtitle: '去设置管理班次模板、计薪规则和备份',
                       trailing: '设置',
                       onTap: () {
                         Navigator.pop(context);
@@ -190,6 +163,7 @@ class _TodayOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEmpty = entries.isEmpty;
     final recordSummary = summarizeRecordEntries(entries);
     final extraPayrollOvertime = math.max(
       0.0,
@@ -250,19 +224,10 @@ class _TodayOverviewCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '今日已记录',
+                    isEmpty ? '今天还没有记录' : '今日已记录',
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                 ),
-                if (entries.isNotEmpty)
-                  const _SummaryChip(
-                    data: _SummaryChipData(
-                      label: '已完成',
-                      background: LedgerColors.successGreenSoft,
-                      foreground: Color(0xFF166534),
-                      border: Color(0xFFBBF7D0),
-                    ),
-                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -270,7 +235,7 @@ class _TodayOverviewCard extends StatelessWidget {
               hoursText(summary.totalHours),
               style: const TextStyle(
                 color: LedgerColors.ink,
-                fontSize: 52,
+                fontSize: 48,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -2.4,
                 fontFeatures: [FontFeature.tabularFigures()],
@@ -283,7 +248,10 @@ class _TodayOverviewCard extends StatelessWidget {
               runSpacing: 7,
               children: [for (final chip in chips) _SummaryChip(data: chip)],
             ),
-            if (extraPayrollOvertime > 0) ...[
+            if (isEmpty) ...[
+              const SizedBox(height: 10),
+              FilledButton.tonal(onPressed: onTap, child: const Text('补今天')),
+            ] else if (extraPayrollOvertime > 0) ...[
               const SizedBox(height: 10),
               Text(
                 '工资估算里另有 ${hoursText(extraPayrollOvertime)} 会按“计薪加班”计算，但记录类型仍保持普通班次。',

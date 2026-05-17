@@ -48,9 +48,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final compactActions =
-        MediaQuery.of(context).size.width < 420 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.15;
+    final compactActions = useDenseTwoColumnLayout(context);
     final summaryRule = widget.state.ruleForDate(
       _day,
       preferredRuleId: _segments.isEmpty ? null : _segments.first.payRuleId,
@@ -91,17 +89,18 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   ),
                 ],
               ),
-              Text(
-                widget.state.entriesForDay(_originalDay).isEmpty
-                    ? '先补这一天的分段，保存后会自动进入汇总、列表和日历。'
-                    : '这里会一起编辑当天所有分段，保存后统一覆盖这一天的记录。',
-                style: const TextStyle(
-                  color: LedgerColors.muted,
-                  fontSize: 13,
-                  height: 1.35,
+              if (widget.state.entriesForDay(_originalDay).isNotEmpty) ...[
+                const Text(
+                  '保存会覆盖当天记录。',
+                  style: TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ] else
+                const SizedBox(height: 12),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
                 child: Column(
@@ -217,20 +216,8 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '编辑操作',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '新增分段适合补休息日加班、夜班或临时外出；保存时会按时间顺序整理。',
-                      style: TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    Text('操作', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 10),
                     _buildActionButtons(
                       compact: compactActions,
                       primary: FilledButton(
@@ -466,16 +453,13 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     final deleted = widget.state.deleteDay(targetDay);
     Navigator.pop(context);
     if (deleted == null) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '已删除 ${ymd(deleted.day)} 全部记录'
-          '（${deleted.segmentCount}段 · ${hoursText(deleted.totalHours)}）',
-        ),
-        action: SnackBarAction(
-          label: '撤销',
-          onPressed: () => widget.state.restoreDeletedDay(deleted.id),
-        ),
+    showLedgerSnackBarOn(
+      messenger,
+      '已删除 ${ymd(deleted.day)} 全部记录'
+      '（${deleted.segmentCount}段 · ${hoursText(deleted.totalHours)}）',
+      action: SnackBarAction(
+        label: '撤销',
+        onPressed: () => widget.state.restoreDeletedDay(deleted.id),
       ),
     );
   }
@@ -492,8 +476,11 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       );
       if (confirmed != true || !mounted) return;
     }
+    final messenger = ScaffoldMessenger.of(context);
+    final savedDay = _day;
     widget.state.replaceDayEntries(_originalDay, _day, _segments);
     Navigator.pop(context);
+    showLedgerSnackBarOn(messenger, '已保存 ${ymd(savedDay)} 记录');
   }
 
   bool _hasOverlaps() {
@@ -567,9 +554,10 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final stackedFields =
-        MediaQuery.of(context).size.width < 520 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    final stackedFields = useDenseTwoColumnLayout(
+      context,
+      textScaleBreakpoint: 1.45,
+    );
     return LedgerDialogShell(
       title: '编辑本段',
       icon: Icons.tune_rounded,

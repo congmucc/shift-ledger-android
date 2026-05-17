@@ -11,6 +11,31 @@ String moneyText(double value) =>
 TextScaler cappedTextScaler(BuildContext context, {double maxScale = 1.35}) =>
     MediaQuery.textScalerOf(context).clamp(maxScaleFactor: maxScale);
 
+bool useDenseTwoColumnLayout(
+  BuildContext context, {
+  double widthBreakpoint = 360,
+  double textScaleBreakpoint = 1.35,
+}) =>
+    MediaQuery.of(context).size.width < widthBreakpoint ||
+    MediaQuery.textScalerOf(context).scale(1) > textScaleBreakpoint;
+
+void showLedgerSnackBar(
+  BuildContext context,
+  String message, {
+  SnackBarAction? action,
+}) {
+  showLedgerSnackBarOn(ScaffoldMessenger.of(context), message, action: action);
+}
+
+void showLedgerSnackBarOn(
+  ScaffoldMessengerState messenger,
+  String message, {
+  SnackBarAction? action,
+}) {
+  messenger.clearSnackBars();
+  messenger.showSnackBar(SnackBar(content: Text(message), action: action));
+}
+
 class FittedValueText extends StatelessWidget {
   const FittedValueText(
     this.text, {
@@ -344,16 +369,15 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleMedium!.copyWith(
+      fontSize: 18,
+      fontWeight: FontWeight.w800,
+    );
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 10),
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ),
+          Expanded(child: Text(title, style: titleStyle)),
           if (actionLabel != null)
             TextButton(onPressed: onAction, child: Text(actionLabel!)),
         ],
@@ -366,13 +390,13 @@ class SheetHeaderBlock extends StatelessWidget {
   const SheetHeaderBlock({
     super.key,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.onClose,
     this.closeLabel = '关闭',
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final String closeLabel;
   final VoidCallback onClose;
 
@@ -392,14 +416,15 @@ class SheetHeaderBlock extends StatelessWidget {
             TextButton(onPressed: onClose, child: Text(closeLabel)),
           ],
         ),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: LedgerColors.muted,
-            fontSize: 13,
-            height: 1.35,
+        if (subtitle != null && subtitle!.trim().isNotEmpty)
+          Text(
+            subtitle!,
+            style: const TextStyle(
+              color: LedgerColors.muted,
+              fontSize: 13,
+              height: 1.35,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -487,11 +512,7 @@ class LedgerPickerButtonField extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             helperText!,
-            style: TextStyle(
-              color: muted,
-              fontSize: 12,
-              height: 1.35,
-            ),
+            style: TextStyle(color: muted, fontSize: 12, height: 1.35),
           ),
         ],
         const SizedBox(height: 8),
@@ -528,7 +549,7 @@ class NoticeCard extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
-    required this.body,
+    this.body,
     this.backgroundColor = LedgerColors.surfaceRaised,
     this.iconBackgroundColor = LedgerColors.primaryBlueSoft,
     this.iconColor = LedgerColors.primaryBlue,
@@ -537,7 +558,7 @@ class NoticeCard extends StatelessWidget {
 
   final IconData icon;
   final String title;
-  final String body;
+  final String? body;
   final Color backgroundColor;
   final Color iconBackgroundColor;
   final Color iconColor;
@@ -566,15 +587,17 @@ class NoticeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: const TextStyle(
-                    color: LedgerColors.muted,
-                    fontSize: 13,
-                    height: 1.35,
+                if (body != null && body!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    body!,
+                    style: const TextStyle(
+                      color: LedgerColors.muted,
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -594,7 +617,8 @@ Future<bool?> showLedgerConfirmDialog(
   bool destructive = false,
   IconData? icon,
 }) {
-  final resolvedIcon = icon ??
+  final resolvedIcon =
+      icon ??
       (destructive ? Icons.warning_amber_rounded : Icons.help_outline_rounded);
   return showDialog<bool>(
     context: context,
@@ -743,9 +767,12 @@ class LedgerConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = destructive ? LedgerColors.errorBrick : LedgerColors.primaryBlue;
-    final accentSoft =
-        destructive ? LedgerColors.warningOrangeSoft : LedgerColors.primaryBlueSoft;
+    final accent = destructive
+        ? LedgerColors.errorBrick
+        : LedgerColors.primaryBlue;
+    final accentSoft = destructive
+        ? LedgerColors.warningOrangeSoft
+        : LedgerColors.primaryBlueSoft;
     return LedgerDialogShell(
       title: title,
       icon: icon,
@@ -825,38 +852,44 @@ class SettingTile extends StatelessWidget {
   const SettingTile({
     super.key,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     this.trailing,
     this.onTap,
   });
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final String? trailing;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final hasAction = onTap != null;
+    final hasSubtitle = subtitle != null && subtitle!.trim().isNotEmpty;
+    final showChevron = hasAction && trailing == null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: hasSubtitle
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: LedgerColors.muted),
-                  ),
+                  if (hasSubtitle) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: LedgerColors.muted),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -880,7 +913,7 @@ class SettingTile extends StatelessWidget {
                   ),
                 ),
               ),
-            if (hasAction) ...[
+            if (showChevron) ...[
               const SizedBox(width: 8),
               const Padding(
                 padding: EdgeInsets.only(top: 3),

@@ -90,7 +90,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ],
         ),
         _MonthSummaryGrid(summary: summary, recordSummary: recordSummary),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(value: false, label: Text('日历')),
@@ -100,81 +100,75 @@ class _CalendarPageState extends State<CalendarPage> {
           onSelectionChanged: (values) =>
               setState(() => _listMode = values.first),
         ),
-        const SizedBox(height: 10),
-        LedgerCard(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final showSwipeHint =
-                      _filter.isAll && constraints.maxWidth < 420;
-                  return Row(
-                    children: [
-                      const Icon(
-                        Icons.tune_rounded,
-                        size: 18,
-                        color: LedgerColors.primaryBlue,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '快速筛选',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const Spacer(),
-                      if (showSwipeHint)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(
-                              Icons.swipe_left_alt_rounded,
-                              size: 16,
-                              color: LedgerColors.muted,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              '左右滑动',
-                              style: TextStyle(
-                                color: LedgerColors.muted,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        )
-                      else if (!_filter.isAll)
-                        TextButton(
-                          onPressed: () => _changeFilter(_CalendarFilter.all),
-                          child: const Text('清除'),
-                        ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
+        const SizedBox(height: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final showSwipeHint =
+                    _filter.isAll && constraints.maxWidth < 420;
+                return Row(
                   children: [
-                    for (final filter in _CalendarFilter.values) ...[
-                      _CalendarFilterChip(
-                        icon: filter.icon,
-                        label: filter.label,
-                        count: filterCounts[filter] ?? 0,
-                        selected: _filter == filter,
-                        onSelected: () => _changeFilter(filter),
+                    const Icon(
+                      Icons.tune_rounded,
+                      size: 16,
+                      color: LedgerColors.primaryBlue,
+                    ),
+                    const SizedBox(width: 6),
+                    Text('筛选', style: Theme.of(context).textTheme.labelMedium),
+                    const Spacer(),
+                    if (showSwipeHint)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.swipe_left_alt_rounded,
+                            size: 16,
+                            color: LedgerColors.muted,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '左右滑动',
+                            style: TextStyle(
+                              color: LedgerColors.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (!_filter.isAll)
+                      TextButton(
+                        onPressed: () => _changeFilter(_CalendarFilter.all),
+                        child: const Text('清除'),
                       ),
-                      if (filter != _CalendarFilter.values.last)
-                        const SizedBox(width: 8),
-                    ],
                   ],
-                ),
+                );
+              },
+            ),
+            const SizedBox(height: 6),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final filter in _CalendarFilter.values) ...[
+                    _CalendarFilterChip(
+                      icon: filter.icon,
+                      label: filter.label,
+                      count: filterCounts[filter] ?? 0,
+                      selected: _filter == filter,
+                      onSelected: () => _changeFilter(filter),
+                    ),
+                    if (filter != _CalendarFilter.values.last)
+                      const SizedBox(width: 8),
+                  ],
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         if (_listMode)
           _MonthList(
             state: widget.state,
@@ -192,7 +186,7 @@ class _CalendarPageState extends State<CalendarPage> {
             onMonthChanged: _selectMonth,
             matchesDay: _matchesCurrentFilter,
             filter: _filter,
-        ),
+          ),
         SectionHeader(
           title: !_filter.isAll && !monthHasFilterMatch
               ? '${_month.month} 月暂无${_filter.label}记录'
@@ -661,7 +655,7 @@ class _MonthSummaryGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       key: const Key('calendar-month-summary-card'),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final statWidth = constraints.maxWidth >= 360
@@ -673,27 +667,27 @@ class _MonthSummaryGrid extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 26,
+                    height: 26,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: LedgerColors.primaryBlueSoft.withValues(alpha: .8),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
                       Icons.summarize_outlined,
-                      size: 17,
+                      size: 16,
                       color: LedgerColors.primaryBlue,
                     ),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 6),
                   Text(
                     '本月一览',
                     style: Theme.of(
                       context,
-                    ).textTheme.titleMedium!.copyWith(fontSize: 16),
+                    ).textTheme.titleMedium!.copyWith(fontSize: 15),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: FittedValueText(
                       '月计 ${hoursText(summary.totalHours)} · 出勤 ${summary.attendanceDays}天 · ${recordSummary.segmentCount}段',
@@ -709,10 +703,10 @@ class _MonthSummaryGrid extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 6),
               Wrap(
-                spacing: 8,
-                runSpacing: 6,
+                spacing: 6,
+                runSpacing: 5,
                 children: [
                   SizedBox(
                     width: statWidth,
@@ -787,7 +781,7 @@ class _MonthStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     decoration: BoxDecoration(
       color: accent.withValues(alpha: .08),
       borderRadius: BorderRadius.circular(14),
@@ -1086,11 +1080,6 @@ class _MonthListState extends State<_MonthList> {
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
-              const Spacer(),
-              Text(
-                '按月内时间顺序浏览',
-                style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-              ),
             ],
           ),
         ),
@@ -1132,8 +1121,8 @@ class _MonthListState extends State<_MonthList> {
                 const SizedBox(height: 8),
                 Text(
                   widget.filter == _CalendarFilter.all
-                      ? '列表模式只展示已经记过的日期，方便快速回看。'
-                      : '你可以先切回“全部”，或者直接补一段新的记录。',
+                      ? '列表只显示已记录日期。'
+                      : '切回“全部”或直接补一段。',
                   style: const TextStyle(
                     color: LedgerColors.muted,
                     fontSize: 13,
@@ -1461,7 +1450,7 @@ class _DayDetails extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              '如果这天只是休息，可以直接留空；需要补录时，再新增一段就好。',
+              '休息日可留空，需要时再补录。',
               style: TextStyle(
                 color: LedgerColors.muted,
                 fontSize: 13,
