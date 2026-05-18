@@ -506,6 +506,42 @@ void main() {
     expect(find.text('连接状态'), findsOneWidget);
   });
 
+  testWidgets('webdav sheet makes auto sync trigger timing explicit', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13))
+      ..updateWebDavConfig(
+        const WebDavConfig(
+          url: 'https://dav.jianguoyun.com/dav/',
+          username: 'u@example.com',
+          appPassword: 'app-pass',
+        ),
+      );
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('坚果云 WebDAV'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final webDavTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '坚果云 WebDAV');
+    webDavTile.onTap!.call();
+    await tester.pumpAndSettle();
+
+    expect(find.text('打开 App 后自动检查'), findsOneWidget);
+    expect(find.textContaining('未启用；打开 App 后不会自动检查'), findsOneWidget);
+
+    await tester.ensureVisible(find.byType(SwitchListTile));
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('已启用；仅在打开 App 或继续使用时自动检查'), findsOneWidget);
+  });
+
   testWidgets(
     'local backup sheet shows remembered folder and allows changing it',
     (tester) async {

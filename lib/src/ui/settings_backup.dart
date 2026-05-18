@@ -295,6 +295,9 @@ class _WebDavSheetState extends State<WebDavSheet> {
       webDavConfig: _config(),
       autoConfig: autoConfig.copyWith(lastStatus: displayStatus),
     );
+    final autoCheckSummary = autoConfig.enabled
+        ? '已启用；仅在打开 App 或继续使用时自动检查'
+        : '未启用；打开 App 后不会自动检查';
     return Container(
       decoration: BoxDecoration(
         color: LedgerColors.surfaceRaised,
@@ -307,7 +310,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
           SwitchListTile(
             value: autoConfig.enabled,
             title: const Text('自动云备份'),
-            subtitle: const Text('最小间隔 1 小时 · 每天最多 6 次'),
+            subtitle: const Text('仅在打开 App 或继续使用时检查 · 最小间隔 1 小时 · 每天最多 6 次'),
             onChanged: (value) {
               final currentConfig = _config();
               final configured = currentConfig.isConfigured;
@@ -332,13 +335,10 @@ class _WebDavSheetState extends State<WebDavSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _StatusLine(label: '打开 App 后自动检查', value: '已启用，开启后生效'),
+                _StatusLine(label: '打开 App 后自动检查', value: autoCheckSummary),
                 _StatusLine(label: '当前状态', value: backupStatus.summary),
                 _StatusLine(label: '状态说明', value: backupStatus.detail),
-                _StatusLine(
-                  label: '云端文件',
-                  value: _config().remotePath,
-                ),
+                _StatusLine(label: '云端文件', value: _config().remotePath),
                 _StatusLine(
                   label: '上次自动备份',
                   value: autoConfig.lastSuccessAt == null
