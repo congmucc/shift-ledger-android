@@ -673,6 +673,7 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final previewOnly = _repository == null;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -692,93 +693,101 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                 onClose: () => Navigator.pop(context),
               ),
               const SizedBox(height: 12),
-              LedgerCard(
-                color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '创建备份',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '会导出 JSON，并同步更新最近本地备份；首次选位置后，后续会自动保存到同一位置。',
-                      style: TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
+              if (previewOnly) ...[
+                const NoticeCard(
+                  icon: Icons.phone_android_outlined,
+                  title: '当前为 Web 预览',
+                  body: '本地备份、恢复和备份位置选择仅支持手机端使用。为避免看起来像能用但点不动，这里不显示操作按钮。',
+                ),
+              ] else ...[
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '创建备份',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildBackupLocationCard(context),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _repository == null ? null : _writeBackup,
-                        child: const Text('创建本地备份'),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _repository == null || _updatingLocation
-                            ? null
-                            : _changeBackupLocation,
-                        child: Text(
-                          _hasRememberedLocation ? '更换备份位置' : '选择备份位置',
+                      const SizedBox(height: 6),
+                      const Text(
+                        '会导出 JSON，并同步更新最近本地备份；首次选位置后，后续会自动保存到同一位置。',
+                        style: TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 13,
+                          height: 1.35,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      _buildBackupLocationCard(context),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _repository == null ? null : _writeBackup,
+                          child: const Text('创建本地备份'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _repository == null || _updatingLocation
+                              ? null
+                              : _changeBackupLocation,
+                          child: Text(
+                            _hasRememberedLocation ? '更换备份位置' : '选择备份位置',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              LedgerCard(
-                color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '恢复本地备份',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '可快速回退最近备份，也支持选择其他手机导出的 JSON 备份文件。',
-                      style: TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 13,
-                        height: 1.35,
+                const SizedBox(height: 12),
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '恢复本地备份',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _repository == null
-                            ? null
-                            : _restoreLatestBackup,
-                        child: const Text('从最近本地备份恢复'),
+                      const SizedBox(height: 6),
+                      const Text(
+                        '可快速回退最近备份，也支持选择其他手机导出的 JSON 备份文件。',
+                        style: TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _repository == null
-                            ? null
-                            : _restoreFromPickedBackup,
-                        child: const Text('选择备份文件恢复'),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _repository == null
+                              ? null
+                              : _restoreLatestBackup,
+                          child: const Text('从最近本地备份恢复'),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _repository == null
+                              ? null
+                              : _restoreFromPickedBackup,
+                          child: const Text('选择备份文件恢复'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
