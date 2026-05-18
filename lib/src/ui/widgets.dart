@@ -27,12 +27,14 @@ void showLedgerSnackBar(
   BuildContext context,
   String message, {
   SnackBarAction? action,
+  Duration? duration,
 }) {
   if (action != null) {
     showLedgerSnackBarOn(
       ScaffoldMessenger.of(context),
       message,
       action: action,
+      duration: duration,
     );
     return;
   }
@@ -40,7 +42,11 @@ void showLedgerSnackBar(
       Overlay.maybeOf(context, rootOverlay: true) ??
       Navigator.maybeOf(context, rootNavigator: true)?.overlay;
   if (overlay == null) {
-    showLedgerSnackBarOn(ScaffoldMessenger.of(context), message);
+    showLedgerSnackBarOn(
+      ScaffoldMessenger.of(context),
+      message,
+      duration: duration,
+    );
     return;
   }
   _showLedgerTopToast(overlay, message);
@@ -50,10 +56,17 @@ void showLedgerSnackBarOn(
   ScaffoldMessengerState messenger,
   String message, {
   SnackBarAction? action,
+  Duration? duration,
 }) {
   _hideLedgerTopToast();
   messenger.clearSnackBars();
-  messenger.showSnackBar(SnackBar(content: Text(message), action: action));
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(message),
+      action: action,
+      duration: duration ?? const Duration(seconds: 4),
+    ),
+  );
 }
 
 OverlayEntry? _ledgerTopToastEntry;

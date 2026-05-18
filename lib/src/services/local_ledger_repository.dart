@@ -34,6 +34,7 @@ class ExternalSaveRequest {
 
 typedef ExternalFileSaver =
     Future<String?> Function(ExternalSaveRequest request);
+typedef ExternalFilePicker = Future<String?> Function();
 typedef RootDirectoryProvider = Future<Directory> Function();
 
 class LocalLedgerRepository {
@@ -41,16 +42,19 @@ class LocalLedgerRepository {
     Directory? directory,
     FlutterSecureStorage? secureStorage,
     ExternalFileSaver? externalSaver,
+    ExternalFilePicker? externalPicker,
     RootDirectoryProvider? rootDirectoryProvider,
   }) : _directory = directory,
        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _externalSaver = externalSaver ?? _saveWithSystemDialog,
+       _externalPicker = externalPicker ?? _pickBackupWithSystemDialog,
        _rootDirectoryProvider =
            rootDirectoryProvider ?? getApplicationDocumentsDirectory;
 
   final Directory? _directory;
   final FlutterSecureStorage _secureStorage;
   final ExternalFileSaver _externalSaver;
+  final ExternalFilePicker _externalPicker;
   final RootDirectoryProvider _rootDirectoryProvider;
 
   static const _secretKey = 'shift_ledger_webdav_app_password';
@@ -63,10 +67,7 @@ class LocalLedgerRepository {
     final decodeResult = BackupService().decodeWithReport(json);
     final password = await _secureStorage.read(key: _secretKey) ?? '';
     return LoadedLedgerData(
-      snapshot: _attachSecret(
-        decodeResult.snapshot,
-        password,
-      ),
+      snapshot: _attachSecret(decodeResult.snapshot, password),
       diagnostics: decodeResult.diagnostics,
     );
   }
@@ -142,6 +143,8 @@ class LocalLedgerRepository {
     return (await readBackupResult(path)).snapshot;
   }
 
+  Future<String?> pickBackupFilePath() => _externalPicker();
+
   Future<LoadedLedgerData> readBackupResult(String path) async {
     final map =
         jsonDecode(await File(path).readAsString()) as Map<String, Object?>;
@@ -187,6 +190,17 @@ Future<String?> _saveWithSystemDialog(ExternalSaveRequest request) {
       fileName: request.fileName,
       mimeTypesFilter: [request.mimeType],
       localOnly: false,
+    ),
+  );
+}
+
+Future<String?> _pickBackupWithSystemDialog() {
+  return FlutterFileDialog.pickFile(
+    params: const OpenFileDialogParams(
+      fileExtensionsFilter: ['json'],
+      mimeTypesFilter: ['application/json', 'text/json'],
+      localOnly: false,
+      copyFileToCacheDir: true,
     ),
   );
 }

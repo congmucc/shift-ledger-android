@@ -33,6 +33,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   late DateTime _day;
   late DateTime _originalDay;
   late List<WorkEntry> _segments;
+  late bool _openedWithExistingDay;
   bool _showDangerActions = false;
 
   @override
@@ -41,6 +42,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     _day = dateOnly(widget.day ?? widget.state.now);
     _originalDay = _day;
     final existing = widget.state.entriesForDay(_day);
+    _openedWithExistingDay = existing.isNotEmpty;
     _segments = existing.isNotEmpty
         ? [...existing]
         : [widget.state.createTemplateEntry(day: _day)];
@@ -62,6 +64,8 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     final deleteTargetSummary = widget.state.summaryFor(
       DateRange.custom(deleteTargetDay, deleteTargetDay),
     );
+    final isCopyingToAnotherDay =
+        _openedWithExistingDay && !_isEditingOriginalDay;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -89,9 +93,11 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   ),
                 ],
               ),
-              if (widget.state.entriesForDay(_originalDay).isNotEmpty) ...[
-                const Text(
-                  '保存会覆盖当天记录。',
+              if (_openedWithExistingDay) ...[
+                Text(
+                  isCopyingToAnotherDay
+                      ? '当前是在已保存日期的基础上改到其他日期；保存后会在新日期新增一份，原日期保留。'
+                      : '保存会覆盖当天记录。',
                   style: TextStyle(
                     color: LedgerColors.muted,
                     fontSize: 13,
@@ -213,7 +219,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   color: LedgerColors.surfaceRaised,
                   padding: const EdgeInsets.all(14),
                   child: const Text(
-                    '当前没有分段了。点击保存会清空这一天，也可以继续新增分段。',
+                    '当前没有分段了。点击保存后不会新增记录，也可以继续新增分段。',
                     style: TextStyle(
                       color: LedgerColors.muted,
                       fontSize: 13,
@@ -406,6 +412,11 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     );
   }
 
+  WorkEntry _duplicateEntryToDay(WorkEntry entry, DateTime day) =>
+      _moveEntryToDay(entry, day).copyWith(id: newId('entry'));
+
+  bool get _isEditingOriginalDay => ymd(_day) == ymd(_originalDay);
+
   void _addSegment() {
     final template = widget.state.templates.firstWhere(
       (tpl) => tpl.type == EntryType.overtime,
@@ -441,7 +452,9 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
         title: '删除最后一段？',
         message: originalDayLabel == targetDayLabel
             ? '这一天只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时会清空 $targetDayLabel 的全部记录。'
-            : '当前只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时会清空原日期 $originalDayLabel 的记录，不会在 $targetDayLabel 新增任何分段。',
+            : _openedWithExistingDay
+            ? '当前只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时不会动原日期 $originalDayLabel，也不会在 $targetDayLabel 新增任何分段。'
+            : '当前只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时不会在 $targetDayLabel 新增任何分段。',
         confirmText: '确认删除',
         destructive: true,
         icon: Icons.delete_outline,
@@ -494,6 +507,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
         label: '撤销',
         onPressed: () => widget.state.restoreDeletedDay(deleted.id),
       ),
+      duration: const Duration(seconds: 4),
     );
   }
 
@@ -503,10 +517,14 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       final originalDayLabel = ymd(_originalDay);
       final confirmed = await showLedgerConfirmDialog(
         context,
-        title: '清空 $originalDayLabel 记录？',
+        title: _openedWithExistingDay && !_isEditingOriginalDay
+            ? '不新增 $targetDayLabel 记录？'
+            : '清空 $originalDayLabel 记录？',
         message: originalDayLabel == targetDayLabel
             ? '当前已经没有分段了。继续保存后，会清空 $originalDayLabel 这一天的全部记录。'
-            : '当前已经没有分段了。继续保存后，会清空原日期 $originalDayLabel 的记录，不会在 $targetDayLabel 新增任何分段。',
+            : _openedWithExistingDay
+            ? '当前已经没有分段了。继续保存后，会保留原日期 $originalDayLabel，不会在 $targetDayLabel 新增任何分段。'
+            : '当前已经没有分段了。继续保存后，不会在 $targetDayLabel 新增任何分段。',
         confirmText: '确认清空',
         destructive: true,
         icon: Icons.delete_sweep_outlined,
@@ -528,12 +546,24 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     final rootContext = Navigator.of(context, rootNavigator: true).context;
     final savedDay = _day;
     final clearedDay = _originalDay;
-    widget.state.replaceDayEntries(_originalDay, _day, _segments);
+    if (_openedWithExistingDay && !_isEditingOriginalDay) {
+      if (_segments.isNotEmpty) {
+        widget.state.addEntries(
+          _segments.map((entry) => _duplicateEntryToDay(entry, savedDay)),
+        );
+      }
+    } else {
+      widget.state.replaceDayEntries(_originalDay, _day, _segments);
+    }
     Navigator.pop(context);
     showLedgerSnackBar(
       rootContext,
       _segments.isEmpty
-          ? '已清空 ${ymd(clearedDay)} 记录'
+          ? _openedWithExistingDay && !_isEditingOriginalDay
+                ? '原日期保留，${ymd(savedDay)} 未新增记录'
+                : '已清空 ${ymd(clearedDay)} 记录'
+          : _openedWithExistingDay && !_isEditingOriginalDay
+          ? '已新增 ${ymd(savedDay)} 记录，${ymd(clearedDay)} 原记录保留'
           : '已保存 ${ymd(savedDay)} 记录',
     );
   }

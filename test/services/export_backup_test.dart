@@ -79,10 +79,7 @@ void main() {
     expect(decoded.entries, isNotEmpty);
     expect(decoded.webDavConfig.appPassword, isEmpty);
     expect(decoded.autoBackupConfig.enabled, isFalse);
-    expect(
-      decoded.autoBackupConfig.remotePath,
-      'shift-ledger-backup.json',
-    );
+    expect(decoded.autoBackupConfig.remotePath, 'shift-ledger-backup.json');
 
     state.restore(decoded);
     expect(state.webDavConfig.username, 'user@example.com');
@@ -249,6 +246,19 @@ void main() {
       expect(externalPath, isNull);
       expect(internalPath, isNotNull);
       expect(internalPath, startsWith('${tempDir.path}/backups/'));
+    },
+  );
+
+  test(
+    'repository uses injected external picker for cross-device restore',
+    () async {
+      final repository = LocalLedgerRepository(
+        externalPicker: () async => '/picked/shift-ledger-backup.json',
+      );
+
+      final path = await repository.pickBackupFilePath();
+
+      expect(path, '/picked/shift-ledger-backup.json');
     },
   );
 }

@@ -137,16 +137,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('列表'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('有备注'));
+      await tester.tap(find.byIcon(Icons.sticky_note_2_outlined).last);
       await tester.pumpAndSettle();
 
       expect(find.text('1日 → 31日'), findsOneWidget);
-      expect(find.text('这个月还没有有备注'), findsOneWidget);
+      expect(find.text('这个月还没有备注'), findsOneWidget);
       expect(find.text('切回“全部”或直接补一段。'), findsOneWidget);
       expect(find.textContaining('你可以先切回“全部”'), findsNothing);
 
       final headerTop = tester.getTopLeft(find.text('1日 → 31日')).dy;
-      final emptyTop = tester.getTopLeft(find.text('这个月还没有有备注')).dy;
+      final emptyTop = tester.getTopLeft(find.text('这个月还没有备注')).dy;
       expect(headerTop, lessThan(emptyTop));
     },
   );

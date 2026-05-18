@@ -255,7 +255,7 @@ void main() {
 
     await tester.tap(find.text('确认删除'));
     await tester.pumpAndSettle();
-    expect(find.text('当前没有分段了。点击保存会清空这一天，也可以继续新增分段。'), findsOneWidget);
+    expect(find.text('当前没有分段了。点击保存后不会新增记录，也可以继续新增分段。'), findsOneWidget);
     expect(state.entries.length, 1);
 
     await tester.ensureVisible(find.text('保存').last);
@@ -786,6 +786,27 @@ void main() {
     expect(find.text('补一段'), findsWidgets);
   });
 
+  testWidgets('calendar bottom add uses the selected day instead of today', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('下个月'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('＋').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存').last);
+    await tester.tap(find.text('保存').last);
+    await tester.pumpAndSettle();
+
+    expect(state.entriesForDay(DateTime(2026, 6, 1)), hasLength(1));
+    expect(state.entriesForDay(DateTime(2026, 5, 13)), isEmpty);
+  });
+
   testWidgets('calendar month picker stays usable at large text scale', (
     tester,
   ) async {
@@ -1303,7 +1324,7 @@ void main() {
   });
 
   testWidgets(
-    'moving a day onto another populated date preserves target entries and refreshes pay rule snapshot',
+    'changing a saved day to another date adds a copy and keeps the original day',
     (tester) async {
       final oldRule = PayRule.defaultHourly(hourlyRate: 35).copyWith(
         id: 'rule_old',
@@ -1351,13 +1372,21 @@ void main() {
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
 
-      final moved = state.entries.firstWhere(
+      final original = state.entries.firstWhere(
         (entry) => entry.id == 'source_entry',
       );
-      expect(ymd(moved.workDate), '2026-05-14');
-      expect(moved.payRuleId, 'rule_new');
-      expect(moved.payRuleSnapshot.id, 'rule_new');
+      expect(ymd(original.workDate), '2026-05-13');
+      expect(original.payRuleId, 'rule_old');
+      expect(original.payRuleSnapshot.id, 'rule_old');
+
+      final copied = state
+          .entriesForDay(DateTime(2026, 5, 14))
+          .firstWhere((entry) => entry.id != 'target_entry');
+      expect(copied.id, isNot('source_entry'));
+      expect(copied.payRuleId, 'rule_new');
+      expect(copied.payRuleSnapshot.id, 'rule_new');
       expect(state.entriesForDay(DateTime(2026, 5, 14)).length, 2);
+      expect(state.entriesForDay(DateTime(2026, 5, 13)).length, 1);
       expect(state.entries.any((entry) => entry.id == 'target_entry'), isTrue);
     },
   );

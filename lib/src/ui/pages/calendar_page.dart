@@ -9,8 +9,15 @@ import '../theme.dart';
 import '../widgets.dart';
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key, required this.state});
+  const CalendarPage({
+    super.key,
+    required this.state,
+    this.initialSelectedDay,
+    this.onSelectedDayChanged,
+  });
   final LedgerState state;
+  final DateTime? initialSelectedDay;
+  final ValueChanged<DateTime>? onSelectedDayChanged;
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -25,8 +32,9 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     super.initState();
-    _month = DateTime(widget.state.now.year, widget.state.now.month);
-    _selectedDay = widget.state.now;
+    final initialDay = dateOnly(widget.initialSelectedDay ?? widget.state.now);
+    _month = DateTime(initialDay.year, initialDay.month);
+    _selectedDay = initialDay;
   }
 
   @override
@@ -108,12 +116,16 @@ class _CalendarPageState extends State<CalendarPage> {
         LayoutBuilder(
           builder: (context, constraints) {
             final useWrappedFilters = constraints.maxWidth < 420;
+            final useCompactFilterLabels = constraints.maxWidth < 420;
             final chips = [
               for (final filter in _CalendarFilter.values)
                 _CalendarFilterChip(
                   icon: filter.icon,
-                  label: filter.label,
+                  label: useCompactFilterLabels
+                      ? filter.compactLabel
+                      : filter.label,
                   count: filterCounts[filter] ?? 0,
+                  showCount: !useCompactFilterLabels,
                   selected: filter.isAll
                       ? !hasActiveFilters
                       : _selectedFilters.contains(filter),
@@ -142,11 +154,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 ),
                 const SizedBox(height: 6),
                 if (useWrappedFilters)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: chips,
-                  )
+                  Wrap(spacing: 8, runSpacing: 8, children: chips)
                 else
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -238,6 +246,7 @@ class _CalendarPageState extends State<CalendarPage> {
   void _selectDay(DateTime day) => setState(() {
     _selectedDay = dateOnly(day);
     _month = DateTime(day.year, day.month);
+    widget.onSelectedDayChanged?.call(_selectedDay);
   });
 
   void _jumpToToday() => setState(() {
@@ -246,6 +255,7 @@ class _CalendarPageState extends State<CalendarPage> {
       _month,
       preferredDay: widget.state.now,
     );
+    widget.onSelectedDayChanged?.call(_selectedDay);
   });
 
   void _selectMonth(DateTime month) => setState(() => _applyMonth(month));
@@ -262,6 +272,7 @@ class _CalendarPageState extends State<CalendarPage> {
       targetMonth,
       preferredDay: defaultSelection,
     );
+    widget.onSelectedDayChanged?.call(_selectedDay);
   }
 
   void _changeFilter(_CalendarFilter filter) => setState(() {
@@ -941,9 +952,17 @@ extension on _CalendarFilter {
 
   String get label => switch (this) {
     _CalendarFilter.all => '全部',
-    _CalendarFilter.overtime => '加班段',
+    _CalendarFilter.overtime => '加班',
     _CalendarFilter.night => '夜班',
-    _CalendarFilter.note => '有备注',
+    _CalendarFilter.note => '备注',
+    _CalendarFilter.longDuration => '超时',
+  };
+
+  String get compactLabel => switch (this) {
+    _CalendarFilter.all => '全部',
+    _CalendarFilter.overtime => '加班',
+    _CalendarFilter.night => '夜班',
+    _CalendarFilter.note => '备注',
     _CalendarFilter.longDuration => '超时',
   };
 
@@ -972,6 +991,7 @@ class _CalendarFilterChip extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.count,
+    required this.showCount,
     required this.selected,
     required this.onSelected,
   });
@@ -979,6 +999,7 @@ class _CalendarFilterChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final int count;
+  final bool showCount;
   final bool selected;
   final VoidCallback onSelected;
 
@@ -1011,12 +1032,14 @@ class _CalendarFilterChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
+            textScaler: cappedTextScaler(context, maxScale: 1.08),
             style: TextStyle(
               color: selected ? Colors.white : LedgerColors.ink,
               fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
           ),
-          if (count > 0) ...[
+          if (showCount && count > 0) ...[
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),

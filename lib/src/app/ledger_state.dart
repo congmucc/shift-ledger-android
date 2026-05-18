@@ -209,6 +209,14 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addEntries(Iterable<WorkEntry> additions) {
+    final next = additions.toList();
+    if (next.isEmpty) return;
+    entries = [...entries, ...next]
+      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    notifyListeners();
+  }
+
   void upsertEntry(WorkEntry entry) {
     final index = entries.indexWhere((item) => item.id == entry.id);
     if (index >= 0) {
@@ -403,7 +411,9 @@ class LedgerState extends ChangeNotifier {
     nightRule: nightRule,
     payPeriod: payPeriod,
     webDavConfig: webDavConfig,
-    autoBackupConfig: autoBackupConfig.copyWith(remotePath: webDavConfig.remotePath),
+    autoBackupConfig: autoBackupConfig.copyWith(
+      remotePath: webDavConfig.remotePath,
+    ),
     recentDeletedDays: recentDeletedDays,
   );
 }

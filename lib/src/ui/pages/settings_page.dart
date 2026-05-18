@@ -553,12 +553,12 @@ class SettingsPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '恢复最近本地备份',
+                        '恢复本地备份',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        '适合快速回退；恢复前可先再导出一份当前数据。',
+                        '可快速回退最近备份，也支持选择其他手机导出的 JSON 备份文件。',
                         style: TextStyle(
                           color: LedgerColors.muted,
                           fontSize: 13,
@@ -573,6 +573,16 @@ class SettingsPage extends StatelessWidget {
                               ? null
                               : () => _restoreLatestBackup(context),
                           child: const Text('从最近本地备份恢复'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: repository == null
+                              ? null
+                              : () => _restoreFromPickedBackup(context),
+                          child: const Text('选择备份文件恢复'),
                         ),
                       ),
                     ],
@@ -616,31 +626,47 @@ class SettingsPage extends StatelessWidget {
       final path = await repository!.latestBackupPath();
       if (!context.mounted) return;
       if (path == null) {
-        showLedgerSnackBar(context, '还没有本地备份');
+        showLedgerSnackBar(context, '没有最近本地备份，请选择备份文件');
+        await _restoreFromPickedBackup(context);
         return;
       }
-      final confirmed = await showLedgerConfirmDialog(
-        context,
-        title: '恢复备份？',
-        message: '将用 $path 覆盖当前账本。',
-        confirmText: '确认恢复',
-        icon: Icons.restore_page_outlined,
-      );
-      if (confirmed != true) return;
-      if (!context.mounted) return;
-      final backup = await repository!.readBackupResult(path);
-      state.restore(backup.snapshot);
-      if (!context.mounted) return;
-      final warning = decodeWarningMessage(backup.diagnostics);
-      showLedgerSnackBar(
-        context,
-        warning == null ? '已从本地备份恢复' : '已从本地备份恢复；$warning',
-      );
+      await _restoreBackupFromPath(context, path);
     } catch (_) {
       if (context.mounted) {
         showLedgerSnackBar(context, '读取本地备份失败，请确认备份文件仍可访问');
       }
     }
+  }
+
+  Future<void> _restoreFromPickedBackup(BuildContext context) async {
+    try {
+      final path = await repository!.pickBackupFilePath();
+      if (!context.mounted || path == null) return;
+      await _restoreBackupFromPath(context, path);
+    } catch (_) {
+      if (context.mounted) {
+        showLedgerSnackBar(context, '读取备份文件失败，请确认选择的是可访问的 JSON 备份');
+      }
+    }
+  }
+
+  Future<void> _restoreBackupFromPath(BuildContext context, String path) async {
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '恢复备份？',
+      message: '将用 $path 覆盖当前账本。',
+      confirmText: '确认恢复',
+      icon: Icons.restore_page_outlined,
+    );
+    if (confirmed != true || !context.mounted) return;
+    final backup = await repository!.readBackupResult(path);
+    state.restore(backup.snapshot);
+    if (!context.mounted) return;
+    final warning = decodeWarningMessage(backup.diagnostics);
+    showLedgerSnackBar(
+      context,
+      warning == null ? '已从本地备份恢复' : '已从本地备份恢复；$warning',
+    );
   }
 
   Future<void> _showRecentlyDeletedSheet(BuildContext context) async {

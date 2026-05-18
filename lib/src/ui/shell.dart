@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../domain/models.dart';
 import '../services/local_ledger_repository.dart';
 import 'edit_entry_sheet.dart';
 import 'pages/calendar_page.dart';
@@ -20,10 +21,12 @@ class LedgerShell extends StatefulWidget {
 
 class _LedgerShellState extends State<LedgerShell> {
   int _index = 0;
+  DateTime? _calendarSelectedDay;
 
   @override
   Widget build(BuildContext context) {
     final state = LedgerScope.of(context);
+    _calendarSelectedDay ??= state.now;
     final pages = [
       HomePage(
         state: state,
@@ -31,7 +34,12 @@ class _LedgerShellState extends State<LedgerShell> {
         openSummary: () => setState(() => _index = 3),
         openSettings: () => setState(() => _index = 4),
       ),
-      CalendarPage(state: state),
+      CalendarPage(
+        state: state,
+        initialSelectedDay: _calendarSelectedDay,
+        onSelectedDayChanged: (day) =>
+            setState(() => _calendarSelectedDay = dateOnly(day)),
+      ),
       SummaryPage(state: state, repository: widget.repository),
       SettingsPage(state: state, repository: widget.repository),
     ];
@@ -87,7 +95,13 @@ class _LedgerShellState extends State<LedgerShell> {
                           button: true,
                           label: '新增工时记录',
                           child: InkWell(
-                            onTap: () => showEditWorkEntrySheet(context, state),
+                            onTap: () => showEditWorkEntrySheet(
+                              context,
+                              state,
+                              day: _index == 1
+                                  ? _calendarSelectedDay ?? state.now
+                                  : state.now,
+                            ),
                             borderRadius: BorderRadius.circular(99),
                             child: Container(
                               width: 56,
