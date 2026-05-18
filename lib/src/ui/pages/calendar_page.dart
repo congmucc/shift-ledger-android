@@ -105,14 +105,25 @@ class _CalendarPageState extends State<CalendarPage> {
               setState(() => _listMode = values.first),
         ),
         const SizedBox(height: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final showSwipeHint =
-                    !hasActiveFilters && constraints.maxWidth < 420;
-                return Row(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useWrappedFilters = constraints.maxWidth < 420;
+            final chips = [
+              for (final filter in _CalendarFilter.values)
+                _CalendarFilterChip(
+                  icon: filter.icon,
+                  label: filter.label,
+                  count: filterCounts[filter] ?? 0,
+                  selected: filter.isAll
+                      ? !hasActiveFilters
+                      : _selectedFilters.contains(filter),
+                  onSelected: () => _changeFilter(filter),
+                ),
+            ];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
                     const Icon(
                       Icons.tune_rounded,
@@ -122,57 +133,36 @@ class _CalendarPageState extends State<CalendarPage> {
                     const SizedBox(width: 6),
                     Text('筛选', style: Theme.of(context).textTheme.labelMedium),
                     const Spacer(),
-                    if (showSwipeHint)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(
-                            Icons.swipe_left_alt_rounded,
-                            size: 16,
-                            color: LedgerColors.muted,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '左右滑动',
-                            style: TextStyle(
-                              color: LedgerColors.muted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      )
-                    else if (hasActiveFilters)
+                    if (hasActiveFilters)
                       TextButton(
                         onPressed: _clearFilters,
                         child: const Text('清除'),
                       ),
                   ],
-                );
-              },
-            ),
-            const SizedBox(height: 6),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final filter in _CalendarFilter.values) ...[
-                    _CalendarFilterChip(
-                      icon: filter.icon,
-                      label: filter.label,
-                      count: filterCounts[filter] ?? 0,
-                      selected: filter.isAll
-                          ? !hasActiveFilters
-                          : _selectedFilters.contains(filter),
-                      onSelected: () => _changeFilter(filter),
+                ),
+                const SizedBox(height: 6),
+                if (useWrappedFilters)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: chips,
+                  )
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (var index = 0; index < chips.length; index++) ...[
+                          chips[index],
+                          if (index != chips.length - 1)
+                            const SizedBox(width: 8),
+                        ],
+                      ],
                     ),
-                    if (filter != _CalendarFilter.values.last)
-                      const SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                  ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 10),
         if (_listMode)

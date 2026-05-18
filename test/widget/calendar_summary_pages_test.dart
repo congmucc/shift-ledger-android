@@ -229,7 +229,9 @@ void main() {
 
     await tester.tap(find.text('日历'));
     await tester.pumpAndSettle();
-    expect(find.text('左右滑动'), findsOneWidget);
+    expect(find.text('全部'), findsOneWidget);
+    expect(find.text('超时'), findsOneWidget);
+    expect(find.text('左右滑动'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('新增分段'),
       240,
@@ -241,5 +243,20 @@ void main() {
     expect(find.text('新增分段'), findsOneWidget);
     expect(find.text('休息日可留空，需要时再补录。'), findsOneWidget);
     expect(find.textContaining('如果这天只是休息，可以直接留空'), findsNothing);
+  });
+
+  testWidgets('calendar filter chips stay fully visible on phone width', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(ShiftLedgerApp(state: buildMultiFilterState()));
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('超时'), findsOneWidget);
+    final timeoutChipRight = tester.getTopRight(find.text('超时')).dx;
+    expect(timeoutChipRight, lessThanOrEqualTo(390));
   });
 }
