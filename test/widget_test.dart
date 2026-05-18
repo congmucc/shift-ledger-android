@@ -28,4 +28,15 @@ void main() {
     expect(find.text('本地账本读取失败'), findsOneWidget);
     expect(find.textContaining('设置 > 本地备份/恢复'), findsOneWidget);
   });
+
+  test('bootstrap skips unsupported local persistence without a fake error', () async {
+    final bootstrap = await bootstrapShiftLedgerApp(
+      localPersistenceSupported: false,
+      now: DateTime(2026, 5, 13),
+    );
+
+    expect(bootstrap.repository, isNull);
+    expect(bootstrap.startupNotice, isNull);
+    expect(bootstrap.state.entries, isEmpty);
+  });
 }

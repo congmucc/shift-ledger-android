@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -26,15 +27,24 @@ class AppBootstrapResult {
   });
 
   final LedgerState state;
-  final LocalLedgerRepository repository;
+  final LocalLedgerRepository? repository;
   final AppStartupNotice? startupNotice;
 }
 
 Future<AppBootstrapResult> bootstrapShiftLedgerApp({
   LocalLedgerRepository? repository,
+  bool localPersistenceSupported = !kIsWeb,
   DateTime? now,
 }) async {
-  final resolvedRepository = repository ?? LocalLedgerRepository();
+  final resolvedRepository = localPersistenceSupported
+      ? (repository ?? LocalLedgerRepository())
+      : repository;
+  if (resolvedRepository == null) {
+    return AppBootstrapResult(
+      state: LedgerState.empty(now: now),
+      repository: null,
+    );
+  }
   try {
     final loaded = await resolvedRepository.loadDetailed();
     if (loaded == null) {
