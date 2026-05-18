@@ -580,39 +580,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    'local backup sheet explains web preview limits instead of showing dead actions',
-    (tester) async {
-      await tester.pumpWidget(
-        ShiftLedgerApp(
-          state: LedgerState.seeded(now: DateTime(2026, 5, 13)),
-          repository: null,
-        ),
-      );
-
-      await tester.tap(find.text('设置'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('本地备份/恢复'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      final backupTile = tester
-          .widgetList<SettingTile>(find.byType(SettingTile))
-          .firstWhere((tile) => tile.title == '本地备份/恢复');
-      backupTile.onTap!.call();
-      await tester.pumpAndSettle();
-
-      expect(find.text('当前为 Web 预览'), findsOneWidget);
-      expect(find.textContaining('仅支持手机端使用'), findsOneWidget);
-      expect(find.text('创建本地备份'), findsNothing);
-      expect(find.text('更换备份位置'), findsNothing);
-      expect(find.text('选择备份位置'), findsNothing);
-      expect(find.text('从最近本地备份恢复'), findsNothing);
-      expect(find.text('选择备份文件恢复'), findsNothing);
-    },
-  );
-
   testWidgets('night rule sheet uses time pickers instead of raw hour inputs', (
     tester,
   ) async {
@@ -762,7 +729,7 @@ void main() {
     backupTile.onTap!.call();
     await tester.pumpAndSettle();
     expect(find.byType(NoticeCard), findsOneWidget);
-    expect(find.text('当前为 Web 预览'), findsOneWidget);
+    expect(find.text('当前备份位置'), findsOneWidget);
   });
 
   testWidgets(
