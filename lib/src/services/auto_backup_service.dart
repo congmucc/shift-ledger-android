@@ -22,7 +22,10 @@ class AutoBackupService {
 
   Future<AutoBackupConfig> run({required LedgerState state}) async {
     final now = nowProvider?.call() ?? DateTime.now();
-    final config = state.autoBackupConfig;
+    final effectiveRemotePath = state.webDavConfig.remotePath;
+    final config = state.autoBackupConfig.copyWith(
+      remotePath: effectiveRemotePath,
+    );
 
     if (!config.enabled) {
       return _apply(state, config.copyWith(lastStatus: AutoBackupStatus.idle));
@@ -88,7 +91,7 @@ class AutoBackupService {
 
     try {
       final uploadConfig = state.webDavConfig.copyWith(
-        remotePath: config.remotePath,
+        remotePath: effectiveRemotePath,
       );
       await (uploader ?? WebDavClient().uploadBackup)(
         uploadConfig,
@@ -125,7 +128,7 @@ class AutoBackupService {
   String _contentHash(LedgerState state) {
     final stableConfig = AutoBackupConfig(
       enabled: state.autoBackupConfig.enabled,
-      remotePath: state.autoBackupConfig.remotePath,
+      remotePath: state.webDavConfig.remotePath,
     );
     final payload = _payloadWithAutoConfig(state, stableConfig);
     return sha256.convert(utf8.encode(payload)).toString();

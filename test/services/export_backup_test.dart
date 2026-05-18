@@ -81,7 +81,7 @@ void main() {
     expect(decoded.autoBackupConfig.enabled, isFalse);
     expect(
       decoded.autoBackupConfig.remotePath,
-      'shift-ledger-auto-latest.json',
+      'shift-ledger-backup.json',
     );
 
     state.restore(decoded);

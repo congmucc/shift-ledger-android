@@ -111,9 +111,7 @@ void main() {
       expect(result.lastStatus, AutoBackupStatus.waiting);
     });
 
-    test(
-      'eligible config uploads automatic latest file and updates status',
-      () async {
+    test('eligible config uploads the unified backup file and updates status', () async {
         final upload = _UploadSpy();
         final now = DateTime(2026, 5, 13, 9);
         final state = _configuredState();
@@ -126,7 +124,7 @@ void main() {
         expect(upload.calls, hasLength(1));
         expect(
           upload.calls.single.config.remotePath,
-          'shift-ledger-auto-latest.json',
+          'manual-backup.json',
         );
         expect(
           upload.calls.single.payload,
@@ -139,6 +137,7 @@ void main() {
         expect(result.dailySuccessCount, 1);
         expect(result.lastContentHash, isNotEmpty);
         expect(state.autoBackupConfig.lastStatus, AutoBackupStatus.success);
+        expect(state.autoBackupConfig.remotePath, 'manual-backup.json');
       },
     );
 

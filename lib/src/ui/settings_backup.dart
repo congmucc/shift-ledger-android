@@ -39,7 +39,7 @@ BackupStatusDisplay buildBackupStatusDisplay({
       summary: autoConfig.lastSuccessAt == null
           ? '自动备份正常'
           : '自动备份正常；最近成功 ${dateTimeText(autoConfig.lastSuccessAt!)}',
-      detail: '云端文件 ${autoConfig.remotePath}',
+      detail: '云端文件 ${webDavConfig.remotePath}',
     ),
     AutoBackupStatus.skipped => BackupStatusDisplay(
       summary: '内容未变化，已跳过',
@@ -337,7 +337,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 _StatusLine(label: '状态说明', value: backupStatus.detail),
                 _StatusLine(
                   label: '云端文件',
-                  value: widget.state.autoBackupConfig.remotePath,
+                  value: _config().remotePath,
                 ),
                 _StatusLine(
                   label: '上次自动备份',

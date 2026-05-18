@@ -362,6 +362,7 @@ class LedgerState extends ChangeNotifier {
 
   void updateWebDavConfig(WebDavConfig config) {
     webDavConfig = config;
+    autoBackupConfig = autoBackupConfig.copyWith(remotePath: config.remotePath);
     notifyListeners();
   }
 
@@ -388,7 +389,9 @@ class LedgerState extends ChangeNotifier {
     nightRule = snapshot.nightRule;
     payPeriod = snapshot.payPeriod;
     webDavConfig = snapshot.webDavConfig.sanitized();
-    autoBackupConfig = snapshot.autoBackupConfig;
+    autoBackupConfig = snapshot.autoBackupConfig.copyWith(
+      remotePath: snapshot.webDavConfig.remotePath,
+    );
     recentDeletedDays = snapshot.recentDeletedDays;
     notifyListeners();
   }
@@ -400,7 +403,7 @@ class LedgerState extends ChangeNotifier {
     nightRule: nightRule,
     payPeriod: payPeriod,
     webDavConfig: webDavConfig,
-    autoBackupConfig: autoBackupConfig,
+    autoBackupConfig: autoBackupConfig.copyWith(remotePath: webDavConfig.remotePath),
     recentDeletedDays: recentDeletedDays,
   );
 }

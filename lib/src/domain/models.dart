@@ -899,7 +899,7 @@ class WebDavConfig {
 class AutoBackupConfig {
   const AutoBackupConfig({
     this.enabled = false,
-    this.remotePath = 'shift-ledger-auto-latest.json',
+    this.remotePath = 'shift-ledger-backup.json',
     this.lastSuccessAt,
     this.lastAttemptAt,
     this.lastContentHash = '',
@@ -957,7 +957,7 @@ class AutoBackupConfig {
       AutoBackupConfig(
         enabled: json['enabled'] == true,
         remotePath:
-            json['remotePath'] as String? ?? 'shift-ledger-auto-latest.json',
+            json['remotePath'] as String? ?? 'shift-ledger-backup.json',
         lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
         lastContentHash: json['lastContentHash'] as String? ?? '',

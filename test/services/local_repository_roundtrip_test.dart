@@ -36,7 +36,7 @@ void main() {
       ..updateAutoBackupConfig(
         const AutoBackupConfig(
           enabled: true,
-          remotePath: 'shift-ledger-auto-latest.json',
+          remotePath: 'manual-backup.json',
         ),
       );
 
