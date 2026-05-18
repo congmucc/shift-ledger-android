@@ -1391,6 +1391,44 @@ void main() {
     },
   );
 
+  testWidgets(
+    'copying the same saved day to the same target again does not accumulate duplicates',
+    (tester) async {
+      final rule = PayRule.defaultHourly(hourlyRate: 35);
+      final state = LedgerState(
+        now: DateTime(2026, 5, 13),
+        payRules: [rule],
+        templates: [ShiftTemplate.standard(payRuleId: rule.id)],
+        entries: [
+          WorkEntry.create(
+            id: 'source_entry',
+            workDate: DateTime(2026, 5, 13),
+            startDateTime: DateTime(2026, 5, 13, 9),
+            endDateTime: DateTime(2026, 5, 13, 18),
+            breakMinutes: 60,
+            type: EntryType.regular,
+            payRule: rule,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byTooltip('编辑').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('明天'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('保存').last);
+        await tester.tap(find.text('保存').last);
+        await tester.pumpAndSettle();
+      }
+
+      expect(state.entriesForDay(DateTime(2026, 5, 13)).length, 1);
+      expect(state.entriesForDay(DateTime(2026, 5, 14)).length, 1);
+    },
+  );
+
   testWidgets('enabling auto backup saves current WebDAV fields first', (
     tester,
   ) async {

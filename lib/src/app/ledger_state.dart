@@ -217,6 +217,23 @@ class LedgerState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void replaceCopiedDayEntries(
+    DateTime sourceDay,
+    DateTime targetDay,
+    List<WorkEntry> replacements,
+  ) {
+    final sourceKey = ymd(sourceDay);
+    final targetKey = ymd(targetDay);
+    entries = [
+      for (final entry in entries)
+        if (!(ymd(entry.workDate) == targetKey &&
+            entry.copiedFromDayKey == sourceKey))
+          entry,
+      ...replacements,
+    ]..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    notifyListeners();
+  }
+
   void upsertEntry(WorkEntry entry) {
     final index = entries.indexWhere((item) => item.id == entry.id);
     if (index >= 0) {

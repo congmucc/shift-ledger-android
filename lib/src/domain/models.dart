@@ -637,6 +637,7 @@ class WorkEntry {
     this.jobTypeName = '',
     required this.payRuleId,
     required this.payRuleSnapshot,
+    this.copiedFromDayKey,
     this.note = '',
     this.adjustments = const [],
     this.isRestDayOvertime = false,
@@ -653,6 +654,7 @@ class WorkEntry {
     String locationName = '',
     String jobTypeName = '',
     required PayRule payRule,
+    String? copiedFromDayKey,
     String note = '',
     List<Adjustment> adjustments = const [],
     bool isRestDayOvertime = false,
@@ -670,6 +672,7 @@ class WorkEntry {
       jobTypeName: jobTypeName,
       payRuleId: payRule.id,
       payRuleSnapshot: payRule,
+      copiedFromDayKey: copiedFromDayKey,
       note: note,
       adjustments: adjustments,
       isRestDayOvertime: isRestDayOvertime,
@@ -687,6 +690,7 @@ class WorkEntry {
   final String jobTypeName;
   final String payRuleId;
   final PayRule payRuleSnapshot;
+  final String? copiedFromDayKey;
   final String note;
   final List<Adjustment> adjustments;
   final bool isRestDayOvertime;
@@ -727,6 +731,7 @@ class WorkEntry {
     String? jobTypeName,
     String? payRuleId,
     PayRule? payRuleSnapshot,
+    String? copiedFromDayKey,
     String? note,
     List<Adjustment>? adjustments,
     bool? isRestDayOvertime,
@@ -742,6 +747,7 @@ class WorkEntry {
     jobTypeName: jobTypeName ?? this.jobTypeName,
     payRuleId: payRuleId ?? this.payRuleId,
     payRuleSnapshot: payRuleSnapshot ?? this.payRuleSnapshot,
+    copiedFromDayKey: copiedFromDayKey ?? this.copiedFromDayKey,
     note: note ?? this.note,
     adjustments: adjustments ?? this.adjustments,
     isRestDayOvertime: isRestDayOvertime ?? this.isRestDayOvertime,
@@ -759,6 +765,7 @@ class WorkEntry {
     'jobTypeName': jobTypeName,
     'payRuleId': payRuleId,
     'payRuleSnapshot': payRuleSnapshot.toJson(),
+    'copiedFromDayKey': copiedFromDayKey,
     'note': note,
     'adjustments': adjustments.map((a) => a.toJson()).toList(),
     'isRestDayOvertime': isRestDayOvertime,
@@ -778,6 +785,7 @@ class WorkEntry {
     payRuleSnapshot: PayRule.fromJson(
       Map<String, Object?>.from(json['payRuleSnapshot'] as Map? ?? {}),
     ),
+    copiedFromDayKey: json['copiedFromDayKey'] as String?,
     note: json['note'] as String? ?? '',
     adjustments: ((json['adjustments'] as List?) ?? const [])
         .whereType<Map>()
@@ -956,8 +964,7 @@ class AutoBackupConfig {
   factory AutoBackupConfig.fromJson(Map<String, Object?> json) =>
       AutoBackupConfig(
         enabled: json['enabled'] == true,
-        remotePath:
-            json['remotePath'] as String? ?? 'shift-ledger-backup.json',
+        remotePath: json['remotePath'] as String? ?? 'shift-ledger-backup.json',
         lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
         lastContentHash: json['lastContentHash'] as String? ?? '',

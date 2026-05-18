@@ -413,7 +413,10 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   WorkEntry _duplicateEntryToDay(WorkEntry entry, DateTime day) =>
-      _moveEntryToDay(entry, day).copyWith(id: newId('entry'));
+      _moveEntryToDay(
+        entry,
+        day,
+      ).copyWith(id: newId('entry'), copiedFromDayKey: ymd(_originalDay));
 
   bool get _isEditingOriginalDay => ymd(_day) == ymd(_originalDay);
 
@@ -523,7 +526,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
         message: originalDayLabel == targetDayLabel
             ? '当前已经没有分段了。继续保存后，会清空 $originalDayLabel 这一天的全部记录。'
             : _openedWithExistingDay
-            ? '当前已经没有分段了。继续保存后，会保留原日期 $originalDayLabel，不会在 $targetDayLabel 新增任何分段。'
+            ? '当前已经没有分段了。继续保存后，会保留原日期 $originalDayLabel，并清空 $targetDayLabel 里这次从原日期复制过去的记录。'
             : '当前已经没有分段了。继续保存后，不会在 $targetDayLabel 新增任何分段。',
         confirmText: '确认清空',
         destructive: true,
@@ -547,11 +550,13 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     final savedDay = _day;
     final clearedDay = _originalDay;
     if (_openedWithExistingDay && !_isEditingOriginalDay) {
-      if (_segments.isNotEmpty) {
-        widget.state.addEntries(
-          _segments.map((entry) => _duplicateEntryToDay(entry, savedDay)),
-        );
-      }
+      widget.state.replaceCopiedDayEntries(
+        _originalDay,
+        _day,
+        _segments
+            .map((entry) => _duplicateEntryToDay(entry, savedDay))
+            .toList(),
+      );
     } else {
       widget.state.replaceDayEntries(_originalDay, _day, _segments);
     }
@@ -560,10 +565,10 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       rootContext,
       _segments.isEmpty
           ? _openedWithExistingDay && !_isEditingOriginalDay
-                ? '原日期保留，${ymd(savedDay)} 未新增记录'
+                ? '已清空 ${ymd(savedDay)} 里从 ${ymd(clearedDay)} 复制的记录，原日期保留'
                 : '已清空 ${ymd(clearedDay)} 记录'
           : _openedWithExistingDay && !_isEditingOriginalDay
-          ? '已新增 ${ymd(savedDay)} 记录，${ymd(clearedDay)} 原记录保留'
+          ? '已同步到 ${ymd(savedDay)}，${ymd(clearedDay)} 原记录保留'
           : '已保存 ${ymd(savedDay)} 记录',
     );
   }

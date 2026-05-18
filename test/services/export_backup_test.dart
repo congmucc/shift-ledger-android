@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
+import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
 import 'package:shift_ledger/src/services/backup_service.dart';
@@ -246,6 +248,56 @@ void main() {
       expect(externalPath, isNull);
       expect(internalPath, isNotNull);
       expect(internalPath, startsWith('${tempDir.path}/backups/'));
+    },
+  );
+
+  test(
+    'production backup remembers the first picked directory and auto-saves later backups there',
+    () async {
+      final originalPlatform = FlutterSecureStoragePlatform.instance;
+      FlutterSecureStoragePlatform.instance = TestFlutterSecureStoragePlatform(
+        <String, String>{},
+      );
+      addTearDown(
+        () => FlutterSecureStoragePlatform.instance = originalPlatform,
+      );
+
+      final tempDir = await Directory.systemTemp.createTemp(
+        'shift-ledger-backup-remember-dir-test',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+      final pickedDirectories = <String>[];
+      final savedRequests = <DirectorySaveRequest>[];
+      final repository = LocalLedgerRepository(
+        rootDirectoryProvider: () async => tempDir,
+        directorySupportChecker: () async => true,
+        directoryPicker: () async {
+          pickedDirectories.add('content://picked/ledger-backups');
+          return 'content://picked/ledger-backups';
+        },
+        directorySaver: (request) async {
+          savedRequests.add(request);
+          return '/picked/${request.fileName}';
+        },
+        externalSaver: (_) async =>
+            throw StateError('should not open the one-off save dialog'),
+      );
+
+      final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+      final firstPath = await repository.writeBackup(state.toSnapshot());
+      final secondPath = await repository.writeBackup(state.toSnapshot());
+
+      expect(firstPath, startsWith('/picked/shift-ledger-backup-'));
+      expect(secondPath, startsWith('/picked/shift-ledger-backup-'));
+      expect(pickedDirectories, hasLength(1));
+      expect(savedRequests, hasLength(2));
+      expect(
+        savedRequests.every(
+          (request) =>
+              request.directoryUri == 'content://picked/ledger-backups',
+        ),
+        isTrue,
+      );
     },
   );
 

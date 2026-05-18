@@ -525,7 +525,7 @@ class SettingsPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        '会导出 JSON，并同步更新最近本地备份。',
+                        '会导出 JSON，并同步更新最近本地备份；首次选位置后，后续会自动保存到同一位置。',
                         style: TextStyle(
                           color: LedgerColors.muted,
                           fontSize: 13,
@@ -601,7 +601,7 @@ class SettingsPage extends StatelessWidget {
       context,
       title: '创建本地备份？',
       content:
-          '会打开系统保存面板，请选择 JSON 备份保存位置；同时保留一份 App 私有备份用于“最近本地备份恢复”。备份不包含 WebDAV 应用授权密码。',
+          '首次会让你选一个备份位置，后续会自动保存到同一位置；同时保留一份 App 私有备份用于“最近本地备份恢复”。备份不包含 WebDAV 应用授权密码。',
       confirmText: '确认备份',
     );
     if (confirmed != true) return;
