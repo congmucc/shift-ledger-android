@@ -204,9 +204,22 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 WorkEntryTile(
                   entry: entry,
                   onEdit: () => _editSegment(entry),
-                  onDelete: _segments.length == 1
-                      ? null
-                      : () => _confirmDeleteSegment(entry),
+                  onDelete: () => _confirmDeleteSegment(entry),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (_segments.isEmpty) ...[
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(14),
+                  child: const Text(
+                    '当前没有分段了。点击保存会清空这一天，也可以继续新增分段。',
+                    style: TextStyle(
+                      color: LedgerColors.muted,
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],
@@ -420,6 +433,26 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _confirmDeleteSegment(WorkEntry entry) async {
+    if (_segments.length == 1) {
+      final targetDayLabel = ymd(_day);
+      final originalDayLabel = ymd(_originalDay);
+      final confirmed = await showLedgerConfirmDialog(
+        context,
+        title: '删除最后一段？',
+        message: originalDayLabel == targetDayLabel
+            ? '这一天只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时会清空 $targetDayLabel 的全部记录。'
+            : '当前只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时会清空原日期 $originalDayLabel 的记录，不会在 $targetDayLabel 新增任何分段。',
+        confirmText: '确认删除',
+        destructive: true,
+        icon: Icons.delete_outline,
+      );
+      if (confirmed != true || !mounted) return;
+      setState(() {
+        _showDangerActions = false;
+        _segments.removeWhere((item) => item.id == entry.id);
+      });
+      return;
+    }
     final confirmed = await showLedgerConfirmDialog(
       context,
       title: '删除本段？',
@@ -465,6 +498,21 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _save() async {
+    if (_segments.isEmpty) {
+      final targetDayLabel = ymd(_day);
+      final originalDayLabel = ymd(_originalDay);
+      final confirmed = await showLedgerConfirmDialog(
+        context,
+        title: '清空 $originalDayLabel 记录？',
+        message: originalDayLabel == targetDayLabel
+            ? '当前已经没有分段了。继续保存后，会清空 $originalDayLabel 这一天的全部记录。'
+            : '当前已经没有分段了。继续保存后，会清空原日期 $originalDayLabel 的记录，不会在 $targetDayLabel 新增任何分段。',
+        confirmText: '确认清空',
+        destructive: true,
+        icon: Icons.delete_sweep_outlined,
+      );
+      if (confirmed != true || !mounted) return;
+    }
     if (_hasOverlaps()) {
       final confirmed = await showLedgerConfirmDialog(
         context,
@@ -479,9 +527,15 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     if (!context.mounted) return;
     final rootContext = Navigator.of(context, rootNavigator: true).context;
     final savedDay = _day;
+    final clearedDay = _originalDay;
     widget.state.replaceDayEntries(_originalDay, _day, _segments);
     Navigator.pop(context);
-    showLedgerSnackBar(rootContext, '已保存 ${ymd(savedDay)} 记录');
+    showLedgerSnackBar(
+      rootContext,
+      _segments.isEmpty
+          ? '已清空 ${ymd(clearedDay)} 记录'
+          : '已保存 ${ymd(savedDay)} 记录',
+    );
   }
 
   bool _hasOverlaps() {

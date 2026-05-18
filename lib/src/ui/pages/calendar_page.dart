@@ -20,7 +20,7 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _month;
   late DateTime _selectedDay;
   bool _listMode = false;
-  _CalendarFilter _filter = _CalendarFilter.all;
+  final Set<_CalendarFilter> _selectedFilters = <_CalendarFilter>{};
 
   @override
   void initState() {
@@ -39,10 +39,13 @@ class _CalendarPageState extends State<CalendarPage> {
         )
         .toList();
     final recordSummary = summarizeRecordEntries(monthEntries);
+    final hasActiveFilters = _selectedFilters.isNotEmpty;
+    final activeFilterLabel = _calendarFilterSelectionLabel(_selectedFilters);
+    final activeFilterIcon = _calendarFilterSelectionIcon(_selectedFilters);
     final selectedMatchesFilter =
-        _filter.isAll || _matchesCurrentFilter(_selectedDay);
+        !hasActiveFilters || _matchesActiveFilters(_selectedDay);
     final monthHasFilterMatch =
-        _filter.isAll || _firstMatchingDayInMonth(_month) != null;
+        !hasActiveFilters || _firstMatchingDayInMonth(_month) != null;
     final selectedEntries = widget.state.entriesForDay(_selectedDay);
     final filterCounts = {
       for (final filter in _CalendarFilter.values)
@@ -107,7 +110,7 @@ class _CalendarPageState extends State<CalendarPage> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final showSwipeHint =
-                    _filter.isAll && constraints.maxWidth < 420;
+                    !hasActiveFilters && constraints.maxWidth < 420;
                 return Row(
                   children: [
                     const Icon(
@@ -138,9 +141,9 @@ class _CalendarPageState extends State<CalendarPage> {
                           ),
                         ],
                       )
-                    else if (!_filter.isAll)
+                    else if (hasActiveFilters)
                       TextButton(
-                        onPressed: () => _changeFilter(_CalendarFilter.all),
+                        onPressed: _clearFilters,
                         child: const Text('清除'),
                       ),
                   ],
@@ -157,7 +160,9 @@ class _CalendarPageState extends State<CalendarPage> {
                       icon: filter.icon,
                       label: filter.label,
                       count: filterCounts[filter] ?? 0,
-                      selected: _filter == filter,
+                      selected: filter.isAll
+                          ? !hasActiveFilters
+                          : _selectedFilters.contains(filter),
                       onSelected: () => _changeFilter(filter),
                     ),
                     if (filter != _CalendarFilter.values.last)
@@ -174,8 +179,10 @@ class _CalendarPageState extends State<CalendarPage> {
             state: widget.state,
             range: range,
             onSelect: _selectDay,
-            filter: _filter,
-            matchesDay: _matchesCurrentFilter,
+            filters: _selectedFilters,
+            activeFilterLabel: activeFilterLabel,
+            activeFilterIcon: activeFilterIcon,
+            matchesDay: _matchesActiveFilters,
           )
         else
           _MonthGrid(
@@ -184,22 +191,22 @@ class _CalendarPageState extends State<CalendarPage> {
             selectedDay: _selectedDay,
             onSelect: _selectDay,
             onMonthChanged: _selectMonth,
-            matchesDay: _matchesCurrentFilter,
-            filter: _filter,
+            filters: _selectedFilters,
+            matchesDay: _matchesActiveFilters,
           ),
         SectionHeader(
-          title: !_filter.isAll && !monthHasFilterMatch
-              ? '${_month.month} 月暂无${_filter.label}记录'
+          title: hasActiveFilters && !monthHasFilterMatch
+              ? '${_month.month} 月暂无$activeFilterLabel记录'
               : selectedEntries.isEmpty
               ? ymd(_selectedDay) == ymd(widget.state.now)
                     ? '今日 · 暂无记录'
                     : '${_selectedDay.month} 月 ${_selectedDay.day} 日 · 暂无记录'
-              : '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情${selectedMatchesFilter ? '' : '（未命中${_filter.label}）'}',
+              : '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情${selectedMatchesFilter ? '' : '（未命中$activeFilterLabel）'}',
           actionLabel: '补一段',
           onAction: () =>
               showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
         ),
-        if (!_filter.isAll && !selectedMatchesFilter) ...[
+        if (hasActiveFilters && !selectedMatchesFilter) ...[
           LedgerCard(
             padding: const EdgeInsets.all(12),
             color: LedgerColors.warningOrangeSoft,
@@ -218,8 +225,8 @@ class _CalendarPageState extends State<CalendarPage> {
                 Expanded(
                   child: Text(
                     monthHasFilterMatch
-                        ? '当前筛选为“${_filter.label}”，这一天不在筛选结果中；下面仍保留原始详情，方便继续查看或补录。'
-                        : '当前月份暂无“${_filter.label}”记录；下面仍保留所选日期的原始详情，避免筛选上下文混淆。',
+                        ? '当前筛选为“$activeFilterLabel”，这一天不在筛选结果中；下面仍保留原始详情，方便继续查看或补录。'
+                        : '当前月份暂无“$activeFilterLabel”记录；下面仍保留所选日期的原始详情，避免筛选上下文混淆。',
                     style: const TextStyle(
                       color: LedgerColors.ink,
                       fontSize: 13,
@@ -267,15 +274,28 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   void _changeFilter(_CalendarFilter filter) => setState(() {
-    _filter = filter;
-    if (!_matchesCurrentFilter(_selectedDay)) {
+    if (filter.isAll) {
+      _selectedFilters.clear();
+    } else if (!_selectedFilters.remove(filter)) {
+      _selectedFilters.add(filter);
+    }
+    if (_selectedFilters.isNotEmpty && !_matchesActiveFilters(_selectedDay)) {
       final firstMatch = _firstMatchingDayInMonth(_month);
       if (firstMatch != null) _selectedDay = firstMatch;
     }
   });
 
-  bool _matchesCurrentFilter(DateTime day) =>
-      _matchesFilter(day, filter: _filter);
+  void _clearFilters() => setState(() => _selectedFilters.clear());
+
+  bool _matchesActiveFilters(DateTime day) =>
+      _selectedFilters.every((filter) => _matchesFilter(day, filter: filter));
+
+  bool _matchesSelectionAnchor(DateTime day) {
+    if (_selectedFilters.isEmpty) {
+      return widget.state.entriesForDay(dateOnly(day)).isNotEmpty;
+    }
+    return _matchesActiveFilters(day);
+  }
 
   bool _matchesFilter(DateTime day, {required _CalendarFilter filter}) {
     final date = dateOnly(day);
@@ -296,7 +316,7 @@ class _CalendarPageState extends State<CalendarPage> {
     required DateTime preferredDay,
   }) {
     final normalizedPreferred = dateOnly(preferredDay);
-    if (_matchesCurrentFilter(normalizedPreferred) &&
+    if (_matchesSelectionAnchor(normalizedPreferred) &&
         normalizedPreferred.year == month.year &&
         normalizedPreferred.month == month.month) {
       return normalizedPreferred;
@@ -311,7 +331,7 @@ class _CalendarPageState extends State<CalendarPage> {
       day.isBefore(range.endExclusive);
       day = day.add(const Duration(days: 1))
     ) {
-      if (_matchesCurrentFilter(day)) return day;
+      if (_matchesSelectionAnchor(day)) return day;
     }
     return null;
   }
@@ -441,7 +461,7 @@ class _MonthGrid extends StatelessWidget {
     required this.onSelect,
     required this.onMonthChanged,
     required this.matchesDay,
-    required this.filter,
+    required this.filters,
   });
   final LedgerState state;
   final DateTime month;
@@ -449,7 +469,7 @@ class _MonthGrid extends StatelessWidget {
   final ValueChanged<DateTime> onSelect;
   final ValueChanged<DateTime> onMonthChanged;
   final bool Function(DateTime day) matchesDay;
-  final _CalendarFilter filter;
+  final Set<_CalendarFilter> filters;
 
   @override
   Widget build(BuildContext context) {
@@ -529,7 +549,7 @@ class _MonthGrid extends StatelessWidget {
     final hasNight = summary.nightHours > 0;
     final hasLongDuration = summary.totalHours > 12;
     final hasWork = entries.isNotEmpty;
-    final visibleByFilter = filter.isAll ? true : matchesDay(day);
+    final visibleByFilter = filters.isEmpty ? true : matchesDay(day);
     final isQuietDay = !visibleByFilter && !selected;
     final dateFill = selected
         ? LedgerColors.primaryBlue
@@ -551,7 +571,7 @@ class _MonthGrid extends StatelessWidget {
         : LedgerColors.stone;
     final showHours = visibleByFilter && summary.totalHours > 0;
     final showMarkers = visibleByFilter;
-    final showEmptyMarker = filter.isAll && !hasWork;
+    final showEmptyMarker = filters.isEmpty && !hasWork;
     return Semantics(
       button: true,
       selected: selected,
@@ -945,6 +965,17 @@ extension on _CalendarFilter {
   };
 }
 
+String _calendarFilterSelectionLabel(Set<_CalendarFilter> filters) {
+  if (filters.isEmpty) return '全部';
+  return filters.map((filter) => filter.label).join(' + ');
+}
+
+IconData _calendarFilterSelectionIcon(Set<_CalendarFilter> filters) {
+  if (filters.isEmpty) return Icons.grid_view_rounded;
+  if (filters.length == 1) return filters.first.icon;
+  return Icons.filter_alt_rounded;
+}
+
 class _CalendarFilterChip extends StatelessWidget {
   const _CalendarFilterChip({
     required this.icon,
@@ -1025,13 +1056,17 @@ class _MonthList extends StatefulWidget {
     required this.state,
     required this.range,
     required this.onSelect,
-    required this.filter,
+    required this.filters,
+    required this.activeFilterLabel,
+    required this.activeFilterIcon,
     required this.matchesDay,
   });
   final LedgerState state;
   final DateRange range;
   final ValueChanged<DateTime> onSelect;
-  final _CalendarFilter filter;
+  final Set<_CalendarFilter> filters;
+  final String activeFilterLabel;
+  final IconData activeFilterIcon;
   final bool Function(DateTime day) matchesDay;
 
   @override
@@ -1045,7 +1080,8 @@ class _MonthListState extends State<_MonthList> {
   void didUpdateWidget(covariant _MonthList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.range.start != widget.range.start ||
-        oldWidget.filter != widget.filter) {
+        oldWidget.filters.length != widget.filters.length ||
+        !oldWidget.filters.containsAll(widget.filters)) {
       _visibleCount = 20;
     }
   }
@@ -1058,7 +1094,10 @@ class _MonthListState extends State<_MonthList> {
         day.isBefore(widget.range.endExclusive);
         day = day.add(const Duration(days: 1))
       )
-        if (widget.matchesDay(day)) day,
+        if (widget.filters.isEmpty
+            ? widget.state.entriesForDay(day).isNotEmpty
+            : widget.matchesDay(day))
+          day,
     ]..sort((a, b) => a.compareTo(b));
     final visibleDays = days.take(_visibleCount).toList();
     return Column(
@@ -1100,9 +1139,9 @@ class _MonthListState extends State<_MonthList> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        widget.filter == _CalendarFilter.all
+                        widget.filters.isEmpty
                             ? Icons.event_busy_outlined
-                            : widget.filter.icon,
+                            : widget.activeFilterIcon,
                         color: LedgerColors.primaryBlue,
                         size: 18,
                       ),
@@ -1110,9 +1149,9 @@ class _MonthListState extends State<_MonthList> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        widget.filter == _CalendarFilter.all
+                        widget.filters.isEmpty
                             ? '这个月还没有记录'
-                            : '这个月还没有${widget.filter.label}',
+                            : '这个月还没有${widget.activeFilterLabel}',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
@@ -1120,9 +1159,7 @@ class _MonthListState extends State<_MonthList> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  widget.filter == _CalendarFilter.all
-                      ? '列表只显示已记录日期。'
-                      : '切回“全部”或直接补一段。',
+                  widget.filters.isEmpty ? '列表只显示已记录日期。' : '切回“全部”或直接补一段。',
                   style: const TextStyle(
                     color: LedgerColors.muted,
                     fontSize: 13,

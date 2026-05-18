@@ -231,6 +231,44 @@ void main() {
     expect(state.entries, isEmpty);
   });
 
+  testWidgets('single existing segment exposes row delete action', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('＋').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存').last);
+    await tester.tap(find.text('保存').last);
+    await tester.pumpAndSettle();
+    expect(state.entries.length, 1);
+
+    await tester.tap(find.byTooltip('编辑').first);
+    await tester.pumpAndSettle();
+    expect(find.text('删除'), findsOneWidget);
+
+    await tester.tap(find.text('删除'));
+    await tester.pumpAndSettle();
+    expect(find.text('删除最后一段？'), findsOneWidget);
+    expect(find.textContaining('这一天只剩'), findsOneWidget);
+
+    await tester.tap(find.text('确认删除'));
+    await tester.pumpAndSettle();
+    expect(find.text('当前没有分段了。点击保存会清空这一天，也可以继续新增分段。'), findsOneWidget);
+    expect(state.entries.length, 1);
+
+    await tester.ensureVisible(find.text('保存').last);
+    await tester.tap(find.text('保存').last);
+    await tester.pumpAndSettle();
+    expect(find.text('清空 2026-05-13 记录？'), findsOneWidget);
+
+    await tester.tap(find.text('确认清空'));
+    await tester.pumpAndSettle();
+    expect(state.entries, isEmpty);
+    expect(find.text('已清空 2026-05-13 记录'), findsOneWidget);
+  });
+
   testWidgets(
     'edit sheet removes generic save hints but keeps overwrite-specific warning',
     (tester) async {

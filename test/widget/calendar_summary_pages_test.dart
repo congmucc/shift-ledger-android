@@ -69,6 +69,40 @@ void main() {
     );
   }
 
+  LedgerState buildMultiFilterState() {
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    return LedgerState(
+      now: DateTime(2026, 5, 15),
+      payRules: [rule],
+      entries: [
+        WorkEntry.create(
+          id: 'combo_night_overtime',
+          workDate: DateTime(2026, 5, 3),
+          startDateTime: DateTime(2026, 5, 3, 22),
+          endDateTime: DateTime(2026, 5, 3, 23, 30),
+          type: EntryType.overtime,
+          payRule: rule,
+        ),
+        WorkEntry.create(
+          id: 'overtime_only',
+          workDate: DateTime(2026, 5, 4),
+          startDateTime: DateTime(2026, 5, 4, 19),
+          endDateTime: DateTime(2026, 5, 4, 21),
+          type: EntryType.overtime,
+          payRule: rule,
+        ),
+        WorkEntry.create(
+          id: 'note_long_only',
+          workDate: DateTime(2026, 5, 5),
+          startDateTime: DateTime(2026, 5, 5, 8),
+          endDateTime: DateTime(2026, 5, 5, 21, 30),
+          payRule: rule,
+          note: '超长班',
+        ),
+      ],
+    );
+  }
+
   testWidgets('calendar list mode locks the approved monthly chronology', (
     tester,
   ) async {
@@ -116,6 +150,33 @@ void main() {
       expect(headerTop, lessThan(emptyTop));
     },
   );
+
+  testWidgets('calendar filters support stacked multi-select narrowing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(ShiftLedgerApp(state: buildMultiFilterState()));
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('列表'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.bolt_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('22:00—23:30'), findsOneWidget);
+    expect(find.text('19:00—21:00'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.nightlight_round));
+    await tester.pumpAndSettle();
+    expect(find.text('22:00—23:30'), findsOneWidget);
+    expect(find.text('19:00—21:00'), findsNothing);
+    expect(find.text('08:00—21:30'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.nightlight_round));
+    await tester.pumpAndSettle();
+    expect(find.text('22:00—23:30'), findsOneWidget);
+    expect(find.text('19:00—21:00'), findsOneWidget);
+  });
 
   testWidgets('summary page keeps the approved aggregate boundary', (
     tester,
