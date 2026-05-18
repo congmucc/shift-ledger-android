@@ -187,7 +187,7 @@ class LedgerState extends ChangeNotifier {
       tpl.endMinute ~/ 60,
       tpl.endMinute % 60,
     );
-    if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
+    end = normalizeOvernightEnd(start, end);
     final rule = ruleForDate(targetDay, preferredRuleId: tpl.defaultPayRuleId);
     return WorkEntry.create(
       workDate: targetDay,

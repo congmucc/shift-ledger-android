@@ -203,7 +203,7 @@ class PayCalculator {
     final limit = dateOnly(entry.endDateTime).add(const Duration(days: 2));
     while (cursor.isBefore(limit)) {
       final windowStart = cursor.add(Duration(minutes: rule.startMinute));
-      final windowEnd = rule.endMinute <= rule.startMinute
+      final windowEnd = rule.endMinute < rule.startMinute
           ? cursor
                 .add(const Duration(days: 1, minutes: 0))
                 .add(Duration(minutes: rule.endMinute))

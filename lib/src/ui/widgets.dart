@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../domain/models.dart';
 import 'theme.dart';
 
+const equalTimeRangeErrorText = '开始和结束时间不能相同。';
+
 String hoursText(double value) =>
     '${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)}h';
 String moneyText(double value) =>

@@ -9,6 +9,12 @@ String hm(DateTime value) =>
 String dateTimeText(DateTime value) => '${ymd(value)} ${hm(value)}';
 String cnDateText(DateTime value) =>
     '${value.year}年 ${value.month}月 ${value.day}日';
+bool isOvernightDateTimeRange(DateTime start, DateTime end) =>
+    end.isBefore(start);
+DateTime normalizeOvernightEnd(DateTime start, DateTime end) =>
+    isOvernightDateTimeRange(start, end)
+    ? end.add(const Duration(days: 1))
+    : end;
 DateTime parseDate(Object? value) => DateTime.parse(value as String);
 DateTime? parseOptionalDate(Object? value) =>
     value == null || value == '' ? null : DateTime.parse(value as String);
@@ -651,10 +657,7 @@ class WorkEntry {
     List<Adjustment> adjustments = const [],
     bool isRestDayOvertime = false,
   }) {
-    var normalizedEnd = endDateTime;
-    if (!normalizedEnd.isAfter(startDateTime)) {
-      normalizedEnd = normalizedEnd.add(const Duration(days: 1));
-    }
+    final normalizedEnd = normalizeOvernightEnd(startDateTime, endDateTime);
     return WorkEntry(
       id: id ?? newId('entry'),
       workDate: dateOnly(workDate),

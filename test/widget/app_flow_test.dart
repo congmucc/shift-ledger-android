@@ -563,6 +563,55 @@ void main() {
     expect(find.text('计薪规则已保存'), findsOneWidget);
   });
 
+  testWidgets('template editor blocks equal start and end time', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    state.updateShiftTemplate(
+      state.templates.first.copyWith(
+        startMinute: 9 * 60,
+        endMinute: 9 * 60,
+        breakMinutes: 0,
+      ),
+    );
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('班次模板'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('开始和结束时间不能相同。'), findsOneWidget);
+    final saveButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '保存模板'),
+    );
+    expect(saveButton.onPressed, isNull);
+  });
+
+  testWidgets('night rule sheet blocks equal start and end time', (
+    tester,
+  ) async {
+    final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
+    state.updateNightRule(
+      state.nightRule.copyWith(startMinute: 9 * 60, endMinute: 9 * 60),
+    );
+    await tester.pumpWidget(ShiftLedgerApp(state: state));
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    final nightRuleTile = tester
+        .widgetList<SettingTile>(find.byType(SettingTile))
+        .firstWhere((tile) => tile.title == '夜班规则');
+    nightRuleTile.onTap!.call();
+    await tester.pumpAndSettle();
+
+    expect(find.text('开始和结束时间不能相同。'), findsOneWidget);
+    final saveButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '保存'),
+    );
+    expect(saveButton.onPressed, isNull);
+  });
+
   testWidgets('dense settings sheets drop redundant top notice cards', (
     tester,
   ) async {
@@ -914,6 +963,45 @@ void main() {
       );
     },
   );
+
+  testWidgets('segment editor blocks equal start and end time', (tester) async {
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    final entry = WorkEntry(
+      id: 'segment_equal_probe',
+      workDate: DateTime(2026, 5, 13),
+      startDateTime: DateTime(2026, 5, 13, 9),
+      endDateTime: DateTime(2026, 5, 13, 9),
+      type: EntryType.regular,
+      payRuleId: rule.id,
+      payRuleSnapshot: rule,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showDialog<WorkEntry>(
+                context: context,
+                builder: (_) =>
+                    SegmentEditorDialog(entry: entry, rules: [rule]),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('开始和结束时间不能相同。'), findsOneWidget);
+    final saveButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '保存本段'),
+    );
+    expect(saveButton.onPressed, isNull);
+  });
 
   testWidgets('summary and calendar stay dense at normal text scale', (
     tester,

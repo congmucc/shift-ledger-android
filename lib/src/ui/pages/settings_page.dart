@@ -189,114 +189,146 @@ class SettingsPage extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
       builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) => SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SheetHeaderBlock(
-                    title: '夜班规则',
-                    onClose: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 12),
-                  LedgerCard(
-                    color: LedgerColors.surfaceRaised,
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '夜班判定时段',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${state.nightRule.mode.label} · 跨天记录按该区间判定',
-                          style: const TextStyle(
-                            color: LedgerColors.muted,
-                            fontSize: 13,
-                            height: 1.35,
+        builder: (context, setSheetState) {
+          final invalidTimeOrder = startMinute == endMinute;
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SheetHeaderBlock(
+                      title: '夜班规则',
+                      onClose: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(height: 12),
+                    LedgerCard(
+                      color: LedgerColors.surfaceRaised,
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '夜班判定时段',
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: LedgerPickerButtonField(
-                                label: '开始时间',
-                                value: _time(startMinute),
-                                icon: Icons.bedtime_outlined,
-                                onTap: () async {
-                                  final picked = await showLedgerTimePicker(
-                                    context,
-                                    initialMinute: startMinute,
-                                    minuteInterval: 60,
-                                  );
-                                  if (picked == null || !context.mounted) {
-                                    return;
-                                  }
-                                  setSheetState(() => startMinute = picked);
-                                },
-                              ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${state.nightRule.mode.label} · 跨天记录按该区间判定',
+                            style: const TextStyle(
+                              color: LedgerColors.muted,
+                              fontSize: 13,
+                              height: 1.35,
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: LedgerPickerButtonField(
-                                label: '结束时间',
-                                value: _time(endMinute),
-                                icon: Icons.wb_sunny_outlined,
-                                onTap: () async {
-                                  final picked = await showLedgerTimePicker(
-                                    context,
-                                    initialMinute: endMinute,
-                                    minuteInterval: 60,
-                                  );
-                                  if (picked == null || !context.mounted) {
-                                    return;
-                                  }
-                                  setSheetState(() => endMinute = picked);
-                                },
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: LedgerPickerButtonField(
+                                  label: '开始时间',
+                                  value: _time(startMinute),
+                                  icon: Icons.bedtime_outlined,
+                                  onTap: () async {
+                                    final picked = await showLedgerTimePicker(
+                                      context,
+                                      initialMinute: startMinute,
+                                      minuteInterval: 60,
+                                    );
+                                    if (picked == null || !context.mounted) {
+                                      return;
+                                    }
+                                    setSheetState(() => startMinute = picked);
+                                  },
+                                ),
                               ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: LedgerPickerButtonField(
+                                  label: '结束时间',
+                                  value: _time(endMinute),
+                                  icon: Icons.wb_sunny_outlined,
+                                  onTap: () async {
+                                    final picked = await showLedgerTimePicker(
+                                      context,
+                                      initialMinute: endMinute,
+                                      minuteInterval: 60,
+                                    );
+                                    if (picked == null || !context.mounted) {
+                                      return;
+                                    }
+                                    setSheetState(() => endMinute = picked);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (invalidTimeOrder) ...[
+                            const SizedBox(height: 8),
+                            const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(top: 2),
+                                  child: Icon(
+                                    Icons.error_outline_rounded,
+                                    size: 16,
+                                    color: LedgerColors.errorRed,
+                                  ),
+                                ),
+                                SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    equalTimeRangeErrorText,
+                                    style: TextStyle(
+                                      color: LedgerColors.errorRed,
+                                      fontSize: 12,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        final rootContext = Navigator.of(
-                          context,
-                          rootNavigator: true,
-                        ).context;
-                        state.updateNightRule(
-                          state.nightRule.copyWith(
-                            startMinute: startMinute,
-                            endMinute: endMinute,
-                          ),
-                        );
-                        Navigator.pop(context);
-                        showLedgerSnackBar(rootContext, '夜班规则已保存');
-                      },
-                      child: const Text('保存'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: invalidTimeOrder
+                            ? null
+                            : () {
+                                final rootContext = Navigator.of(
+                                  context,
+                                  rootNavigator: true,
+                                ).context;
+                                state.updateNightRule(
+                                  state.nightRule.copyWith(
+                                    startMinute: startMinute,
+                                    endMinute: endMinute,
+                                  ),
+                                );
+                                Navigator.pop(context);
+                                showLedgerSnackBar(rootContext, '夜班规则已保存');
+                              },
+                        child: const Text('保存'),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -784,6 +816,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
   Widget build(BuildContext context) {
     final compact = useDenseTwoColumnLayout(context);
     final isDefaultTemplate = _template == widget.state.templates.first;
+    final invalidTimeOrder = _hasEqualTimeOrder;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -925,6 +958,33 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         onTap: () => _pickTime(_end),
                       ),
                     ),
+                    if (invalidTimeOrder) ...[
+                      const SizedBox(height: 8),
+                      const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.error_outline_rounded,
+                              size: 16,
+                              color: LedgerColors.errorRed,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              equalTimeRangeErrorText,
+                              style: TextStyle(
+                                color: LedgerColors.errorRed,
+                                fontSize: 12,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     _buildFieldPair(
                       compact: compact,
@@ -1015,7 +1075,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _save,
+                        onPressed: invalidTimeOrder ? null : _save,
                         child: const Text('保存模板'),
                       ),
                     ),
@@ -1266,7 +1326,17 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     _type = template.type;
   }
 
+  bool get _hasEqualTimeOrder {
+    final start = _parseTime(_start.text) ?? _template.startMinute;
+    final end = _parseTime(_end.text) ?? _template.endMinute;
+    return start == end;
+  }
+
   void _save() {
+    if (_hasEqualTimeOrder) {
+      _snack(equalTimeRangeErrorText);
+      return;
+    }
     final start = _parseTime(_start.text) ?? _template.startMinute;
     final end = _parseTime(_end.text) ?? _template.endMinute;
     final nextName = _name.text.trim().isEmpty

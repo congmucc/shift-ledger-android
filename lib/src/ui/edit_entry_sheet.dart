@@ -392,7 +392,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       entry.endDateTime.hour,
       entry.endDateTime.minute,
     );
-    if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
+    end = normalizeOvernightEnd(start, end);
     final nextRule = widget.state.ruleForDate(
       day,
       preferredRuleId: entry.payRuleId,
@@ -616,6 +616,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     final draftStart = _draftStartDateTime;
     final draftEnd = _draftEndDateTime;
     final draftCrossesMidnight = _draftCrossesMidnight;
+    final draftHasEqualTime = _draftHasEqualTime;
     return LedgerDialogShell(
       title: '编辑本段',
       icon: Icons.tune_rounded,
@@ -649,7 +650,33 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               onTap: () => _pickTime(_end),
             ),
           ),
-          if (draftCrossesMidnight) ...[
+          if (draftHasEqualTime) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    size: 16,
+                    color: LedgerColors.errorRed,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    equalTimeRangeErrorText,
+                    style: TextStyle(
+                      color: LedgerColors.errorRed,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (draftCrossesMidnight) ...[
             const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,7 +776,10 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _save, child: const Text('保存本段')),
+        FilledButton(
+          onPressed: draftHasEqualTime ? null : _save,
+          child: const Text('保存本段'),
+        ),
       ],
     );
   }
@@ -775,6 +805,10 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
   }
 
   Future<void> _save() async {
+    if (_draftHasEqualTime) {
+      showLedgerSnackBar(context, equalTimeRangeErrorText);
+      return;
+    }
     final start = _draftStartDateTime;
     final end = _draftEndDateTime;
     if (_draftCrossesMidnight) {
@@ -823,14 +857,14 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
         [widget.entry.endDateTime.hour, widget.entry.endDateTime.minute];
     final day = widget.entry.workDate;
     var end = DateTime(day.year, day.month, day.day, endParts[0], endParts[1]);
-    if (!end.isAfter(_draftStartDateTime)) {
-      end = end.add(const Duration(days: 1));
-    }
-    return end;
+    return normalizeOvernightEnd(_draftStartDateTime, end);
   }
 
   bool get _draftCrossesMidnight =>
-      !_sameDayDraftEndDateTime.isAfter(_draftStartDateTime);
+      _sameDayDraftEndDateTime.isBefore(_draftStartDateTime);
+
+  bool get _draftHasEqualTime =>
+      _sameDayDraftEndDateTime.isAtSameMomentAs(_draftStartDateTime);
 
   DateTime get _sameDayDraftEndDateTime {
     final endParts =
