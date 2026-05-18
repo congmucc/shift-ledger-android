@@ -126,6 +126,39 @@ void main() {
     },
   );
 
+  test('backup decode reports skipped malformed top-level records', () {
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    final result = BackupService().decodeWithReport({
+      'entries': [
+        {
+          'id': 'bad_entry',
+          'workDate': '2026-05-14',
+          'startDateTime': 'not-a-date',
+          'endDateTime': '2026-05-14T18:00:00',
+          'payRuleSnapshot': rule.toJson(),
+        },
+      ],
+      'payRules': [
+        rule.toJson(),
+        {'id': 'bad_rule', 'name': '坏规则', 'effectiveFrom': 'not-a-date'},
+      ],
+      'templates': const [],
+      'nightRule': NightRule.defaults().toJson(),
+      'payPeriod': const PayPeriod().toJson(),
+      'webDavConfig': const WebDavConfig().toJson(),
+      'recentDeletedDays': const [
+        {'id': 'bad_deleted', 'day': 'not-a-day'},
+      ],
+    });
+
+    expect(result.snapshot.entries, isEmpty);
+    expect(result.diagnostics.hasWarnings, isTrue);
+    expect(result.diagnostics.malformedEntries, 1);
+    expect(result.diagnostics.malformedPayRules, 1);
+    expect(result.diagnostics.malformedDeletedDays, 1);
+    expect(result.diagnostics.summary, contains('1条工时记录'));
+  });
+
   test('backup decode treats malformed entry containers as empty lists', () {
     final snapshot = BackupService().decode({
       'entries': 'not-a-list',

@@ -85,6 +85,28 @@ void main() {
 
     expect(service.runs, 0);
   });
+
+  testWidgets('save failures surface a user-visible backup warning', (
+    tester,
+  ) async {
+    final state = LedgerState.empty(now: DateTime(2026, 5, 13));
+
+    await tester.pumpWidget(
+      ShiftLedgerApp(
+        state: state,
+        repository: _FailingSaveRepository(),
+        autoBackupStartupDelay: const Duration(seconds: 1),
+        autoBackupChangeDebounce: const Duration(seconds: 1),
+      ),
+    );
+
+    state.addEntry(state.createTemplateEntry());
+    await tester.pump(const Duration(milliseconds: 260));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('本地保存失败'), findsOneWidget);
+    expect(find.textContaining('本地备份/恢复'), findsOneWidget);
+  });
 }
 
 class _MemoryRepository extends LocalLedgerRepository {
@@ -109,5 +131,14 @@ class _CountingAutoBackupService extends AutoBackupService {
     );
     state.updateAutoBackupConfig(next);
     return next;
+  }
+}
+
+class _FailingSaveRepository extends LocalLedgerRepository {
+  _FailingSaveRepository();
+
+  @override
+  Future<void> save(LedgerSnapshot snapshot) async {
+    throw Exception('disk full');
   }
 }

@@ -9,20 +9,85 @@ import 'src/services/local_ledger_repository.dart';
 import 'src/ui/scope.dart';
 import 'src/ui/shell.dart';
 import 'src/ui/theme.dart';
+import 'src/ui/widgets.dart';
+
+class AppStartupNotice {
+  const AppStartupNotice({required this.title, required this.message});
+
+  final String title;
+  final String message;
+}
+
+class AppBootstrapResult {
+  const AppBootstrapResult({
+    required this.state,
+    required this.repository,
+    this.startupNotice,
+  });
+
+  final LedgerState state;
+  final LocalLedgerRepository repository;
+  final AppStartupNotice? startupNotice;
+}
+
+Future<AppBootstrapResult> bootstrapShiftLedgerApp({
+  LocalLedgerRepository? repository,
+  DateTime? now,
+}) async {
+  final resolvedRepository = repository ?? LocalLedgerRepository();
+  try {
+    final loaded = await resolvedRepository.loadDetailed();
+    if (loaded == null) {
+      return AppBootstrapResult(
+        state: LedgerState.empty(now: now),
+        repository: resolvedRepository,
+      );
+    }
+
+    return AppBootstrapResult(
+      state: LedgerState.fromSnapshot(loaded.snapshot, now: now),
+      repository: resolvedRepository,
+      startupNotice: loaded.diagnostics.hasWarnings
+          ? AppStartupNotice(
+              title: '已载入可读取数据',
+              message:
+                  '本地账本里有部分内容损坏，已自动忽略 ${loaded.diagnostics.summary}。建议尽快到“设置 > 本地备份/恢复”检查最近备份。',
+            )
+          : null,
+    );
+  } catch (_) {
+    final latestBackupPath = await _safeLatestBackupPath(resolvedRepository);
+    return AppBootstrapResult(
+      state: LedgerState.empty(now: now),
+      repository: resolvedRepository,
+      startupNotice: AppStartupNotice(
+        title: '本地账本读取失败',
+        message: latestBackupPath == null
+            ? '当前先以空账本打开，避免继续写入损坏数据。请先不要卸载应用，并尽快到“设置 > 本地备份/恢复”检查是否还能导出或恢复备份。'
+            : '当前先以空账本打开，避免继续写入损坏数据。检测到最近本地备份，可到“设置 > 本地备份/恢复”尝试恢复。',
+      ),
+    );
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final repository = LocalLedgerRepository();
-  LedgerState state;
+  final bootstrap = await bootstrapShiftLedgerApp();
+  runApp(
+    ShiftLedgerApp(
+      state: bootstrap.state,
+      repository: bootstrap.repository,
+      startupNotice: bootstrap.startupNotice,
+    ),
+  );
+}
+
+Future<String?> _safeLatestBackupPath(LocalLedgerRepository repository) async {
   try {
-    final snapshot = await repository.load();
-    state = snapshot == null
-        ? LedgerState.empty()
-        : LedgerState.fromSnapshot(snapshot);
+    return await repository.latestBackupPath();
   } catch (_) {
-    state = LedgerState.empty();
+    return null;
   }
-  runApp(ShiftLedgerApp(state: state, repository: repository));
 }
 
 class ShiftLedgerApp extends StatefulWidget {
@@ -33,6 +98,7 @@ class ShiftLedgerApp extends StatefulWidget {
     this.autoBackupService = const AutoBackupService(),
     this.autoBackupStartupDelay = const Duration(seconds: 20),
     this.autoBackupChangeDebounce = const Duration(minutes: 10),
+    this.startupNotice,
   });
 
   final LedgerState state;
@@ -40,16 +106,22 @@ class ShiftLedgerApp extends StatefulWidget {
   final AutoBackupService autoBackupService;
   final Duration autoBackupStartupDelay;
   final Duration autoBackupChangeDebounce;
+  final AppStartupNotice? startupNotice;
 
   @override
   State<ShiftLedgerApp> createState() => _ShiftLedgerAppState();
 }
 
 class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   Timer? _saveDebounce;
   Timer? _autoBackupStartupTimer;
   Timer? _autoBackupChangeTimer;
   bool _runningAutoBackup = false;
+  bool _didShowStartupNotice = false;
+  bool _reportedSaveFailure = false;
 
   @override
   void initState() {
@@ -60,6 +132,11 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
         widget.autoBackupStartupDelay,
         _runAutoBackup,
       );
+    }
+    if (widget.startupNotice != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showStartupNoticeIfNeeded();
+      });
     }
   }
 
@@ -90,8 +167,15 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
     final repository = widget.repository;
     if (repository == null) return;
     _saveDebounce?.cancel();
-    _saveDebounce = Timer(const Duration(milliseconds: 250), () {
-      unawaited(repository.save(widget.state.toSnapshot()));
+    _saveDebounce = Timer(const Duration(milliseconds: 250), () async {
+      try {
+        await repository.save(widget.state.toSnapshot());
+        _reportedSaveFailure = false;
+      } catch (_) {
+        if (_reportedSaveFailure) return;
+        _reportedSaveFailure = true;
+        _showSaveFailureNotice();
+      }
     });
   }
 
@@ -125,12 +209,47 @@ class _ShiftLedgerAppState extends State<ShiftLedgerApp> {
     }
   }
 
+  void _showStartupNoticeIfNeeded() {
+    final dialogContext = _navigatorKey.currentContext;
+    if (!mounted ||
+        _didShowStartupNotice ||
+        widget.startupNotice == null ||
+        dialogContext == null) {
+      return;
+    }
+    _didShowStartupNotice = true;
+    showLedgerInfoDialog(
+      dialogContext,
+      title: widget.startupNotice!.title,
+      icon: Icons.warning_amber_rounded,
+      content: Text(
+        widget.startupNotice!.message,
+        style: const TextStyle(
+          color: LedgerColors.muted,
+          fontSize: 14,
+          height: 1.45,
+        ),
+      ),
+    );
+  }
+
+  void _showSaveFailureNotice() {
+    final messenger = _messengerKey.currentState;
+    if (messenger == null) return;
+    showLedgerSnackBarOn(
+      messenger,
+      '本地保存失败，请先不要卸载应用，并尽快到“设置 > 本地备份/恢复”导出或恢复一份备份。',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LedgerScope(
       state: widget.state,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        navigatorKey: _navigatorKey,
+        scaffoldMessengerKey: _messengerKey,
         title: 'Shift Ledger 工时账本',
         locale: const Locale('zh', 'CN'),
         supportedLocales: const [Locale('zh', 'CN')],

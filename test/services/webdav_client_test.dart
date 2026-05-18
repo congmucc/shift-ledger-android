@@ -53,7 +53,7 @@ void main() {
       await server.close(force: true);
     });
 
-    test('upload download and listing use expected endpoints and auth', () async {
+    test('upload and download use the same backup endpoint and auth', () async {
       final client = WebDavClient();
       final config = WebDavConfig(
         url: 'http://127.0.0.1:${server.port}/dav',
@@ -64,11 +64,9 @@ void main() {
 
       await client.uploadBackup(config, '{"entries":[]}');
       final downloaded = await client.downloadBackup(config);
-      final listing = await client.listBackups(config);
 
       expect(downloaded, '{"ok":true}');
-      expect(listing, '<multistatus />');
-      expect(requests, hasLength(3));
+      expect(requests, hasLength(2));
 
       final auth = 'Basic ${base64Encode(utf8.encode('worker@example.com:app-pass'))}';
 
@@ -80,11 +78,6 @@ void main() {
       expect(requests[1].method, 'GET');
       expect(requests[1].path, '/dav/nested/shift-ledger-backup.json');
       expect(requests[1].authorization, auth);
-
-      expect(requests[2].method, 'PROPFIND');
-      expect(requests[2].path, '/dav/');
-      expect(requests[2].authorization, auth);
-      expect(requests[2].depth, '1');
     });
   });
 }

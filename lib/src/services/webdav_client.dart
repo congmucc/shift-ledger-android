@@ -28,28 +28,14 @@ class WebDavClient {
     );
   }
 
-  Future<String> listBackups(WebDavConfig config) async {
-    final request = await _open(config, 'PROPFIND', directory: true);
-    request.headers.set('Depth', '1');
-    final response = await request.close();
-    await _ensureOk(response, allowed: {207, 200});
-    return utf8.decode(
-      await response.fold<List<int>>([], (all, chunk) => all..addAll(chunk)),
-    );
-  }
-
-  Future<HttpClientRequest> _open(
-    WebDavConfig config,
-    String method, {
-    bool directory = false,
-  }) async {
+  Future<HttpClientRequest> _open(WebDavConfig config, String method) async {
     if (config.url.isEmpty ||
         config.username.isEmpty ||
         config.appPassword.isEmpty) {
       throw const WebDavException('请先填写坚果云地址、账号和应用授权密码');
     }
     final base = config.url.endsWith('/') ? config.url : '${config.url}/';
-    final uri = Uri.parse(directory ? base : base + config.remotePath);
+    final uri = Uri.parse(base + config.remotePath);
     final request = await _client
         .openUrl(method, uri)
         .timeout(const Duration(seconds: 12));

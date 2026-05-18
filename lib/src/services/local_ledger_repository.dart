@@ -10,6 +10,16 @@ import 'package:path_provider/path_provider.dart';
 import '../domain/models.dart';
 import 'backup_service.dart';
 
+class LoadedLedgerData {
+  const LoadedLedgerData({
+    required this.snapshot,
+    this.diagnostics = const BackupDecodeDiagnostics(),
+  });
+
+  final LedgerSnapshot snapshot;
+  final BackupDecodeDiagnostics diagnostics;
+}
+
 class ExternalSaveRequest {
   const ExternalSaveRequest({
     required this.bytes,
@@ -46,23 +56,22 @@ class LocalLedgerRepository {
   static const _secretKey = 'shift_ledger_webdav_app_password';
   static const _dataFileName = 'shift_ledger_data.json';
 
-  Future<LedgerSnapshot?> load() async {
+  Future<LoadedLedgerData?> loadDetailed() async {
     final file = await _dataFile();
     if (!await file.exists()) return null;
     final json = jsonDecode(await file.readAsString()) as Map<String, Object?>;
-    final snapshot = LedgerSnapshot.fromJson(json);
+    final decodeResult = BackupService().decodeWithReport(json);
     final password = await _secureStorage.read(key: _secretKey) ?? '';
-    return LedgerSnapshot(
-      entries: snapshot.entries,
-      templates: snapshot.templates,
-      payRules: snapshot.payRules,
-      nightRule: snapshot.nightRule,
-      payPeriod: snapshot.payPeriod,
-      webDavConfig: snapshot.webDavConfig.copyWith(appPassword: password),
-      autoBackupConfig: snapshot.autoBackupConfig,
-      recentDeletedDays: snapshot.recentDeletedDays,
+    return LoadedLedgerData(
+      snapshot: _attachSecret(
+        decodeResult.snapshot,
+        password,
+      ),
+      diagnostics: decodeResult.diagnostics,
     );
   }
+
+  Future<LedgerSnapshot?> load() async => (await loadDetailed())?.snapshot;
 
   Future<void> save(LedgerSnapshot snapshot) async {
     final file = await _dataFile();
@@ -130,9 +139,17 @@ class LocalLedgerRepository {
   }
 
   Future<LedgerSnapshot> readBackup(String path) async {
+    return (await readBackupResult(path)).snapshot;
+  }
+
+  Future<LoadedLedgerData> readBackupResult(String path) async {
     final map =
         jsonDecode(await File(path).readAsString()) as Map<String, Object?>;
-    return BackupService().decode(map);
+    final decodeResult = BackupService().decodeWithReport(map);
+    return LoadedLedgerData(
+      snapshot: decodeResult.snapshot,
+      diagnostics: decodeResult.diagnostics,
+    );
   }
 
   Future<Directory> _root() async => _directory ?? _rootDirectoryProvider();
@@ -149,6 +166,18 @@ class LocalLedgerRepository {
     String two(int value) => value.toString().padLeft(2, '0');
     return '${now.year}${two(now.month)}${two(now.day)}-${two(now.hour)}${two(now.minute)}${two(now.second)}';
   }
+
+  LedgerSnapshot _attachSecret(LedgerSnapshot snapshot, String password) =>
+      LedgerSnapshot(
+        entries: snapshot.entries,
+        templates: snapshot.templates,
+        payRules: snapshot.payRules,
+        nightRule: snapshot.nightRule,
+        payPeriod: snapshot.payPeriod,
+        webDavConfig: snapshot.webDavConfig.copyWith(appPassword: password),
+        autoBackupConfig: snapshot.autoBackupConfig,
+        recentDeletedDays: snapshot.recentDeletedDays,
+      );
 }
 
 Future<String?> _saveWithSystemDialog(ExternalSaveRequest request) {

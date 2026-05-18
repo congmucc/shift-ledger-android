@@ -55,11 +55,12 @@ class _CalendarPageState extends State<CalendarPage> {
     };
     return PageFrame(
       title: '工时日历',
-      trailing: IconButton(
+      trailing: TextButton.icon(
+        key: const Key('calendar-add-entry-action'),
         onPressed: () =>
             showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
-        icon: const Icon(Icons.add),
-        tooltip: '补一段',
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('补一段'),
       ),
       children: [
         Row(

@@ -772,6 +772,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('calendar keeps a labeled add-entry action in the header', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calendar-add-entry-action')), findsOneWidget);
+    expect(find.text('补一段'), findsWidgets);
+  });
+
   testWidgets('calendar month picker stays usable at large text scale', (
     tester,
   ) async {
