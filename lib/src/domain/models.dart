@@ -708,7 +708,9 @@ class WorkEntry {
       .where((item) => item.type == AdjustmentType.deduction)
       .fold(0.0, (sum, item) => sum + item.amount);
 
-  String get timeRangeLabel => '${hm(startDateTime)} — ${hm(endDateTime)}';
+  String get timeRangeLabel => isCrossDay
+      ? '${hm(startDateTime)} — 次日 ${hm(endDateTime)}'
+      : '${hm(startDateTime)} — ${hm(endDateTime)}';
 
   WorkEntry copyWith({
     String? id,

@@ -613,6 +613,9 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
       context,
       textScaleBreakpoint: 1.45,
     );
+    final draftStart = _draftStartDateTime;
+    final draftEnd = _draftEndDateTime;
+    final draftCrossesMidnight = _draftCrossesMidnight;
     return LedgerDialogShell(
       title: '编辑本段',
       icon: Icons.tune_rounded,
@@ -646,6 +649,33 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               onTap: () => _pickTime(_end),
             ),
           ),
+          if (draftCrossesMidnight) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(
+                    Icons.bedtime_outlined,
+                    size: 16,
+                    color: LedgerColors.warningOrange,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '结束时间不晚于开始时间，会按跨天记录处理：${hm(draftStart)} → 次日 ${hm(draftEnd)}。',
+                    style: const TextStyle(
+                      color: LedgerColors.muted,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           TextField(
             controller: _break,
@@ -744,23 +774,20 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     );
   }
 
-  void _save() {
-    final startParts =
-        _parseTime(_start.text) ??
-        [widget.entry.startDateTime.hour, widget.entry.startDateTime.minute];
-    final endParts =
-        _parseTime(_end.text) ??
-        [widget.entry.endDateTime.hour, widget.entry.endDateTime.minute];
-    final day = widget.entry.workDate;
-    final start = DateTime(
-      day.year,
-      day.month,
-      day.day,
-      startParts[0],
-      startParts[1],
-    );
-    var end = DateTime(day.year, day.month, day.day, endParts[0], endParts[1]);
-    if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
+  Future<void> _save() async {
+    final start = _draftStartDateTime;
+    final end = _draftEndDateTime;
+    if (_draftCrossesMidnight) {
+      final confirmed = await showLedgerConfirmDialog(
+        context,
+        title: '按跨天记录保存？',
+        message:
+            '当前时间顺序会跨到次日，这一段会记为 ${dateTimeText(start)} 到 ${dateTimeText(end)}。',
+        confirmText: '确认保存',
+        icon: Icons.bedtime_outlined,
+      );
+      if (confirmed != true || !mounted) return;
+    }
     final adjustments = <Adjustment>[];
     final allowance = double.tryParse(_allowance.text) ?? 0;
     final deduction = double.tryParse(_deduction.text) ?? 0;
@@ -780,6 +807,37 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
         payRuleSnapshot: _rule,
       ),
     );
+  }
+
+  DateTime get _draftStartDateTime {
+    final startParts =
+        _parseTime(_start.text) ??
+        [widget.entry.startDateTime.hour, widget.entry.startDateTime.minute];
+    final day = widget.entry.workDate;
+    return DateTime(day.year, day.month, day.day, startParts[0], startParts[1]);
+  }
+
+  DateTime get _draftEndDateTime {
+    final endParts =
+        _parseTime(_end.text) ??
+        [widget.entry.endDateTime.hour, widget.entry.endDateTime.minute];
+    final day = widget.entry.workDate;
+    var end = DateTime(day.year, day.month, day.day, endParts[0], endParts[1]);
+    if (!end.isAfter(_draftStartDateTime)) {
+      end = end.add(const Duration(days: 1));
+    }
+    return end;
+  }
+
+  bool get _draftCrossesMidnight =>
+      !_sameDayDraftEndDateTime.isAfter(_draftStartDateTime);
+
+  DateTime get _sameDayDraftEndDateTime {
+    final endParts =
+        _parseTime(_end.text) ??
+        [widget.entry.endDateTime.hour, widget.entry.endDateTime.minute];
+    final day = widget.entry.workDate;
+    return DateTime(day.year, day.month, day.day, endParts[0], endParts[1]);
   }
 
   Future<void> _pickTime(TextEditingController controller) async {

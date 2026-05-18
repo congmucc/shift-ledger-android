@@ -1346,8 +1346,9 @@ class _MonthListRow extends StatelessWidget {
     );
   }
 
-  String _entryPreviewLabel(WorkEntry entry) =>
-      '${hm(entry.startDateTime)}—${hm(entry.endDateTime)}';
+  String _entryPreviewLabel(WorkEntry entry) => entry.isCrossDay
+      ? '${hm(entry.startDateTime)}—次日${hm(entry.endDateTime)}'
+      : '${hm(entry.startDateTime)}—${hm(entry.endDateTime)}';
 }
 
 class _MonthListDateBlock extends StatelessWidget {

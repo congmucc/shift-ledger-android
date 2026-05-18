@@ -866,6 +866,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'segment editor makes cross-day time order explicit before save',
+    (tester) async {
+      final rule = PayRule.defaultHourly(hourlyRate: 35);
+      final entry = WorkEntry.create(
+        id: 'segment_overnight_probe',
+        workDate: DateTime(2026, 5, 13),
+        startDateTime: DateTime(2026, 5, 13, 22),
+        endDateTime: DateTime(2026, 5, 14, 6),
+        type: EntryType.night,
+        payRule: rule,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showDialog<WorkEntry>(
+                  context: context,
+                  builder: (_) =>
+                      SegmentEditorDialog(entry: entry, rules: [rule]),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('22:00 — 次日 06:00 · 8h'), findsOneWidget);
+      expect(
+        find.text('结束时间不晚于开始时间，会按跨天记录处理：22:00 → 次日 06:00。'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('保存本段'));
+      await tester.pumpAndSettle();
+      expect(find.text('按跨天记录保存？'), findsOneWidget);
+      expect(
+        find.textContaining('2026-05-13 22:00 到 2026-05-14 06:00'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('summary and calendar stay dense at normal text scale', (
     tester,
   ) async {
