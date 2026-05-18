@@ -210,6 +210,26 @@ class LocalLedgerRepository {
 
   Future<String?> pickBackupFilePath() => _externalPicker();
 
+  Future<String?> currentBackupDirectoryUri() async =>
+      _readOptionalSecure(_backupDirectoryUriKey);
+
+  Future<String?> currentBackupDirectoryLabel() async {
+    final uri = await currentBackupDirectoryUri();
+    if (uri == null || uri.isEmpty) return null;
+    return _formatDirectoryLabel(uri);
+  }
+
+  Future<String?> currentBackupDirectoryDetail() async =>
+      currentBackupDirectoryUri();
+
+  Future<bool> chooseBackupDirectory() async {
+    if (!await _directorySupportChecker()) return false;
+    final pickedDirectoryUri = await _directoryPicker();
+    if (pickedDirectoryUri == null || pickedDirectoryUri.isEmpty) return false;
+    await _writeOptionalSecure(_backupDirectoryUriKey, pickedDirectoryUri);
+    return true;
+  }
+
   Future<LoadedLedgerData> readBackupResult(String path) async {
     final map =
         jsonDecode(await File(path).readAsString()) as Map<String, Object?>;
@@ -265,6 +285,27 @@ class LocalLedgerRepository {
     try {
       await _secureStorage.delete(key: key);
     } catch (_) {}
+  }
+
+  String _formatDirectoryLabel(String uri) {
+    final normalized = uri.trim();
+    if (normalized.isEmpty) return '已选择备份位置';
+    final decoded = Uri.decodeFull(normalized);
+    final segments = decoded
+        .split('/')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    if (segments.isEmpty) return decoded;
+    final last = segments.last;
+    if (last.contains(':')) {
+      final colonParts = last
+          .split(':')
+          .where((item) => item.isNotEmpty)
+          .toList();
+      if (colonParts.isNotEmpty) return colonParts.last;
+    }
+    return last;
   }
 }
 

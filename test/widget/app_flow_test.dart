@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
 import 'package:shift_ledger/src/domain/models.dart';
+import 'package:shift_ledger/src/services/local_ledger_repository.dart';
 import 'package:shift_ledger/src/ui/edit_entry_sheet.dart';
 import 'package:shift_ledger/src/ui/theme.dart';
 import 'package:shift_ledger/src/ui/widgets.dart';
@@ -505,6 +506,80 @@ void main() {
     expect(find.text('连接状态'), findsOneWidget);
   });
 
+  testWidgets(
+    'local backup sheet shows remembered folder and allows changing it',
+    (tester) async {
+      final repository = _BackupLocationRepository(
+        currentLabel: '下载/工时账本备份',
+        currentDetail: 'content://picked/ledger-backups',
+        nextSelectionLabel: '文稿/新备份目录',
+        nextSelectionDetail: 'content://picked/new-ledger-backups',
+      );
+      await tester.pumpWidget(
+        ShiftLedgerApp(
+          state: LedgerState.seeded(now: DateTime(2026, 5, 13)),
+          repository: repository,
+        ),
+      );
+
+      await tester.tap(find.text('设置'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('本地备份/恢复'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final backupTile = tester
+          .widgetList<SettingTile>(find.byType(SettingTile))
+          .firstWhere((tile) => tile.title == '本地备份/恢复');
+      backupTile.onTap!.call();
+      await tester.pumpAndSettle();
+
+      expect(find.text('当前备份位置'), findsOneWidget);
+      expect(find.text('下载/工时账本备份'), findsOneWidget);
+      expect(find.text('content://picked/ledger-backups'), findsOneWidget);
+      expect(find.text('更换备份位置'), findsOneWidget);
+
+      await tester.tap(find.text('更换备份位置'));
+      await tester.pumpAndSettle();
+
+      expect(repository.changeLocationCalls, 1);
+      expect(find.text('文稿/新备份目录'), findsOneWidget);
+      expect(find.text('content://picked/new-ledger-backups'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'local backup sheet prompts to choose folder before first backup',
+    (tester) async {
+      final repository = _BackupLocationRepository();
+      await tester.pumpWidget(
+        ShiftLedgerApp(
+          state: LedgerState.seeded(now: DateTime(2026, 5, 13)),
+          repository: repository,
+        ),
+      );
+
+      await tester.tap(find.text('设置'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('本地备份/恢复'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final backupTile = tester
+          .widgetList<SettingTile>(find.byType(SettingTile))
+          .firstWhere((tile) => tile.title == '本地备份/恢复');
+      backupTile.onTap!.call();
+      await tester.pumpAndSettle();
+
+      expect(find.text('当前备份位置'), findsOneWidget);
+      expect(find.textContaining('未设置'), findsOneWidget);
+      expect(find.textContaining('首次备份前先选一次位置'), findsOneWidget);
+      expect(find.text('选择备份位置'), findsOneWidget);
+    },
+  );
+
   testWidgets('night rule sheet uses time pickers instead of raw hour inputs', (
     tester,
   ) async {
@@ -653,7 +728,8 @@ void main() {
         .firstWhere((tile) => tile.title == '本地备份/恢复');
     backupTile.onTap!.call();
     await tester.pumpAndSettle();
-    expect(find.byType(NoticeCard), findsNothing);
+    expect(find.byType(NoticeCard), findsOneWidget);
+    expect(find.text('当前备份位置'), findsOneWidget);
   });
 
   testWidgets(
@@ -1462,4 +1538,34 @@ void main() {
     expect(state.autoBackupConfig.enabled, isTrue);
     expect(state.autoBackupConfig.lastStatus, AutoBackupStatus.waiting);
   });
+}
+
+class _BackupLocationRepository extends LocalLedgerRepository {
+  _BackupLocationRepository({
+    this.currentLabel,
+    this.currentDetail,
+    this.nextSelectionLabel,
+    this.nextSelectionDetail,
+  });
+
+  String? currentLabel;
+  String? currentDetail;
+  final String? nextSelectionLabel;
+  final String? nextSelectionDetail;
+  int changeLocationCalls = 0;
+
+  @override
+  Future<String?> currentBackupDirectoryLabel() async => currentLabel;
+
+  @override
+  Future<String?> currentBackupDirectoryDetail() async => currentDetail;
+
+  @override
+  Future<bool> chooseBackupDirectory() async {
+    changeLocationCalls += 1;
+    if (nextSelectionLabel == null && nextSelectionDetail == null) return false;
+    currentLabel = nextSelectionLabel;
+    currentDetail = nextSelectionDetail;
+    return true;
+  }
 }

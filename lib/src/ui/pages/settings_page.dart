@@ -494,178 +494,8 @@ class SettingsPage extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: LedgerColors.paper,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SheetHeaderBlock(
-                  title: '本地备份/恢复',
-                  subtitle: '恢复会覆盖当前记录、模板和规则。',
-                  onClose: () => Navigator.pop(context),
-                ),
-                const SizedBox(height: 12),
-                LedgerCard(
-                  color: LedgerColors.surfaceRaised,
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '创建备份',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        '会导出 JSON，并同步更新最近本地备份；首次选位置后，后续会自动保存到同一位置。',
-                        style: TextStyle(
-                          color: LedgerColors.muted,
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: repository == null
-                              ? null
-                              : () => _writeBackup(context),
-                          child: const Text('创建本地备份'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                LedgerCard(
-                  color: LedgerColors.surfaceRaised,
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '恢复本地备份',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        '可快速回退最近备份，也支持选择其他手机导出的 JSON 备份文件。',
-                        style: TextStyle(
-                          color: LedgerColors.muted,
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: repository == null
-                              ? null
-                              : () => _restoreLatestBackup(context),
-                          child: const Text('从最近本地备份恢复'),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: repository == null
-                              ? null
-                              : () => _restoreFromPickedBackup(context),
-                          child: const Text('选择备份文件恢复'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _writeBackup(BuildContext context) async {
-    final confirmed = await _confirm(
-      context,
-      title: '创建本地备份？',
-      content:
-          '首次会让你选一个备份位置，后续会自动保存到同一位置；同时保留一份 App 私有备份用于“最近本地备份恢复”。备份不包含 WebDAV 应用授权密码。',
-      confirmText: '确认备份',
-    );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-    try {
-      final path = await repository!.writeBackup(state.toSnapshot());
-      if (context.mounted) {
-        showLedgerSnackBar(
-          context,
-          path == null ? '已创建 App 私有备份；外部保存已取消' : '本地备份已保存：$path',
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        showLedgerSnackBar(context, '本地备份创建失败，请重试或更换保存位置');
-      }
-    }
-  }
-
-  Future<void> _restoreLatestBackup(BuildContext context) async {
-    try {
-      final path = await repository!.latestBackupPath();
-      if (!context.mounted) return;
-      if (path == null) {
-        showLedgerSnackBar(context, '没有最近本地备份，请选择备份文件');
-        await _restoreFromPickedBackup(context);
-        return;
-      }
-      await _restoreBackupFromPath(context, path);
-    } catch (_) {
-      if (context.mounted) {
-        showLedgerSnackBar(context, '读取本地备份失败，请确认备份文件仍可访问');
-      }
-    }
-  }
-
-  Future<void> _restoreFromPickedBackup(BuildContext context) async {
-    try {
-      final path = await repository!.pickBackupFilePath();
-      if (!context.mounted || path == null) return;
-      await _restoreBackupFromPath(context, path);
-    } catch (_) {
-      if (context.mounted) {
-        showLedgerSnackBar(context, '读取备份文件失败，请确认选择的是可访问的 JSON 备份');
-      }
-    }
-  }
-
-  Future<void> _restoreBackupFromPath(BuildContext context, String path) async {
-    final confirmed = await showLedgerConfirmDialog(
-      context,
-      title: '恢复备份？',
-      message: '将用 $path 覆盖当前账本。',
-      confirmText: '确认恢复',
-      icon: Icons.restore_page_outlined,
-    );
-    if (confirmed != true || !context.mounted) return;
-    final backup = await repository!.readBackupResult(path);
-    state.restore(backup.snapshot);
-    if (!context.mounted) return;
-    final warning = decodeWarningMessage(backup.diagnostics);
-    showLedgerSnackBar(
-      context,
-      warning == null ? '已从本地备份恢复' : '已从本地备份恢复；$warning',
+      builder: (context) =>
+          _LocalBackupSheet(state: state, repository: repository),
     );
   }
 
@@ -790,6 +620,317 @@ class SettingsPage extends StatelessWidget {
     destructive: destructive,
     icon: icon,
   );
+}
+
+class _LocalBackupSheet extends StatefulWidget {
+  const _LocalBackupSheet({required this.state, required this.repository});
+
+  final LedgerState state;
+  final LocalLedgerRepository? repository;
+
+  @override
+  State<_LocalBackupSheet> createState() => _LocalBackupSheetState();
+}
+
+class _LocalBackupSheetState extends State<_LocalBackupSheet> {
+  String? _locationLabel;
+  String? _locationDetail;
+  bool _loadingLocation = true;
+  bool _updatingLocation = false;
+
+  LocalLedgerRepository? get _repository => widget.repository;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshLocation();
+  }
+
+  bool get _hasRememberedLocation =>
+      (_locationLabel != null && _locationLabel!.isNotEmpty) ||
+      (_locationDetail != null && _locationDetail!.isNotEmpty);
+
+  Future<void> _refreshLocation() async {
+    final repository = _repository;
+    if (repository == null) {
+      if (!mounted) return;
+      setState(() {
+        _locationLabel = null;
+        _locationDetail = null;
+        _loadingLocation = false;
+      });
+      return;
+    }
+    final label = await repository.currentBackupDirectoryLabel();
+    final detail = await repository.currentBackupDirectoryDetail();
+    if (!mounted) return;
+    setState(() {
+      _locationLabel = label;
+      _locationDetail = detail;
+      _loadingLocation = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SheetHeaderBlock(
+                title: '本地备份/恢复',
+                subtitle: '恢复会覆盖当前记录、模板和规则。',
+                onClose: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '创建备份',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '会导出 JSON，并同步更新最近本地备份；首次选位置后，后续会自动保存到同一位置。',
+                      style: TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildBackupLocationCard(context),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _repository == null ? null : _writeBackup,
+                        child: const Text('创建本地备份'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _repository == null || _updatingLocation
+                            ? null
+                            : _changeBackupLocation,
+                        child: Text(
+                          _hasRememberedLocation ? '更换备份位置' : '选择备份位置',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              LedgerCard(
+                color: LedgerColors.surfaceRaised,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '恢复本地备份',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '可快速回退最近备份，也支持选择其他手机导出的 JSON 备份文件。',
+                      style: TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _repository == null
+                            ? null
+                            : _restoreLatestBackup,
+                        child: const Text('从最近本地备份恢复'),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _repository == null
+                            ? null
+                            : _restoreFromPickedBackup,
+                        child: const Text('选择备份文件恢复'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackupLocationCard(BuildContext context) {
+    if (_loadingLocation) {
+      return const NoticeCard(
+        icon: Icons.folder_open_outlined,
+        title: '当前备份位置',
+        body: '正在读取当前备份位置…',
+      );
+    }
+    if (!_hasRememberedLocation) {
+      return const NoticeCard(
+        icon: Icons.folder_copy_outlined,
+        title: '当前备份位置',
+        body: '未设置\n首次备份前先选一次位置，后续会自动保存到这里。',
+      );
+    }
+    return LedgerCard(
+      color: LedgerColors.surfaceSoft,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('当前备份位置', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 6),
+          Text(
+            _locationLabel ?? '已选择备份位置',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          if (_locationDetail != null && _locationDetail!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SelectableText(
+              _locationDetail!,
+              style: const TextStyle(
+                color: LedgerColors.muted,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _changeBackupLocation() async {
+    final repository = _repository;
+    if (repository == null) return;
+    setState(() => _updatingLocation = true);
+    try {
+      final changed = await repository.chooseBackupDirectory();
+      if (!mounted) return;
+      await _refreshLocation();
+      if (!mounted) return;
+      if (changed) {
+        showLedgerSnackBar(context, '已更新本地备份位置');
+      }
+    } catch (_) {
+      if (mounted) {
+        showLedgerSnackBar(context, '更新本地备份位置失败，请重试');
+      }
+    } finally {
+      if (mounted) setState(() => _updatingLocation = false);
+    }
+  }
+
+  Future<void> _writeBackup() async {
+    final repository = _repository;
+    if (repository == null) return;
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '创建本地备份？',
+      message:
+          '首次会让你选一个备份位置，后续会自动保存到同一位置；同时保留一份 App 私有备份用于“最近本地备份恢复”。备份不包含 WebDAV 应用授权密码。',
+      confirmText: '确认备份',
+      icon: Icons.save_outlined,
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final path = await repository.writeBackup(widget.state.toSnapshot());
+      if (!mounted) return;
+      await _refreshLocation();
+      if (!mounted) return;
+      showLedgerSnackBar(
+        context,
+        path == null ? '已创建 App 私有备份；外部保存已取消' : '本地备份已保存：$path',
+      );
+    } catch (_) {
+      if (mounted) {
+        showLedgerSnackBar(context, '本地备份创建失败，请重试或更换保存位置');
+      }
+    }
+  }
+
+  Future<void> _restoreLatestBackup() async {
+    final repository = _repository;
+    if (repository == null) return;
+    try {
+      final path = await repository.latestBackupPath();
+      if (!mounted) return;
+      if (path == null) {
+        showLedgerSnackBar(context, '没有最近本地备份，请选择备份文件');
+        await _restoreFromPickedBackup();
+        return;
+      }
+      await _restoreBackupFromPath(path);
+    } catch (_) {
+      if (mounted) {
+        showLedgerSnackBar(context, '读取本地备份失败，请确认备份文件仍可访问');
+      }
+    }
+  }
+
+  Future<void> _restoreFromPickedBackup() async {
+    final repository = _repository;
+    if (repository == null) return;
+    try {
+      final path = await repository.pickBackupFilePath();
+      if (!mounted || path == null) return;
+      await _restoreBackupFromPath(path);
+    } catch (_) {
+      if (mounted) {
+        showLedgerSnackBar(context, '读取备份文件失败，请确认选择的是可访问的 JSON 备份');
+      }
+    }
+  }
+
+  Future<void> _restoreBackupFromPath(String path) async {
+    final repository = _repository;
+    if (repository == null) return;
+    final confirmed = await showLedgerConfirmDialog(
+      context,
+      title: '恢复备份？',
+      message: '将用 $path 覆盖当前账本。',
+      confirmText: '确认恢复',
+      icon: Icons.restore_page_outlined,
+    );
+    if (confirmed != true || !mounted) return;
+    final backup = await repository.readBackupResult(path);
+    widget.state.restore(backup.snapshot);
+    if (!mounted) return;
+    final warning = decodeWarningMessage(backup.diagnostics);
+    showLedgerSnackBar(
+      context,
+      warning == null ? '已从本地备份恢复' : '已从本地备份恢复；$warning',
+    );
+  }
 }
 
 class ShiftTemplateSheet extends StatefulWidget {
