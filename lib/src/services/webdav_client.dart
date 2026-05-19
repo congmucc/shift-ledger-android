@@ -22,7 +22,7 @@ class WebDavClient {
       response,
       allowed: {200, 201, 204},
       notFoundMessage:
-          '云端备份路径不存在，请检查坚果云地址或远端备份文件名；坚果云根目录通常只读，建议使用 Apps/shift-ledger-backup.json 这类可写路径',
+          '云端备份路径不存在，请检查坚果云地址或远端备份文件名；建议使用 shift-ledger/shift-ledger-backup.json 这类应用专属目录路径',
     );
   }
 

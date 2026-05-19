@@ -59,7 +59,7 @@ enum AutoBackupStatus {
   failed,
 }
 
-const defaultWebDavRemotePath = 'Apps/shift-ledger-backup.json';
+const defaultWebDavRemotePath = 'shift-ledger/shift-ledger-backup.json';
 
 extension EntryTypeX on EntryType {
   String get label => switch (this) {
