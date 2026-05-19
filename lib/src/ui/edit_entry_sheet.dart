@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../app/ledger_state.dart';
@@ -31,21 +33,15 @@ class EditWorkEntrySheet extends StatefulWidget {
 
 class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   late DateTime _day;
-  late DateTime _originalDay;
   late List<WorkEntry> _segments;
+  late List<WorkEntry> _loadedSegments;
   late bool _openedWithExistingDay;
   bool _showDangerActions = false;
 
   @override
   void initState() {
     super.initState();
-    _day = dateOnly(widget.day ?? widget.state.now);
-    _originalDay = _day;
-    final existing = widget.state.entriesForDay(_day);
-    _openedWithExistingDay = existing.isNotEmpty;
-    _segments = existing.isNotEmpty
-        ? [...existing]
-        : [widget.state.createTemplateEntry(day: _day)];
+    _loadDay(dateOnly(widget.day ?? widget.state.now));
   }
 
   @override
@@ -56,16 +52,13 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
       preferredRuleId: _segments.isEmpty ? null : _segments.first.payRuleId,
     );
     final dayRecordSummary = summarizeRecordEntries(_segments);
-    final deleteTargetDay = _originalDay;
+    final deleteTargetDay = _day;
     final canDeleteDay =
-        ymd(_day) == ymd(deleteTargetDay) &&
         widget.state.entriesForDay(deleteTargetDay).isNotEmpty;
     final deleteTargetEntries = widget.state.entriesForDay(deleteTargetDay);
     final deleteTargetSummary = widget.state.summaryFor(
       DateRange.custom(deleteTargetDay, deleteTargetDay),
     );
-    final isCopyingToAnotherDay =
-        _openedWithExistingDay && !_isEditingOriginalDay;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -95,9 +88,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
               ),
               if (_openedWithExistingDay) ...[
                 Text(
-                  isCopyingToAnotherDay
-                      ? '当前是在已保存日期的基础上改到其他日期；保存后会在新日期新增一份，原日期保留。'
-                      : '保存会覆盖当天记录。',
+                  '保存会覆盖当天记录。',
                   style: TextStyle(
                     color: LedgerColors.muted,
                     fontSize: 13,
@@ -218,8 +209,10 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 LedgerCard(
                   color: LedgerColors.surfaceRaised,
                   padding: const EdgeInsets.all(14),
-                  child: const Text(
-                    '当前没有分段了。点击保存后不会新增记录，也可以继续新增分段。',
+                  child: Text(
+                    _openedWithExistingDay
+                        ? '当前没有分段了。点击保存后不会新增记录，也可以继续新增分段。'
+                        : '这一天还没有分段。先点“新增分段”再保存；如果只是查看，直接关闭即可。',
                     style: TextStyle(
                       color: LedgerColors.muted,
                       fontSize: 13,
@@ -361,70 +354,56 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     );
   }
 
-  void _moveDay(int offset) {
-    _setDay(_day.add(Duration(days: offset)));
-  }
+  Future<void> _moveDay(int offset) =>
+      _switchDay(_day.add(Duration(days: offset)));
 
   Future<void> _pickDay() async {
     final picked = await showLedgerDatePicker(context, initialDate: _day);
     if (picked == null || !mounted) return;
-    _setDay(picked);
+    await _switchDay(picked);
   }
 
-  void _setDay(DateTime day) {
+  Future<void> _switchDay(DateTime day) async {
     final nextDay = dateOnly(day);
-    final changedDay = ymd(nextDay) != ymd(_day);
+    if (ymd(nextDay) == ymd(_day)) return;
+    if (_hasUnsavedChanges()) {
+      final confirmed = await showLedgerConfirmDialog(
+        context,
+        title: '切换日期并放弃当前修改？',
+        message: '当前还没保存。切到 ${ymd(nextDay)} 后，会重新加载那一天的已保存分段。',
+        confirmText: '切换日期',
+        cancelText: '继续编辑',
+        icon: Icons.calendar_month_outlined,
+      );
+      if (confirmed != true || !mounted) return;
+    }
     setState(() {
-      _day = nextDay;
-      if (changedDay) _showDangerActions = false;
-      _segments = _segments
-          .map((entry) => _moveEntryToDay(entry, nextDay))
-          .toList();
+      _showDangerActions = false;
+      _loadDay(nextDay);
     });
   }
 
-  WorkEntry _moveEntryToDay(WorkEntry entry, DateTime day) {
-    final start = DateTime(
-      day.year,
-      day.month,
-      day.day,
-      entry.startDateTime.hour,
-      entry.startDateTime.minute,
-    );
-    var end = DateTime(
-      day.year,
-      day.month,
-      day.day,
-      entry.endDateTime.hour,
-      entry.endDateTime.minute,
-    );
-    end = normalizeOvernightEnd(start, end);
-    final nextRule = widget.state.ruleForDate(
-      day,
-      preferredRuleId: entry.payRuleId,
-    );
-    return entry.copyWith(
-      workDate: dateOnly(day),
-      startDateTime: start,
-      endDateTime: end,
-      payRuleId: nextRule.id,
-      payRuleSnapshot: nextRule,
-    );
+  void _loadDay(DateTime day) {
+    final existing = widget.state.entriesForDay(day);
+    _day = day;
+    _openedWithExistingDay = existing.isNotEmpty;
+    _loadedSegments = [...existing];
+    _segments = [...existing];
   }
 
-  WorkEntry _duplicateEntryToDay(WorkEntry entry, DateTime day) =>
-      _moveEntryToDay(
-        entry,
-        day,
-      ).copyWith(id: newId('entry'), copiedFromDayKey: ymd(_originalDay));
+  bool _hasUnsavedChanges() =>
+      _entriesSignature(_segments) != _entriesSignature(_loadedSegments);
 
-  bool get _isEditingOriginalDay => ymd(_day) == ymd(_originalDay);
+  String _entriesSignature(List<WorkEntry> entries) =>
+      jsonEncode(entries.map((entry) => entry.toJson()).toList());
 
   void _addSegment() {
-    final template = widget.state.templates.firstWhere(
-      (tpl) => tpl.type == EntryType.overtime,
-      orElse: () => widget.state.templates.first,
-    );
+    final template = _segments.isEmpty
+        ? widget.state.templates.first
+        : widget.state.templates.firstWhere(
+            (tpl) => tpl.type == EntryType.overtime,
+            orElse: () => widget.state.templates.first,
+          );
     setState(() {
       _segments = [
         ..._segments,
@@ -449,14 +428,11 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   Future<void> _confirmDeleteSegment(WorkEntry entry) async {
     if (_segments.length == 1) {
       final targetDayLabel = ymd(_day);
-      final originalDayLabel = ymd(_originalDay);
       final confirmed = await showLedgerConfirmDialog(
         context,
         title: '删除最后一段？',
-        message: originalDayLabel == targetDayLabel
+        message: _openedWithExistingDay
             ? '这一天只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时会清空 $targetDayLabel 的全部记录。'
-            : _openedWithExistingDay
-            ? '当前只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时不会动原日期 $originalDayLabel，也不会在 $targetDayLabel 新增任何分段。'
             : '当前只剩 ${entry.timeRangeLabel} 这一段。删除后，保存时不会在 $targetDayLabel 新增任何分段。',
         confirmText: '确认删除',
         destructive: true,
@@ -482,7 +458,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _confirmDeleteDay() async {
-    final targetDay = _originalDay;
+    final targetDay = _day;
     final entries = widget.state.entriesForDay(targetDay);
     final summary = widget.state.summaryFor(
       DateRange.custom(targetDay, targetDay),
@@ -515,19 +491,17 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
   }
 
   Future<void> _save() async {
+    if (_segments.isEmpty && !_openedWithExistingDay) {
+      final rootContext = Navigator.of(context, rootNavigator: true).context;
+      Navigator.pop(context);
+      showLedgerSnackBar(rootContext, '这一天还没有分段，未新增记录');
+      return;
+    }
     if (_segments.isEmpty) {
-      final targetDayLabel = ymd(_day);
-      final originalDayLabel = ymd(_originalDay);
       final confirmed = await showLedgerConfirmDialog(
         context,
-        title: _openedWithExistingDay && !_isEditingOriginalDay
-            ? '不新增 $targetDayLabel 记录？'
-            : '清空 $originalDayLabel 记录？',
-        message: originalDayLabel == targetDayLabel
-            ? '当前已经没有分段了。继续保存后，会清空 $originalDayLabel 这一天的全部记录。'
-            : _openedWithExistingDay
-            ? '当前已经没有分段了。继续保存后，会保留原日期 $originalDayLabel，并清空 $targetDayLabel 里这次从原日期复制过去的记录。'
-            : '当前已经没有分段了。继续保存后，不会在 $targetDayLabel 新增任何分段。',
+        title: '清空 ${ymd(_day)} 记录？',
+        message: '当前已经没有分段了。继续保存后，会清空 ${ymd(_day)} 这一天的全部记录。',
         confirmText: '确认清空',
         destructive: true,
         icon: Icons.delete_sweep_outlined,
@@ -548,27 +522,12 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     if (!context.mounted) return;
     final rootContext = Navigator.of(context, rootNavigator: true).context;
     final savedDay = _day;
-    final clearedDay = _originalDay;
-    if (_openedWithExistingDay && !_isEditingOriginalDay) {
-      widget.state.replaceCopiedDayEntries(
-        _originalDay,
-        _day,
-        _segments
-            .map((entry) => _duplicateEntryToDay(entry, savedDay))
-            .toList(),
-      );
-    } else {
-      widget.state.replaceDayEntries(_originalDay, _day, _segments);
-    }
+    widget.state.replaceDayEntries(savedDay, savedDay, _segments);
     Navigator.pop(context);
     showLedgerSnackBar(
       rootContext,
       _segments.isEmpty
-          ? _openedWithExistingDay && !_isEditingOriginalDay
-                ? '已清空 ${ymd(savedDay)} 里从 ${ymd(clearedDay)} 复制的记录，原日期保留'
-                : '已清空 ${ymd(clearedDay)} 记录'
-          : _openedWithExistingDay && !_isEditingOriginalDay
-          ? '已同步到 ${ymd(savedDay)}，${ymd(clearedDay)} 原记录保留'
+          ? '已清空 ${ymd(savedDay)} 记录'
           : '已保存 ${ymd(savedDay)} 记录',
     );
   }

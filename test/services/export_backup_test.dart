@@ -63,13 +63,13 @@ void main() {
   test('backup excludes WebDAV app password but restores ledger data', () {
     final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
     state.updateWebDavConfig(
-      const WebDavConfig(
-        url: 'https://dav.jianguoyun.com/dav/shift-ledger',
-        username: 'user@example.com',
-        appPassword: 'secret-app-password',
-        remotePath: 'shift-ledger-backup.json',
-      ),
-    );
+        const WebDavConfig(
+          url: 'https://dav.jianguoyun.com/dav/shift-ledger',
+          username: 'user@example.com',
+          appPassword: 'secret-app-password',
+          remotePath: _legacyRootRemotePath,
+        ),
+      );
 
     final payload = BackupService().encode(state.toSnapshot());
     expect(payload, isNot(contains('secret-app-password')));
@@ -81,12 +81,13 @@ void main() {
     expect(decoded.entries, isNotEmpty);
     expect(decoded.webDavConfig.appPassword, isEmpty);
     expect(decoded.autoBackupConfig.enabled, isFalse);
-    expect(decoded.autoBackupConfig.remotePath, 'shift-ledger-backup.json');
+    expect(decoded.autoBackupConfig.remotePath, defaultWebDavRemotePath);
 
     state.restore(decoded);
     expect(state.webDavConfig.username, 'user@example.com');
     expect(state.webDavConfig.appPassword, isEmpty);
     expect(state.webDavConfig.isConfigured, isFalse);
+    expect(state.webDavConfig.remotePath, defaultWebDavRemotePath);
   });
 
   test(
@@ -314,3 +315,5 @@ void main() {
     },
   );
 }
+
+const _legacyRootRemotePath = 'shift-ledger-backup.json';

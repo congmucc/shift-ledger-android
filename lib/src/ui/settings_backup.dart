@@ -111,7 +111,11 @@ class _WebDavSheetState extends State<WebDavSheet> {
     );
     _username = TextEditingController(text: config.username);
     _password = TextEditingController(text: config.appPassword);
-    _remotePath = TextEditingController(text: config.remotePath);
+    _remotePath = TextEditingController(
+      text: config.remotePath.isEmpty
+          ? defaultWebDavRemotePath
+          : config.remotePath,
+    );
   }
 
   @override
@@ -215,7 +219,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       controller: _remotePath,
                       decoration: const InputDecoration(
                         labelText: '远端备份文件名',
-                        hintText: 'shift-ledger-backup.json',
+                        hintText: defaultWebDavRemotePath,
                       ),
                     ),
                   ],
@@ -284,7 +288,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
     username: _username.text.trim(),
     appPassword: _password.text,
     remotePath: _remotePath.text.trim().isEmpty
-        ? 'shift-ledger-backup.json'
+        ? defaultWebDavRemotePath
         : _remotePath.text.trim(),
   );
 

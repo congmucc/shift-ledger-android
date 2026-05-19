@@ -59,6 +59,9 @@ enum AutoBackupStatus {
   failed,
 }
 
+const defaultWebDavRemotePath = 'Apps/shift-ledger-backup.json';
+const _legacyRootWebDavRemotePath = 'shift-ledger-backup.json';
+
 extension EntryTypeX on EntryType {
   String get label => switch (this) {
     EntryType.regular => '普通',
@@ -858,7 +861,7 @@ class WebDavConfig {
     this.url = '',
     this.username = '',
     this.appPassword = '',
-    this.remotePath = 'shift-ledger-backup.json',
+    this.remotePath = defaultWebDavRemotePath,
     this.lastBackupAt,
   });
 
@@ -899,7 +902,9 @@ class WebDavConfig {
     url: json['url'] as String? ?? '',
     username: json['username'] as String? ?? '',
     appPassword: json['appPassword'] as String? ?? '',
-    remotePath: json['remotePath'] as String? ?? 'shift-ledger-backup.json',
+    remotePath: _normalizedStoredWebDavRemotePath(
+      json['remotePath'] as String?,
+    ),
     lastBackupAt: parseOptionalDate(json['lastBackupAt']),
   );
 }
@@ -907,7 +912,7 @@ class WebDavConfig {
 class AutoBackupConfig {
   const AutoBackupConfig({
     this.enabled = false,
-    this.remotePath = 'shift-ledger-backup.json',
+    this.remotePath = defaultWebDavRemotePath,
     this.lastTargetSignature = '',
     this.lastSuccessAt,
     this.lastAttemptAt,
@@ -969,7 +974,9 @@ class AutoBackupConfig {
   factory AutoBackupConfig.fromJson(Map<String, Object?> json) =>
       AutoBackupConfig(
         enabled: json['enabled'] == true,
-        remotePath: json['remotePath'] as String? ?? 'shift-ledger-backup.json',
+        remotePath: _normalizedStoredWebDavRemotePath(
+          json['remotePath'] as String?,
+        ),
         lastTargetSignature: json['lastTargetSignature'] as String? ?? '',
         lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
@@ -979,6 +986,14 @@ class AutoBackupConfig {
         lastStatus: AutoBackupStatusX.fromName(json['lastStatus'] as String?),
         lastError: json['lastError'] as String? ?? '',
       );
+}
+
+String _normalizedStoredWebDavRemotePath(String? remotePath) {
+  final trimmed = remotePath?.trim() ?? '';
+  if (trimmed.isEmpty || trimmed == _legacyRootWebDavRemotePath) {
+    return defaultWebDavRemotePath;
+  }
+  return trimmed;
 }
 
 class DeletedDayRecord {

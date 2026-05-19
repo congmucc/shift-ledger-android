@@ -199,7 +199,11 @@ void main() {
     await tester.tap(find.text('＋').last);
     await tester.pumpAndSettle();
     expect(find.text('新增 / 编辑工时记录'), findsOneWidget);
+    expect(find.textContaining('这一天还没有分段'), findsOneWidget);
+    expect(find.textContaining('09:00 — 18:00'), findsNothing);
 
+    await tester.tap(find.text('新增分段'));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('保存').last);
     await tester.tap(find.text('保存').last);
     await tester.pumpAndSettle();
@@ -240,6 +244,8 @@ void main() {
 
     await tester.tap(find.text('＋').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('新增分段'));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('保存').last);
     await tester.tap(find.text('保存').last);
     await tester.pumpAndSettle();
@@ -268,6 +274,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(state.entries, isEmpty);
     expect(find.text('已清空 2026-05-13 记录'), findsOneWidget);
+  });
+
+  testWidgets('edit sheet switching dates loads that day records', (tester) async {
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    final previousDay = DateTime(2026, 5, 12);
+    final today = DateTime(2026, 5, 13);
+    final state = LedgerState(
+      now: today,
+      payRules: [rule],
+      templates: [ShiftTemplate.standard(payRuleId: rule.id)],
+      entries: [
+        WorkEntry.create(
+          id: 'previous-day-entry',
+          workDate: previousDay,
+          startDateTime: DateTime(2026, 5, 12, 7),
+          endDateTime: DateTime(2026, 5, 12, 11),
+          payRule: rule,
+        ),
+        WorkEntry.create(
+          id: 'today-entry',
+          workDate: today,
+          startDateTime: DateTime(2026, 5, 13, 15),
+          endDateTime: DateTime(2026, 5, 13, 20),
+          payRule: rule,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: EditWorkEntrySheet(state: state, day: today)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('15:00 — 20:00'), findsWidgets);
+    expect(find.textContaining('07:00 — 11:00'), findsNothing);
+
+    await tester.tap(find.text('昨天'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-05-12'), findsOneWidget);
+    expect(find.textContaining('07:00 — 11:00'), findsWidgets);
+    expect(find.textContaining('15:00 — 20:00'), findsNothing);
+    expect(find.textContaining('这一天还没有分段'), findsNothing);
   });
 
   testWidgets(
@@ -911,6 +962,8 @@ void main() {
 
     await tester.tap(find.text('＋').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('新增分段'));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('保存').last);
     await tester.tap(find.text('保存').last);
     await tester.pumpAndSettle();
@@ -1436,7 +1489,7 @@ void main() {
   });
 
   testWidgets(
-    'changing a saved day to another date adds a copy and keeps the original day',
+    'changing from one saved day to another saved day loads target records instead of copying',
     (tester) async {
       final oldRule = PayRule.defaultHourly(hourlyRate: 35).copyWith(
         id: 'rule_old',
@@ -1480,6 +1533,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('明天'));
       await tester.pumpAndSettle();
+      final editSheet = find.byType(EditWorkEntrySheet);
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('13:00 — 18:00'),
+        ),
+        findsWidgets,
+      );
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('09:00 — 18:00'),
+        ),
+        findsNothing,
+      );
       await tester.ensureVisible(find.text('保存').last);
       await tester.tap(find.text('保存').last);
       await tester.pumpAndSettle();
@@ -1491,20 +1559,18 @@ void main() {
       expect(original.payRuleId, 'rule_old');
       expect(original.payRuleSnapshot.id, 'rule_old');
 
-      final copied = state
-          .entriesForDay(DateTime(2026, 5, 14))
-          .firstWhere((entry) => entry.id != 'target_entry');
-      expect(copied.id, isNot('source_entry'));
-      expect(copied.payRuleId, 'rule_new');
-      expect(copied.payRuleSnapshot.id, 'rule_new');
-      expect(state.entriesForDay(DateTime(2026, 5, 14)).length, 2);
+      final target = state.entriesForDay(DateTime(2026, 5, 14)).single;
+      expect(target.id, 'target_entry');
+      expect(target.payRuleId, 'rule_new');
+      expect(target.payRuleSnapshot.id, 'rule_new');
+      expect(state.entriesForDay(DateTime(2026, 5, 14)).length, 1);
       expect(state.entriesForDay(DateTime(2026, 5, 13)).length, 1);
       expect(state.entries.any((entry) => entry.id == 'target_entry'), isTrue);
     },
   );
 
   testWidgets(
-    'copying the same saved day to the same target again does not accumulate duplicates',
+    'switching dates with unsaved changes asks before discarding current edits',
     (tester) async {
       final rule = PayRule.defaultHourly(hourlyRate: 35);
       final state = LedgerState(
@@ -1526,18 +1592,61 @@ void main() {
 
       await tester.pumpWidget(ShiftLedgerApp(state: state));
 
-      for (var i = 0; i < 2; i++) {
-        await tester.tap(find.byTooltip('编辑').first);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('明天'));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('保存').last);
-        await tester.tap(find.text('保存').last);
-        await tester.pumpAndSettle();
-      }
+      await tester.tap(find.byTooltip('编辑').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('新增分段'));
+      await tester.pumpAndSettle();
+      final editSheet = find.byType(EditWorkEntrySheet);
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('18:00 — 21:00'),
+        ),
+        findsWidgets,
+      );
+      await tester.tap(find.text('明天'));
+      await tester.pumpAndSettle();
+      expect(find.text('切换日期并放弃当前修改？'), findsOneWidget);
+      await tester.tap(find.text('继续编辑'));
+      await tester.pumpAndSettle();
+      expect(find.text('切换日期并放弃当前修改？'), findsNothing);
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('18:00 — 21:00'),
+        ),
+        findsWidgets,
+      );
 
+      await tester.tap(find.text('明天'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('切换日期'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2026-05-14'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('09:00 — 18:00'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('18:00 — 21:00'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: editSheet,
+          matching: find.textContaining('这一天还没有分段'),
+        ),
+        findsOneWidget,
+      );
       expect(state.entriesForDay(DateTime(2026, 5, 13)).length, 1);
-      expect(state.entriesForDay(DateTime(2026, 5, 14)).length, 1);
+      expect(state.entriesForDay(DateTime(2026, 5, 14)), isEmpty);
     },
   );
 
