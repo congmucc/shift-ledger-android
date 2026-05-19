@@ -111,7 +111,9 @@ void main() {
       expect(result.lastStatus, AutoBackupStatus.waiting);
     });
 
-    test('eligible config uploads the unified backup file and updates status', () async {
+    test(
+      'eligible config uploads the unified backup file and updates status',
+      () async {
         final upload = _UploadSpy();
         final now = DateTime(2026, 5, 13, 9);
         final state = _configuredState();
@@ -122,10 +124,7 @@ void main() {
         ).run(state: state);
 
         expect(upload.calls, hasLength(1));
-        expect(
-          upload.calls.single.config.remotePath,
-          'manual-backup.json',
-        );
+        expect(upload.calls.single.config.remotePath, 'manual-backup.json');
         expect(
           upload.calls.single.payload,
           isNot(contains('secret-app-password')),
@@ -182,6 +181,32 @@ void main() {
       expect(snapshot.recentDeletedDays.single.segmentCount, 2);
       expect(snapshot.webDavConfig.appPassword, isEmpty);
     });
+
+    test(
+      'changing WebDAV destination triggers a fresh upload even within the usual interval',
+      () async {
+        final upload = _UploadSpy();
+        var now = DateTime(2026, 5, 13, 9);
+        final state = _configuredState();
+        final service = AutoBackupService(
+          uploader: upload.call,
+          nowProvider: () => now,
+        );
+
+        final first = await service.run(state: state);
+        expect(first.lastStatus, AutoBackupStatus.success);
+
+        state.updateWebDavConfig(
+          state.webDavConfig.copyWith(username: 'other@example.com'),
+        );
+        now = now.add(const Duration(minutes: 10));
+        final second = await service.run(state: state);
+
+        expect(second.lastStatus, AutoBackupStatus.success);
+        expect(upload.calls, hasLength(2));
+        expect(upload.calls.last.config.username, 'other@example.com');
+      },
+    );
   });
 }
 

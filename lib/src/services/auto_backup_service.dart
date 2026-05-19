@@ -23,9 +23,14 @@ class AutoBackupService {
   Future<AutoBackupConfig> run({required LedgerState state}) async {
     final now = nowProvider?.call() ?? DateTime.now();
     final effectiveRemotePath = state.webDavConfig.remotePath;
+    final targetSignature = _targetSignature(state.webDavConfig);
     final config = state.autoBackupConfig.copyWith(
       remotePath: effectiveRemotePath,
     );
+    final previousTargetSignature = config.lastTargetSignature.isEmpty
+        ? targetSignature
+        : config.lastTargetSignature;
+    final targetChanged = previousTargetSignature != targetSignature;
 
     if (!config.enabled) {
       return _apply(state, config.copyWith(lastStatus: AutoBackupStatus.idle));
@@ -43,7 +48,7 @@ class AutoBackupService {
     }
 
     final contentHash = _contentHash(state);
-    if (config.lastContentHash == contentHash) {
+    if (!targetChanged && config.lastContentHash == contentHash) {
       return _apply(
         state,
         config.copyWith(
@@ -55,7 +60,9 @@ class AutoBackupService {
     }
 
     final lastSuccessAt = config.lastSuccessAt;
-    if (lastSuccessAt != null && now.difference(lastSuccessAt) < minInterval) {
+    if (!targetChanged &&
+        lastSuccessAt != null &&
+        now.difference(lastSuccessAt) < minInterval) {
       return _apply(
         state,
         config.copyWith(
@@ -67,7 +74,7 @@ class AutoBackupService {
     }
 
     final today = dateOnly(now);
-    final successCount = _successCountFor(config, today);
+    final successCount = targetChanged ? 0 : _successCountFor(config, today);
     if (successCount >= maxDailySuccessCount) {
       return _apply(
         state,
@@ -83,6 +90,7 @@ class AutoBackupService {
       lastSuccessAt: now,
       lastAttemptAt: now,
       lastContentHash: contentHash,
+      lastTargetSignature: targetSignature,
       dailyCountDate: today,
       dailySuccessCount: successCount + 1,
       lastStatus: AutoBackupStatus.success,
@@ -132,6 +140,13 @@ class AutoBackupService {
     );
     final payload = _payloadWithAutoConfig(state, stableConfig);
     return sha256.convert(utf8.encode(payload)).toString();
+  }
+
+  String _targetSignature(WebDavConfig config) {
+    final normalizedUrl = config.url.trim();
+    final normalizedUsername = config.username.trim();
+    final normalizedRemotePath = config.remotePath.trim();
+    return '$normalizedUrl\n$normalizedUsername\n$normalizedRemotePath';
   }
 
   String _payloadWithAutoConfig(LedgerState state, AutoBackupConfig config) {

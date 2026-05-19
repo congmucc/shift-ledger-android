@@ -908,6 +908,7 @@ class AutoBackupConfig {
   const AutoBackupConfig({
     this.enabled = false,
     this.remotePath = 'shift-ledger-backup.json',
+    this.lastTargetSignature = '',
     this.lastSuccessAt,
     this.lastAttemptAt,
     this.lastContentHash = '',
@@ -919,6 +920,7 @@ class AutoBackupConfig {
 
   final bool enabled;
   final String remotePath;
+  final String lastTargetSignature;
   final DateTime? lastSuccessAt;
   final DateTime? lastAttemptAt;
   final String lastContentHash;
@@ -930,6 +932,7 @@ class AutoBackupConfig {
   AutoBackupConfig copyWith({
     bool? enabled,
     String? remotePath,
+    String? lastTargetSignature,
     DateTime? lastSuccessAt,
     DateTime? lastAttemptAt,
     String? lastContentHash,
@@ -940,6 +943,7 @@ class AutoBackupConfig {
   }) => AutoBackupConfig(
     enabled: enabled ?? this.enabled,
     remotePath: remotePath ?? this.remotePath,
+    lastTargetSignature: lastTargetSignature ?? this.lastTargetSignature,
     lastSuccessAt: lastSuccessAt ?? this.lastSuccessAt,
     lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
     lastContentHash: lastContentHash ?? this.lastContentHash,
@@ -952,6 +956,7 @@ class AutoBackupConfig {
   Map<String, Object?> toJson() => {
     'enabled': enabled,
     'remotePath': remotePath,
+    'lastTargetSignature': lastTargetSignature,
     'lastSuccessAt': lastSuccessAt?.toIso8601String(),
     'lastAttemptAt': lastAttemptAt?.toIso8601String(),
     'lastContentHash': lastContentHash,
@@ -965,6 +970,7 @@ class AutoBackupConfig {
       AutoBackupConfig(
         enabled: json['enabled'] == true,
         remotePath: json['remotePath'] as String? ?? 'shift-ledger-backup.json',
+        lastTargetSignature: json['lastTargetSignature'] as String? ?? '',
         lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
         lastContentHash: json['lastContentHash'] as String? ?? '',
