@@ -63,13 +63,13 @@ void main() {
   test('backup excludes WebDAV app password but restores ledger data', () {
     final state = LedgerState.seeded(now: DateTime(2026, 5, 13));
     state.updateWebDavConfig(
-        const WebDavConfig(
-          url: 'https://dav.jianguoyun.com/dav/shift-ledger',
-          username: 'user@example.com',
-          appPassword: 'secret-app-password',
-          remotePath: _legacyRootRemotePath,
-        ),
-      );
+      const WebDavConfig(
+        url: 'https://dav.jianguoyun.com/dav/shift-ledger',
+        username: 'user@example.com',
+        appPassword: 'secret-app-password',
+        remotePath: defaultWebDavRemotePath,
+      ),
+    );
 
     final payload = BackupService().encode(state.toSnapshot());
     expect(payload, isNot(contains('secret-app-password')));
@@ -315,5 +315,3 @@ void main() {
     },
   );
 }
-
-const _legacyRootRemotePath = 'shift-ledger-backup.json';

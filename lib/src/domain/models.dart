@@ -60,7 +60,6 @@ enum AutoBackupStatus {
 }
 
 const defaultWebDavRemotePath = 'Apps/shift-ledger-backup.json';
-const _legacyRootWebDavRemotePath = 'shift-ledger-backup.json';
 
 extension EntryTypeX on EntryType {
   String get label => switch (this) {
@@ -902,9 +901,7 @@ class WebDavConfig {
     url: json['url'] as String? ?? '',
     username: json['username'] as String? ?? '',
     appPassword: json['appPassword'] as String? ?? '',
-    remotePath: _normalizedStoredWebDavRemotePath(
-      json['remotePath'] as String?,
-    ),
+    remotePath: _normalizedRemotePathValue(json['remotePath'] as String?),
     lastBackupAt: parseOptionalDate(json['lastBackupAt']),
   );
 }
@@ -974,9 +971,7 @@ class AutoBackupConfig {
   factory AutoBackupConfig.fromJson(Map<String, Object?> json) =>
       AutoBackupConfig(
         enabled: json['enabled'] == true,
-        remotePath: _normalizedStoredWebDavRemotePath(
-          json['remotePath'] as String?,
-        ),
+        remotePath: _normalizedRemotePathValue(json['remotePath'] as String?),
         lastTargetSignature: json['lastTargetSignature'] as String? ?? '',
         lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
@@ -988,12 +983,9 @@ class AutoBackupConfig {
       );
 }
 
-String _normalizedStoredWebDavRemotePath(String? remotePath) {
+String _normalizedRemotePathValue(String? remotePath) {
   final trimmed = remotePath?.trim() ?? '';
-  if (trimmed.isEmpty || trimmed == _legacyRootWebDavRemotePath) {
-    return defaultWebDavRemotePath;
-  }
-  return trimmed;
+  return trimmed.isEmpty ? defaultWebDavRemotePath : trimmed;
 }
 
 class DeletedDayRecord {
