@@ -180,6 +180,23 @@ void main() {
     ).readAsStringSync();
     expect(manifest, contains('android.permission.INTERNET'));
     expect(manifest, contains('android:label="工时账本"'));
+    expect(manifest, contains('android:allowBackup="false"'));
+    expect(manifest, contains('android:fullBackupContent="@xml/backup_rules"'));
+    expect(
+      manifest,
+      contains('android:dataExtractionRules="@xml/data_extraction_rules"'),
+    );
+
+    final legacyBackupRules = File(
+      'android/app/src/main/res/xml/backup_rules.xml',
+    ).readAsStringSync();
+    final android12BackupRules = File(
+      'android/app/src/main/res/xml/data_extraction_rules.xml',
+    ).readAsStringSync();
+    expect(legacyBackupRules, contains('<full-backup-content>'));
+    expect(android12BackupRules, contains('<data-extraction-rules>'));
+    expect(android12BackupRules, contains('<cloud-backup>'));
+    expect(android12BackupRules, contains('<device-transfer>'));
   });
 
   test(
