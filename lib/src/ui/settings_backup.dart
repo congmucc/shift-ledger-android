@@ -226,6 +226,14 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 ),
               ),
               const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: const Text('保存配置'),
+                ),
+              ),
+              const SizedBox(height: 12),
               _buildAutoBackupSection(context),
               const SizedBox(height: 12),
               LedgerCard(
@@ -241,14 +249,6 @@ class _WebDavSheetState extends State<WebDavSheet> {
                     const SizedBox(height: 10),
                     Column(
                       children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _busy ? null : _save,
-                            child: const Text('保存配置'),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
@@ -299,9 +299,6 @@ class _WebDavSheetState extends State<WebDavSheet> {
       webDavConfig: _config(),
       autoConfig: autoConfig.copyWith(lastStatus: displayStatus),
     );
-    final autoCheckSummary = autoConfig.enabled
-        ? '已启用；仅在打开 App 或继续使用时自动检查'
-        : '未启用；打开 App 后不会自动检查';
     return Container(
       decoration: BoxDecoration(
         color: LedgerColors.surfaceRaised,
@@ -312,9 +309,12 @@ class _WebDavSheetState extends State<WebDavSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SwitchListTile(
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             value: autoConfig.enabled,
             title: const Text('自动云备份'),
-            subtitle: const Text('打开 App 或账本变化后检查 · 内容未变不重复上传 · 最小间隔 1 小时'),
+            subtitle: const Text('打开 App 或账本变化后自动检查 · 1 小时内不重复上传'),
             onChanged: (value) {
               final currentConfig = _config();
               final configured = currentConfig.isConfigured;
@@ -335,13 +335,11 @@ class _WebDavSheetState extends State<WebDavSheet> {
             },
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _StatusLine(label: '打开 App 后自动检查', value: autoCheckSummary),
                 _StatusLine(label: '当前状态', value: backupStatus.summary),
-                _StatusLine(label: '状态说明', value: backupStatus.detail),
                 _StatusLine(label: '云端文件', value: _config().remotePath),
                 _StatusLine(
                   label: '上次自动备份',
@@ -349,10 +347,11 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       ? '尚未自动备份'
                       : dateTimeText(autoConfig.lastSuccessAt!),
                 ),
-                _StatusLine(label: '最近状态', value: displayStatus.label),
                 if (autoConfig.lastStatus == AutoBackupStatus.failed &&
                     autoConfig.lastError.isNotEmpty)
                   _StatusLine(label: '失败原因', value: autoConfig.lastError),
+                if (backupStatus.detail.isNotEmpty)
+                  _StatusLine(label: '状态说明', value: backupStatus.detail),
               ],
             ),
           ),
