@@ -879,7 +879,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('自动云备份'), findsOneWidget);
       expect(find.textContaining('最小间隔 1 小时'), findsOneWidget);
-      expect(find.textContaining('每天最多 6 次'), findsOneWidget);
+      expect(find.textContaining('内容未变不重复上传'), findsOneWidget);
       expect(find.textContaining('打开 App 后自动检查'), findsOneWidget);
       final autoSwitch = tester.widget<Switch>(
         find.descendant(

@@ -15,7 +15,6 @@ class AutoBackupService {
   const AutoBackupService({this.uploader, this.nowProvider});
 
   static const minInterval = Duration(hours: 1);
-  static const maxDailySuccessCount = 6;
 
   final AutoBackupUploader? uploader;
   final NowProvider? nowProvider;
@@ -73,26 +72,11 @@ class AutoBackupService {
       );
     }
 
-    final today = dateOnly(now);
-    final successCount = targetChanged ? 0 : _successCountFor(config, today);
-    if (successCount >= maxDailySuccessCount) {
-      return _apply(
-        state,
-        config.copyWith(
-          lastAttemptAt: now,
-          lastStatus: AutoBackupStatus.waiting,
-          lastError: '',
-        ),
-      );
-    }
-
     final next = config.copyWith(
       lastSuccessAt: now,
       lastAttemptAt: now,
       lastContentHash: contentHash,
       lastTargetSignature: targetSignature,
-      dailyCountDate: today,
-      dailySuccessCount: successCount + 1,
       lastStatus: AutoBackupStatus.success,
       lastError: '',
     );
@@ -123,14 +107,6 @@ class AutoBackupService {
       state.updateAutoBackupConfig(config);
     }
     return config;
-  }
-
-  int _successCountFor(AutoBackupConfig config, DateTime today) {
-    if (config.dailyCountDate == null ||
-        ymd(config.dailyCountDate!) != ymd(today)) {
-      return 0;
-    }
-    return config.dailySuccessCount;
   }
 
   String _contentHash(LedgerState state) {

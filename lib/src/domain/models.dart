@@ -914,8 +914,6 @@ class AutoBackupConfig {
     this.lastSuccessAt,
     this.lastAttemptAt,
     this.lastContentHash = '',
-    this.dailyCountDate,
-    this.dailySuccessCount = 0,
     this.lastStatus = AutoBackupStatus.idle,
     this.lastError = '',
   });
@@ -926,8 +924,6 @@ class AutoBackupConfig {
   final DateTime? lastSuccessAt;
   final DateTime? lastAttemptAt;
   final String lastContentHash;
-  final DateTime? dailyCountDate;
-  final int dailySuccessCount;
   final AutoBackupStatus lastStatus;
   final String lastError;
 
@@ -938,8 +934,6 @@ class AutoBackupConfig {
     DateTime? lastSuccessAt,
     DateTime? lastAttemptAt,
     String? lastContentHash,
-    DateTime? dailyCountDate,
-    int? dailySuccessCount,
     AutoBackupStatus? lastStatus,
     String? lastError,
   }) => AutoBackupConfig(
@@ -949,8 +943,6 @@ class AutoBackupConfig {
     lastSuccessAt: lastSuccessAt ?? this.lastSuccessAt,
     lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
     lastContentHash: lastContentHash ?? this.lastContentHash,
-    dailyCountDate: dailyCountDate ?? this.dailyCountDate,
-    dailySuccessCount: dailySuccessCount ?? this.dailySuccessCount,
     lastStatus: lastStatus ?? this.lastStatus,
     lastError: lastError ?? this.lastError,
   );
@@ -962,8 +954,6 @@ class AutoBackupConfig {
     'lastSuccessAt': lastSuccessAt?.toIso8601String(),
     'lastAttemptAt': lastAttemptAt?.toIso8601String(),
     'lastContentHash': lastContentHash,
-    'dailyCountDate': dailyCountDate == null ? null : ymd(dailyCountDate!),
-    'dailySuccessCount': dailySuccessCount,
     'lastStatus': lastStatus.name,
     'lastError': lastError,
   };
@@ -976,8 +966,6 @@ class AutoBackupConfig {
         lastSuccessAt: parseOptionalDate(json['lastSuccessAt']),
         lastAttemptAt: parseOptionalDate(json['lastAttemptAt']),
         lastContentHash: json['lastContentHash'] as String? ?? '',
-        dailyCountDate: parseOptionalDate(json['dailyCountDate']),
-        dailySuccessCount: asNonNegativeInt(json['dailySuccessCount']),
         lastStatus: AutoBackupStatusX.fromName(json['lastStatus'] as String?),
         lastError: json['lastError'] as String? ?? '',
       );

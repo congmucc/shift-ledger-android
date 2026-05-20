@@ -51,7 +51,7 @@ BackupStatusDisplay buildBackupStatusDisplay({
       summary: autoConfig.lastSuccessAt == null
           ? '自动备份等待中'
           : '等待下次自动备份；最近成功 ${dateTimeText(autoConfig.lastSuccessAt!)}',
-      detail: '最小间隔 1 小时，每天最多 6 次。',
+      detail: '内容有变化且距离上次成功超过 1 小时才会自动上传。',
     ),
     AutoBackupStatus.configIncomplete => const BackupStatusDisplay(
       summary: '需重新授权或补全配置',
@@ -314,7 +314,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
           SwitchListTile(
             value: autoConfig.enabled,
             title: const Text('自动云备份'),
-            subtitle: const Text('仅在打开 App 或继续使用时检查 · 最小间隔 1 小时 · 每天最多 6 次'),
+            subtitle: const Text('打开 App 或账本变化后检查 · 内容未变不重复上传 · 最小间隔 1 小时'),
             onChanged: (value) {
               final currentConfig = _config();
               final configured = currentConfig.isConfigured;
