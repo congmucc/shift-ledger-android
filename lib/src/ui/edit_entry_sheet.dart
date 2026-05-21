@@ -246,23 +246,24 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
               ),
               if (canDeleteDay) ...[
                 const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: LedgerColors.errorBrick,
-                      side: const BorderSide(color: LedgerColors.errorRed),
+                LedgerActionGroup(
+                  children: [
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: LedgerColors.errorBrick,
+                        side: const BorderSide(color: LedgerColors.errorRed),
+                      ),
+                      onPressed: () => setState(
+                        () => _showDangerActions = !_showDangerActions,
+                      ),
+                      icon: Icon(
+                        _showDangerActions
+                            ? Icons.expand_less
+                            : Icons.warning_amber_outlined,
+                      ),
+                      label: Text(_showDangerActions ? '收起危险操作' : '危险操作'),
                     ),
-                    onPressed: () => setState(
-                      () => _showDangerActions = !_showDangerActions,
-                    ),
-                    icon: Icon(
-                      _showDangerActions
-                          ? Icons.expand_less
-                          : Icons.warning_amber_outlined,
-                    ),
-                    label: Text(_showDangerActions ? '收起危险操作' : '危险操作'),
-                  ),
+                  ],
                 ),
                 if (_showDangerActions) ...[
                   const SizedBox(height: 6),
@@ -302,20 +303,21 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                           ],
                         ),
                         const SizedBox(height: 7),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: LedgerColors.errorBrick,
-                              foregroundColor: Colors.white,
+                        LedgerActionGroup(
+                          children: [
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: LedgerColors.errorBrick,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: _confirmDeleteDay,
+                              icon: const Icon(Icons.delete_outline),
+                              label: Text(
+                                '删除 ${ymd(deleteTargetDay)} 全部记录'
+                                '（${deleteTargetEntries.length}段 · ${hoursText(deleteTargetSummary.totalHours)}）',
+                              ),
                             ),
-                            onPressed: _confirmDeleteDay,
-                            icon: const Icon(Icons.delete_outline),
-                            label: Text(
-                              '删除 ${ymd(deleteTargetDay)} 全部记录'
-                              '（${deleteTargetEntries.length}段 · ${hoursText(deleteTargetSummary.totalHours)}）',
-                            ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -334,23 +336,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     required Widget primary,
     required Widget secondary,
   }) {
-    if (compact) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(width: double.infinity, child: primary),
-          const SizedBox(height: 7),
-          SizedBox(width: double.infinity, child: secondary),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        Expanded(child: secondary),
-        const SizedBox(width: 10),
-        Expanded(child: primary),
-      ],
-    );
+    return LedgerActionGroup(children: [secondary, primary]);
   }
 
   Future<void> _moveDay(int offset) =>

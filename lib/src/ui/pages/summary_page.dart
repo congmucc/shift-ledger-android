@@ -494,9 +494,8 @@ class _SummaryOverview extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 7),
-            Wrap(
+            LedgerInlineGroup(
               spacing: 6,
-              runSpacing: 6,
               children: [
                 LedgerPill(
                   '计薪 $payrollBasisSummary',
@@ -716,9 +715,8 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
             ),
           ),
           const SizedBox(height: 7),
-          Wrap(
+          LedgerInlineGroup(
             spacing: 6,
-            runSpacing: 6,
             children: [
               for (final series in _TrendSeries.values)
                 _TrendToggle(
@@ -1180,9 +1178,8 @@ class _WorkHoursCompositionBar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 7),
-        Wrap(
+        LedgerInlineGroup(
           spacing: 6,
-          runSpacing: 5,
           children: [
             for (final part in parts)
               _HoursLegendPill(
@@ -1548,12 +1545,10 @@ class _PayrollBasisCard extends StatelessWidget {
                 '${nightRule.label} · ${nightRule.mode.label} · ${_nightRuleValueText(nightRule)}',
           ),
           const SizedBox(height: 6),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onExplain,
-              child: const Text('计算说明'),
-            ),
+          LedgerActionGroup(
+            children: [
+              OutlinedButton(onPressed: onExplain, child: const Text('计算说明')),
+            ],
           ),
         ],
       ),

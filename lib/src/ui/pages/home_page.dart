@@ -123,9 +123,8 @@ class HomePage extends StatelessWidget {
           ),
         ),
         const SectionHeader(title: '快捷操作'),
-        Wrap(
+        LedgerInlineGroup(
           spacing: 6,
-          runSpacing: 6,
           children: [
             LedgerPill(
               '补今天',
@@ -233,9 +232,8 @@ class _TodayOverviewCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 9),
-            Wrap(
+            LedgerInlineGroup(
               spacing: 6,
-              runSpacing: 6,
               children: [
                 if (recordSummary.regularHours > 0)
                   LedgerPill('普通 ${hoursText(recordSummary.regularHours)}'),

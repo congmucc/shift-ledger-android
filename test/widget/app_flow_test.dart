@@ -403,6 +403,48 @@ void main() {
     expect(find.text('更多操作'), findsNothing);
   });
 
+  testWidgets(
+    'home inline pills do not expand into full-width rows at large text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+      );
+
+      final regularPill = find.widgetWithText(LedgerPill, '普通 8h');
+      final segmentPill = find.widgetWithText(LedgerPill, '2段');
+      expect(regularPill, findsOneWidget);
+      expect(segmentPill, findsOneWidget);
+      expect(tester.getSize(regularPill).width, lessThan(180));
+      expect(tester.getSize(segmentPill).width, lessThan(150));
+      expect(
+        tester.getTopLeft(segmentPill).dy,
+        moreOrLessEquals(tester.getTopLeft(regularPill).dy, epsilon: 1),
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('快捷操作'),
+        320,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      final addTodayPill = find.widgetWithText(LedgerPill, '补今天');
+      final calendarPill = find.widgetWithText(LedgerPill, '查日历');
+      expect(addTodayPill, findsOneWidget);
+      expect(calendarPill, findsOneWidget);
+      expect(tester.getSize(addTodayPill).width, lessThan(170));
+      expect(tester.getSize(calendarPill).width, lessThan(170));
+      expect(
+        tester.getTopLeft(calendarPill).dy,
+        moreOrLessEquals(tester.getTopLeft(addTodayPill).dy, epsilon: 1),
+      );
+    },
+  );
+
   testWidgets('empty home collapses duplicate empty-state chrome', (
     tester,
   ) async {

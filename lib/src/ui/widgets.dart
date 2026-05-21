@@ -364,8 +364,8 @@ class LedgerPill extends StatelessWidget {
     final child = onTap == null
         ? visualPill
         : ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Center(child: visualPill),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Center(widthFactor: 1, heightFactor: 1, child: visualPill),
           );
     final pill = IntrinsicWidth(
       child: Material(
@@ -385,6 +385,72 @@ class LedgerPill extends StatelessWidget {
             label: label,
             child: pill,
           );
+  }
+}
+
+class LedgerActionGroup extends StatelessWidget {
+  const LedgerActionGroup({
+    super.key,
+    required this.children,
+    this.alignment = Alignment.centerLeft,
+    this.spacing = 8,
+    this.runSpacing = 7,
+  });
+
+  final List<Widget> children;
+  final AlignmentGeometry alignment;
+  final double spacing;
+  final double runSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.length == 1) {
+      return Align(alignment: alignment, child: children.single);
+    }
+    return Align(
+      alignment: alignment,
+      child: Wrap(
+        spacing: spacing,
+        runSpacing: runSpacing,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: children,
+      ),
+    );
+  }
+}
+
+class LedgerInlineGroup extends StatelessWidget {
+  const LedgerInlineGroup({
+    super.key,
+    required this.children,
+    this.spacing = 6,
+    this.scrollPadding = EdgeInsets.zero,
+  });
+
+  final List<Widget> children;
+  final double spacing;
+  final EdgeInsetsGeometry scrollPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        padding: scrollPadding,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < children.length; index++) ...[
+              children[index],
+              if (index != children.length - 1) SizedBox(width: spacing),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

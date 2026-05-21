@@ -336,27 +336,28 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: invalidTimeOrder
-                            ? null
-                            : () {
-                                final rootContext = Navigator.of(
-                                  context,
-                                  rootNavigator: true,
-                                ).context;
-                                state.updateNightRule(
-                                  state.nightRule.copyWith(
-                                    startMinute: startMinute,
-                                    endMinute: endMinute,
-                                  ),
-                                );
-                                Navigator.pop(context);
-                                showLedgerSnackBar(rootContext, '夜班规则已保存');
-                              },
-                        child: const Text('保存'),
-                      ),
+                    LedgerActionGroup(
+                      children: [
+                        FilledButton(
+                          onPressed: invalidTimeOrder
+                              ? null
+                              : () {
+                                  final rootContext = Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).context;
+                                  state.updateNightRule(
+                                    state.nightRule.copyWith(
+                                      startMinute: startMinute,
+                                      endMinute: endMinute,
+                                    ),
+                                  );
+                                  Navigator.pop(context);
+                                  showLedgerSnackBar(rootContext, '夜班规则已保存');
+                                },
+                          child: const Text('保存'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -466,22 +467,23 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        final rootContext = Navigator.of(
-                          context,
-                          rootNavigator: true,
-                        ).context;
-                        state.updatePayPeriod(
-                          PayPeriod(mode: mode, monthStartDay: monthStartDay),
-                        );
-                        Navigator.pop(context);
-                        showLedgerSnackBar(rootContext, '发薪周期已保存');
-                      },
-                      child: const Text('保存'),
-                    ),
+                  LedgerActionGroup(
+                    children: [
+                      FilledButton(
+                        onPressed: () {
+                          final rootContext = Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).context;
+                          state.updatePayPeriod(
+                            PayPeriod(mode: mode, monthStartDay: monthStartDay),
+                          );
+                          Navigator.pop(context);
+                          showLedgerSnackBar(rootContext, '发薪周期已保存');
+                        },
+                        child: const Text('保存'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -752,24 +754,26 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                     const SizedBox(height: 6),
                     _buildBackupLocationCard(context),
                     const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _repository == null ? null : _writeBackup,
-                        child: const Text('创建本地备份'),
-                      ),
+                    LedgerActionGroup(
+                      children: [
+                        FilledButton(
+                          onPressed: _repository == null ? null : _writeBackup,
+                          child: const Text('创建本地备份'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 7),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _repository == null || _updatingLocation
-                            ? null
-                            : _changeBackupLocation,
-                        child: Text(
-                          _hasRememberedLocation ? '更换备份位置' : '选择备份位置',
+                    LedgerActionGroup(
+                      children: [
+                        OutlinedButton(
+                          onPressed: _repository == null || _updatingLocation
+                              ? null
+                              : _changeBackupLocation,
+                          child: Text(
+                            _hasRememberedLocation ? '更换备份位置' : '选择备份位置',
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -795,24 +799,26 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _repository == null
-                            ? null
-                            : _restoreLatestBackup,
-                        child: const Text('从最近本地备份恢复'),
-                      ),
+                    LedgerActionGroup(
+                      children: [
+                        OutlinedButton(
+                          onPressed: _repository == null
+                              ? null
+                              : _restoreLatestBackup,
+                          child: const Text('从最近本地备份恢复'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 7),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _repository == null
-                            ? null
-                            : _restoreFromPickedBackup,
-                        child: const Text('选择备份文件恢复'),
-                      ),
+                    LedgerActionGroup(
+                      children: [
+                        OutlinedButton(
+                          onPressed: _repository == null
+                              ? null
+                              : _restoreFromPickedBackup,
+                          child: const Text('选择备份文件恢复'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1251,57 +1257,61 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       ),
                     ),
                     const SizedBox(height: 7),
-                    _buildFieldPair(
-                      compact: compact,
-                      first: OutlinedButton.icon(
-                        onPressed: _copyLockedTemplateId == _template.id
-                            ? null
-                            : _createTemplate,
-                        icon: const Icon(Icons.add),
-                        label: const Text('新增副本'),
-                      ),
-                      second: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: LedgerColors.errorBrick,
+                    LedgerActionGroup(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _copyLockedTemplateId == _template.id
+                              ? null
+                              : _createTemplate,
+                          icon: const Icon(Icons.add),
+                          label: const Text('新增副本'),
                         ),
-                        onPressed:
-                            _template.isBuiltIn ||
-                                widget.state.templates.length <= 1
-                            ? null
-                            : _confirmDeleteTemplate,
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('删除模板'),
-                      ),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: LedgerColors.errorBrick,
+                          ),
+                          onPressed:
+                              _template.isBuiltIn ||
+                                  widget.state.templates.length <= 1
+                              ? null
+                              : _confirmDeleteTemplate,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('删除模板'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 7),
                     if (_template.isBuiltIn)
-                      _buildFieldPair(
-                        compact: compact,
-                        first: OutlinedButton(
-                          onPressed: isDefaultTemplate ? null : _setAsDefault,
-                          child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
-                        ),
-                        second: OutlinedButton.icon(
-                          onPressed: _confirmRestoreCurrentTemplate,
-                          icon: const Icon(Icons.restore_outlined),
-                          label: const Text('恢复当前内置模板'),
-                        ),
+                      LedgerActionGroup(
+                        children: [
+                          OutlinedButton(
+                            onPressed: isDefaultTemplate ? null : _setAsDefault,
+                            child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _confirmRestoreCurrentTemplate,
+                            icon: const Icon(Icons.restore_outlined),
+                            label: const Text('恢复当前内置模板'),
+                          ),
+                        ],
                       ),
                     if (!_template.isBuiltIn)
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: isDefaultTemplate ? null : _setAsDefault,
-                          child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
-                        ),
+                      LedgerActionGroup(
+                        children: [
+                          OutlinedButton(
+                            onPressed: isDefaultTemplate ? null : _setAsDefault,
+                            child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
+                          ),
+                        ],
                       ),
                     const SizedBox(height: 7),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: invalidTimeOrder ? null : _save,
-                        child: const Text('保存模板'),
-                      ),
+                    LedgerActionGroup(
+                      children: [
+                        FilledButton(
+                          onPressed: invalidTimeOrder ? null : _save,
+                          child: const Text('保存模板'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1932,9 +1942,10 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                 title: '保存后会生成新版本',
               ),
               const SizedBox(height: 6),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(onPressed: _save, child: const Text('保存')),
+              LedgerActionGroup(
+                children: [
+                  FilledButton(onPressed: _save, child: const Text('保存')),
+                ],
               ),
             ],
           ),

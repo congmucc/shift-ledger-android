@@ -226,12 +226,13 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 ),
               ),
               const SizedBox(height: 6),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _busy ? null : _save,
-                  child: const Text('保存配置'),
-                ),
+              LedgerActionGroup(
+                children: [
+                  FilledButton(
+                    onPressed: _busy ? null : _save,
+                    child: const Text('保存配置'),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               _buildAutoBackupSection(context),
@@ -247,24 +248,17 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 7),
-                    Column(
+                    LedgerActionGroup(
                       children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _busy ? null : _backup,
-                            icon: const Icon(Icons.cloud_upload_outlined),
-                            label: const Text('备份到坚果云'),
-                          ),
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _backup,
+                          icon: const Icon(Icons.cloud_upload_outlined),
+                          label: const Text('备份到坚果云'),
                         ),
-                        const SizedBox(height: 7),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _busy ? null : _restore,
-                            icon: const Icon(Icons.cloud_download_outlined),
-                            label: const Text('从坚果云恢复'),
-                          ),
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _restore,
+                          icon: const Icon(Icons.cloud_download_outlined),
+                          label: const Text('从坚果云恢复'),
                         ),
                       ],
                     ),

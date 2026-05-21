@@ -123,7 +123,6 @@ class _CalendarPageState extends State<CalendarPage> {
         const SizedBox(height: 7),
         LayoutBuilder(
           builder: (context, constraints) {
-            final useWrappedFilters = constraints.maxWidth < 420;
             final useCompactFilterLabels = constraints.maxWidth < 420;
             final chips = [
               for (final filter in _CalendarFilter.values)
@@ -141,26 +140,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   onSelected: () => _changeFilter(filter),
                 ),
             ];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (useWrappedFilters)
-                  Wrap(spacing: 5, runSpacing: 5, children: chips)
-                else
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (var index = 0; index < chips.length; index++) ...[
-                          chips[index],
-                          if (index != chips.length - 1)
-                            const SizedBox(width: 5),
-                        ],
-                      ],
-                    ),
-                  ),
-              ],
-            );
+            return LedgerInlineGroup(spacing: 5, children: chips);
           },
         ),
         const SizedBox(height: 7),
@@ -1153,8 +1133,8 @@ class _CalendarFilterChip extends StatelessWidget {
           onTap: onSelected,
           borderRadius: BorderRadius.circular(18),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Center(child: chip),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Center(widthFactor: 1, heightFactor: 1, child: chip),
           ),
         ),
       ),
@@ -1721,9 +1701,8 @@ class _DayDetails extends StatelessWidget {
         LedgerCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           color: LedgerColors.surfaceRaised,
-          child: Wrap(
+          child: LedgerInlineGroup(
             spacing: 8,
-            runSpacing: 6,
             children: [
               _SmallPill('合计 ${hoursText(summary.totalHours)}'),
               if (recordSummary.regularHours > 0)
