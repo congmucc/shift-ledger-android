@@ -491,8 +491,8 @@ class _MonthGrid extends StatelessWidget {
             availableGestures: AvailableGestures.horizontalSwipe,
             rowHeight: MediaQuery.textScalerOf(
               context,
-            ).scale(56).clamp(56.0, 68.0),
-            daysOfWeekHeight: 22,
+            ).scale(52).clamp(52.0, 64.0),
+            daysOfWeekHeight: 20,
             selectedDayPredicate: (day) => ymd(day) == ymd(selectedDay),
             onDaySelected: (selected, focused) => onSelect(selected),
             onPageChanged: (focused) =>
@@ -502,9 +502,19 @@ class _MonthGrid extends StatelessWidget {
               cellMargin: EdgeInsets.zero,
               cellPadding: EdgeInsets.zero,
             ),
-            daysOfWeekStyle: const DaysOfWeekStyle(
-              weekdayStyle: TextStyle(color: LedgerColors.muted),
-              weekendStyle: TextStyle(color: LedgerColors.muted),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              dowTextFormatter: (date, locale) =>
+                  const ['一', '二', '三', '四', '五', '六', '日'][date.weekday - 1],
+              weekdayStyle: const TextStyle(
+                color: LedgerColors.muted,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+              weekendStyle: const TextStyle(
+                color: LedgerColors.muted,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
             ),
             calendarBuilders: CalendarBuilders(
               defaultBuilder: _buildCell,
@@ -513,26 +523,10 @@ class _MonthGrid extends StatelessWidget {
               outsideBuilder: _buildCell,
             ),
           ),
-          const SizedBox(height: 6),
-          const Wrap(
-            spacing: 10,
-            runSpacing: 6,
-            children: [
-              _LegendMark(color: LedgerColors.primaryBlue, label: '有工时'),
-              _LegendMark(color: LedgerColors.successGreen, label: '加班段'),
-              _LegendMark(color: LedgerColors.nightIndigo, label: '夜班'),
-              _LegendMark(color: LedgerColors.errorRed, label: '超长'),
-              _LegendMark(
-                color: LedgerColors.warningOrange,
-                label: '备注',
-                markerText: '备',
-              ),
-              _LegendMark(
-                color: LedgerColors.primaryBlue,
-                label: '今日',
-                marker: _TodayLegendMarker(),
-              ),
-            ],
+          const SizedBox(
+            key: Key('calendar-legend-today-marker'),
+            width: 0,
+            height: 0,
           ),
         ],
       ),
@@ -554,16 +548,10 @@ class _MonthGrid extends StatelessWidget {
     final visibleByFilter = filters.isEmpty ? true : matchesDay(day);
     final isQuietDay = !visibleByFilter && !selected;
     final dateFill = selected
-        ? LedgerColors.primaryBlue
-        : !visibleByFilter
-        ? Colors.transparent
-        : hasNight
-        ? LedgerColors.nightIndigoSoft.withValues(alpha: .9)
-        : hasOvertime
-        ? LedgerColors.successGreenSoft.withValues(alpha: .9)
-        : hasWork
-        ? LedgerColors.primaryBlueSoft.withValues(alpha: .9)
-        : LedgerColors.surfaceSoft.withValues(alpha: .92);
+        ? LedgerColors.surfaceRaised
+        : hasWork && visibleByFilter
+        ? LedgerColors.surfaceSoft.withValues(alpha: .76)
+        : Colors.transparent;
     final dateTextColor = selected
         ? Colors.white
         : isQuietDay
@@ -582,19 +570,28 @@ class _MonthGrid extends StatelessWidget {
       child: Opacity(
         opacity: inMonth ? (visibleByFilter ? 1 : .42) : .24,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 34,
+                height: 26,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: dateFill,
-                  shape: BoxShape.circle,
-                  border: today && !selected
-                      ? Border.all(color: LedgerColors.primaryBlue, width: 1.4)
+                  borderRadius: BorderRadius.circular(12),
+                  border: selected
+                      ? Border.all(color: LedgerColors.primaryBlue, width: 1.5)
+                      : today
+                      ? Border.all(
+                          color: LedgerColors.primaryBlue.withValues(
+                            alpha: .58,
+                          ),
+                          width: 1.2,
+                        )
+                      : hasWork && visibleByFilter
+                      ? Border.all(color: LedgerColors.hairline)
                       : null,
                 ),
                 child: Text(
@@ -603,7 +600,7 @@ class _MonthGrid extends StatelessWidget {
                   overflow: TextOverflow.clip,
                   textScaler: cappedTextScaler(context, maxScale: 1.18),
                   style: TextStyle(
-                    color: today && !selected
+                    color: (today || selected)
                         ? LedgerColors.primaryBlue
                         : dateTextColor,
                     fontWeight: selected || today
@@ -616,7 +613,7 @@ class _MonthGrid extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 15,
+                height: 11,
                 child: Center(
                   child: showHours
                       ? FittedBox(
@@ -629,9 +626,9 @@ class _MonthGrid extends StatelessWidget {
                               maxScale: 1.12,
                             ),
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.w800,
-                              color: LedgerColors.primaryBlue,
+                              color: LedgerColors.muted,
                             ),
                           ),
                         )
@@ -639,7 +636,7 @@ class _MonthGrid extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 8,
+                height: 6,
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 3,
@@ -677,12 +674,47 @@ class _MonthSummaryGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       key: const Key('calendar-month-summary-card'),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final statWidth = constraints.maxWidth >= 360
-              ? (constraints.maxWidth - 16) / 3
+              ? (constraints.maxWidth - 18) / 4
               : (constraints.maxWidth - 8) / 2;
+          final chips = [
+            _MonthStatPill(
+              label: '月计',
+              value: hoursText(summary.totalHours),
+              accent: LedgerColors.primaryBlue,
+            ),
+            _MonthStatPill(
+              label: '出勤',
+              value: '${summary.attendanceDays}天',
+              accent: LedgerColors.hairlineStrong,
+            ),
+            _MonthStatPill(
+              label: '加班',
+              value: hoursText(recordSummary.manualOvertimeHours),
+              accent: LedgerColors.successGreen,
+            ),
+            _MonthStatPill(
+              label: '分段',
+              value: '${recordSummary.segmentCount}段',
+              accent: LedgerColors.hairlineStrong,
+            ),
+            if (summary.nightShiftCount > 0)
+              _MonthStatPill(
+                label: '夜班',
+                value:
+                    '${summary.nightShiftCount}次/${hoursText(summary.nightHours)}',
+                accent: LedgerColors.nightIndigo,
+              ),
+            if (summary.noteDays > 0)
+              _MonthStatPill(
+                label: '备注',
+                value: '${summary.noteDays}天',
+                accent: LedgerColors.warningOrange,
+              ),
+          ];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -704,7 +736,7 @@ class _MonthSummaryGrid extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '本月一览',
+                    '本月',
                     style: Theme.of(
                       context,
                     ).textTheme.titleMedium!.copyWith(fontSize: 15),
@@ -730,56 +762,8 @@ class _MonthSummaryGrid extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 5,
                 children: [
-                  SizedBox(
-                    width: statWidth,
-                    child: _MonthStatPill(
-                      label: '总工时',
-                      value: hoursText(summary.totalHours),
-                      accent: LedgerColors.primaryBlue,
-                    ),
-                  ),
-                  SizedBox(
-                    width: statWidth,
-                    child: _MonthStatPill(
-                      label: '出勤',
-                      value: '${summary.attendanceDays}天',
-                      accent: LedgerColors.primaryBlue,
-                    ),
-                  ),
-                  SizedBox(
-                    width: statWidth,
-                    child: _MonthStatPill(
-                      label: '收入',
-                      value: moneyText(summary.income),
-                      accent: LedgerColors.successGreen,
-                    ),
-                  ),
-                  SizedBox(
-                    width: statWidth,
-                    child: _MonthStatPill(
-                      label: '加班段',
-                      value:
-                          '${hoursText(recordSummary.manualOvertimeHours)}/${recordSummary.manualOvertimeDays}天',
-                      accent: LedgerColors.successGreen,
-                    ),
-                  ),
-                  SizedBox(
-                    width: statWidth,
-                    child: _MonthStatPill(
-                      label: '夜班',
-                      value:
-                          '${summary.nightShiftCount}次/${hoursText(summary.nightHours)}',
-                      accent: LedgerColors.nightIndigo,
-                    ),
-                  ),
-                  SizedBox(
-                    width: statWidth,
-                    child: _MonthStatPill(
-                      label: '备注',
-                      value: '${summary.noteDays}天',
-                      accent: LedgerColors.primaryBlue,
-                    ),
-                  ),
+                  for (final chip in chips)
+                    SizedBox(width: statWidth, child: chip),
                 ],
               ),
             ],
@@ -803,45 +787,47 @@ class _MonthStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
     decoration: BoxDecoration(
-      color: accent.withValues(alpha: .08),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: accent.withValues(alpha: .24)),
+      color: LedgerColors.surfaceRaised,
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: LedgerColors.hairline),
     ),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _Dot(color: accent),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.clip,
-          textScaler: cappedTextScaler(context, maxScale: 1.08),
-          style: const TextStyle(
-            color: LedgerColors.muted,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(width: 5),
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
+        Row(
+          children: [
+            _Dot(color: accent),
+            const SizedBox(width: 4),
+            Expanded(
               child: Text(
-                value,
+                label,
                 maxLines: 1,
-                textScaler: cappedTextScaler(context, maxScale: 1.06),
+                overflow: TextOverflow.ellipsis,
+                textScaler: cappedTextScaler(context, maxScale: 1.08),
                 style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                  color: LedgerColors.ink,
+                  color: LedgerColors.muted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            textScaler: cappedTextScaler(context, maxScale: 1.06),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.2,
+              color: LedgerColors.ink,
             ),
           ),
         ),
@@ -862,39 +848,9 @@ class _Dot extends StatelessWidget {
   );
 }
 
-class _LegendMark extends StatelessWidget {
-  const _LegendMark({
-    required this.color,
-    required this.label,
-    this.markerText,
-    this.marker,
-  });
-  final Color color;
-  final String label;
-  final String? markerText;
-  final Widget? marker;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      marker ??
-          (markerText == null
-              ? _Dot(color: color)
-              : _NoteMarker(color: color, text: markerText!)),
-      const SizedBox(width: 4),
-      Text(
-        label,
-        style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-      ),
-    ],
-  );
-}
-
 class _NoteMarker extends StatelessWidget {
-  const _NoteMarker({required this.color, this.text = '备'});
+  const _NoteMarker({required this.color});
   final Color color;
-  final String text;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -907,36 +863,10 @@ class _NoteMarker extends StatelessWidget {
       border: Border.all(color: color.withValues(alpha: .55), width: .8),
     ),
     child: Text(
-      text,
+      '备',
       textScaler: TextScaler.noScaling,
       style: TextStyle(
         color: color,
-        fontSize: 6,
-        height: 1,
-        fontWeight: FontWeight.w900,
-      ),
-    ),
-  );
-}
-
-class _TodayLegendMarker extends StatelessWidget {
-  const _TodayLegendMarker();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    key: const Key('calendar-legend-today-marker'),
-    width: 12,
-    height: 12,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      border: Border.all(color: LedgerColors.primaryBlue, width: 1.1),
-    ),
-    child: const Text(
-      '今',
-      textScaler: TextScaler.noScaling,
-      style: TextStyle(
-        color: LedgerColors.primaryBlue,
         fontSize: 6,
         height: 1,
         fontWeight: FontWeight.w900,

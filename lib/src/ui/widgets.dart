@@ -227,7 +227,7 @@ class PageFrame extends StatelessWidget {
               ? (constraints.maxWidth - ledgerContentMaxWidth) / 2 + 16
               : 16.0;
           return ListView(
-            padding: EdgeInsets.fromLTRB(sidePadding, 18, sidePadding, 120),
+            padding: EdgeInsets.fromLTRB(sidePadding, 14, sidePadding, 104),
             children: [
               Row(
                 children: [
@@ -240,7 +240,7 @@ class PageFrame extends StatelessWidget {
                   ?trailing,
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               ...children,
             ],
           );
@@ -254,7 +254,7 @@ class LedgerCard extends StatelessWidget {
   const LedgerCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = const EdgeInsets.all(14),
     this.color,
   });
   final Widget child;
@@ -268,13 +268,13 @@ class LedgerCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? LedgerColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: LedgerColors.hairline),
         boxShadow: const [
           BoxShadow(
             color: Color(0x080F172A),
-            blurRadius: 22,
-            offset: Offset(0, 10),
+            blurRadius: 14,
+            offset: Offset(0, 6),
           ),
           BoxShadow(
             color: Color(0x050F172A),
@@ -370,13 +370,13 @@ class WorkEntryTile extends StatelessWidget {
         : LedgerColors.primaryBlueSoft;
     final chipText = isNight ? LedgerColors.nightIndigo : LedgerColors.ink;
     return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 4,
-            height: 44,
+            height: 38,
             margin: const EdgeInsets.only(top: 2, right: 10),
             decoration: BoxDecoration(
               color: railColor,
@@ -479,7 +479,7 @@ class WorkEntryTile extends StatelessWidget {
 
   TextStyle _timeStyle(BuildContext context) =>
       Theme.of(context).textTheme.titleMedium!.copyWith(
-        fontSize: 16,
+        fontSize: 15,
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
@@ -507,11 +507,11 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleMedium!.copyWith(
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: FontWeight.w800,
     );
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      padding: const EdgeInsets.only(top: 12, bottom: 7),
       child: Row(
         children: [
           Expanded(child: Text(title, style: titleStyle)),
@@ -1007,7 +1007,7 @@ class SettingTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           crossAxisAlignment: hasSubtitle
               ? CrossAxisAlignment.start

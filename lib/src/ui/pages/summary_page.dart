@@ -63,8 +63,12 @@ class _SummaryPageState extends State<SummaryPage> {
             payrollBasisSummary:
                 '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _IncomeCompositionCard(summary: summary),
+          const SizedBox(height: 10),
+          _SummaryTrendCard(summary: summary),
+          const SizedBox(height: 10),
+          _WorkHoursTable(summary: summary),
           const SizedBox(height: 12),
           _PayrollBasisCard(
             range: range,
@@ -231,78 +235,91 @@ class _RangeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final custom = onPickStart != null || onPickEnd != null;
     final rangeText =
-        range.label ?? '${ymd(range.start)} — ${ymd(range.endInclusive)}';
+        '${_compactCnDate(range.start)} — ${_compactCnDate(range.endInclusive)}';
+    final rangeContext = range.label == null || range.label == rangeText
+        ? rangeText
+        : '${range.label} · $rangeText';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: LedgerColors.surfaceSoft.withValues(alpha: .7),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: LedgerColors.hairline),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final item in ['本月', '本周', '年度', '发薪周期', '自定义'])
+                  _RangeModePill(
+                    label: item,
+                    selected: mode == item,
+                    onTap: () => onModeChanged(item),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Row(
             children: [
-              for (final item in ['本月', '本周', '年度', '发薪周期', '自定义']) ...[
-                _RangeModePill(
-                  label: item,
-                  selected: mode == item,
-                  onTap: () => onModeChanged(item),
-                ),
-                if (item != '自定义') const SizedBox(width: 6),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        LedgerCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.filter_alt_outlined,
-                    size: 18,
-                    color: LedgerColors.primaryBlue,
+              Expanded(
+                child: Text(
+                  '$mode · $rangeContext',
+                  maxLines: 2,
+                  style: const TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(width: 8),
-                  Text('当前范围', style: Theme.of(context).textTheme.labelMedium),
-                  const Spacer(),
-                  _ScopeBadge(text: '$mode · ${summary.range.dayCount}天'),
-                ],
+                ),
               ),
-              const SizedBox(height: 10),
-              if (custom) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RangeDateButton(
-                        label: ymd(range.start),
-                        onTap: onPickStart,
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(
-                        '至',
-                        style: TextStyle(color: LedgerColors.muted),
-                      ),
-                    ),
-                    Expanded(
-                      child: _RangeDateButton(
-                        label: ymd(range.endInclusive),
-                        onTap: onPickEnd,
-                      ),
-                    ),
-                  ],
-                ),
-              ] else
-                FittedValueText(
-                  rangeText,
-                  style: Theme.of(context).textTheme.titleMedium!,
-                  maxScale: 1.08,
-                ),
+              _ScopeBadge(text: '$mode · ${summary.range.dayCount}天'),
             ],
           ),
         ),
+        if (range.label != null && range.label!.startsWith('每月')) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(
+              range.label!,
+              style: const TextStyle(
+                color: LedgerColors.ink,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+        if (custom) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _RangeDateButton(
+                  label: ymd(range.start),
+                  onTap: onPickStart,
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6),
+                child: Text('至', style: TextStyle(color: LedgerColors.muted)),
+              ),
+              Expanded(
+                child: _RangeDateButton(
+                  label: ymd(range.endInclusive),
+                  onTap: onPickEnd,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -321,32 +338,28 @@ class _RangeModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(9),
+    borderRadius: BorderRadius.circular(11),
     onTap: onTap,
     child: Container(
-      constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 9),
+      constraints: const BoxConstraints(minHeight: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: selected ? LedgerColors.primaryBlueSoft : LedgerColors.surface,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(
-          color: selected
-              ? LedgerColors.primaryBlueSoft
-              : LedgerColors.hairline,
-        ),
+        color: selected ? LedgerColors.surfaceRaised : Colors.transparent,
+        borderRadius: BorderRadius.circular(11),
+        border: selected ? Border.all(color: LedgerColors.hairline) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (selected) ...[
-            const Icon(Icons.check, size: 14),
-            const SizedBox(width: 4),
-          ],
           Text(
             label,
             textScaler: cappedTextScaler(context, maxScale: 1.12),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: selected ? LedgerColors.primaryBlue : LedgerColors.muted,
+            ),
           ),
         ],
       ),
@@ -415,58 +428,73 @@ class _SummaryOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final incomeFlex = constraints.maxWidth < 360 ? 7 : 6;
+              return Row(
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: _CoreMetricBox(
+                      label: '总工时',
+                      value: hoursText(summary.totalHours),
+                      dotColor: LedgerColors.primaryBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    flex: incomeFlex,
+                    child: _CoreMetricBox(
+                      label: '收入估算',
+                      value: moneyText(summary.income),
+                      dotColor: LedgerColors.hairlineStrong,
+                      emphasizeValue: true,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 7),
           Row(
             children: [
               Expanded(
-                child: _MiniMetric(
-                  label: '总工时',
-                  value: hoursText(summary.totalHours),
-                  subtext: '${summary.attendanceDays}天出勤',
-                  emphasized: true,
-                ),
+                child: _SmallMetricBox('出勤', '${summary.attendanceDays}天'),
               ),
-              const SizedBox(width: 10),
-              Container(width: 1, height: 56, color: LedgerColors.hairline),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               Expanded(
-                child: _MiniMetric(
-                  label: '收入估算',
-                  value: moneyText(summary.income),
-                  subtext:
-                      '补 ${moneyText(summary.allowance)} / 扣 ${moneyText(summary.deduction)}',
-                  emphasized: true,
-                ),
+                child: _SmallMetricBox('加班', hoursText(summary.overtimeHours)),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _SmallMetricBox('夜班', '${summary.nightShiftCount}次'),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _SmallMetricBox('补贴', moneyText(summary.allowance)),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _StatChip('出勤', '${summary.attendanceDays}天'),
-              _StatChip(
-                '计薪加班',
-                '${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}',
-              ),
-              _StatChip(
-                '夜班',
-                '${summary.nightShiftCount}次 / ${hoursText(summary.nightHours)}',
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           Text(
-            '备注 ${summary.noteDays} 天 · 偏长 ${summary.longDurationDays} 天 · 共 ${summary.calculations.length} 段',
+            '计薪加班 ${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}',
+            style: const TextStyle(
+              color: LedgerColors.ink,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '扣款 ${moneyText(summary.deduction)} · 偏长 ${summary.longDurationDays}天 · 共 ${summary.calculations.length}段',
             style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
           ),
-          const SizedBox(height: 6),
-          Text('计薪依据', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 2),
+          Text('计薪依据', style: Theme.of(context).textTheme.labelMedium),
           Text(
             payrollBasisSummary,
             style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
@@ -477,64 +505,499 @@ class _SummaryOverview extends StatelessWidget {
   }
 }
 
-class _MiniMetric extends StatelessWidget {
-  const _MiniMetric({
+class _CoreMetricBox extends StatelessWidget {
+  const _CoreMetricBox({
     required this.label,
     required this.value,
-    required this.subtext,
-    this.emphasized = false,
+    required this.dotColor,
+    this.emphasizeValue = false,
   });
 
   final String label;
   final String value;
-  final String subtext;
-  final bool emphasized;
+  final Color dotColor;
+  final bool emphasizeValue;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(label, style: Theme.of(context).textTheme.labelMedium),
-      const SizedBox(height: 4),
-      FittedValueText(
-        value,
-        maxScale: 1.1,
-        style: TextStyle(
-          fontSize: emphasized ? 23 : 19,
-          fontWeight: FontWeight.w900,
-          letterSpacing: -0.8,
-          color: LedgerColors.ink,
-          fontFeatures: const [FontFeature.tabularFigures()],
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceSoft.withValues(alpha: .52),
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: LedgerColors.hairline),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _MetricDot(color: dotColor),
+            const SizedBox(width: 4),
+            Text(label, style: Theme.of(context).textTheme.labelMedium),
+          ],
         ),
-      ),
-      const SizedBox(height: 2),
-      FittedValueText(
-        subtext,
-        maxScale: 1.06,
-        style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-      ),
-    ],
+        const SizedBox(height: 6),
+        FittedValueText(
+          value,
+          maxScale: 1.06,
+          style: TextStyle(
+            fontSize: emphasizeValue ? 20 : 18,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.7,
+            color: LedgerColors.ink,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    ),
   );
 }
 
-class _StatChip extends StatelessWidget {
-  const _StatChip(this.label, this.value);
+class _MetricDot extends StatelessWidget {
+  const _MetricDot({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 6,
+    height: 6,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
+class _SmallMetricBox extends StatelessWidget {
+  const _SmallMetricBox(this.label, this.value);
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
     decoration: BoxDecoration(
-      color: LedgerColors.surfaceSoft.withValues(alpha: .72),
-      borderRadius: BorderRadius.circular(99),
+      color: LedgerColors.surfaceRaised,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: LedgerColors.hairline),
     ),
-    child: Text(
-      '$label $value',
-      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        FittedValueText(
+          value,
+          maxScale: 1.04,
+          style: const TextStyle(
+            color: LedgerColors.ink,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     ),
   );
+}
+
+enum _TrendSeries { total, regular, overtime, night, attendance, income }
+
+extension on _TrendSeries {
+  String get label => switch (this) {
+    _TrendSeries.total => '总工时',
+    _TrendSeries.regular => '普通',
+    _TrendSeries.overtime => '加班',
+    _TrendSeries.night => '夜班',
+    _TrendSeries.attendance => '出勤',
+    _TrendSeries.income => '收入',
+  };
+
+  Color get color => switch (this) {
+    _TrendSeries.total => LedgerColors.primaryBlue,
+    _TrendSeries.regular => const Color(0xFF60A5FA),
+    _TrendSeries.overtime => LedgerColors.successGreen,
+    _TrendSeries.night => LedgerColors.nightIndigo,
+    _TrendSeries.attendance => LedgerColors.hairlineStrong,
+    _TrendSeries.income => LedgerColors.ink,
+  };
+}
+
+class _SummaryTrendCard extends StatefulWidget {
+  const _SummaryTrendCard({required this.summary});
+  final LedgerSummary summary;
+
+  @override
+  State<_SummaryTrendCard> createState() => _SummaryTrendCardState();
+}
+
+class _SummaryTrendCardState extends State<_SummaryTrendCard> {
+  final Set<_TrendSeries> _selected = {
+    _TrendSeries.total,
+    _TrendSeries.overtime,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final points = _dailyPoints(widget.summary);
+    if (points.isEmpty) return const SizedBox.shrink();
+    return LedgerCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('工时趋势', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 154,
+            child: CustomPaint(
+              painter: _TrendChartPainter(points: points, selected: _selected),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final series in _TrendSeries.values)
+                FilterChip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text(series.label),
+                  selected: _selected.contains(series),
+                  onSelected: (selected) => setState(() {
+                    if (selected) {
+                      _selected.add(series);
+                    } else if (_selected.length > 1) {
+                      _selected.remove(series);
+                    }
+                  }),
+                  avatar: _MetricDot(color: series.color),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_DailyTrendPoint> _dailyPoints(LedgerSummary summary) {
+    final byDay = <String, _DailyTrendPoint>{};
+    for (final calculation in summary.calculations) {
+      final day = dateOnly(calculation.entry.workDate);
+      final key = ymd(day);
+      final current = byDay[key] ?? _DailyTrendPoint(day: day);
+      byDay[key] = current.add(calculation);
+    }
+    final points = byDay.values.toList()
+      ..sort((a, b) => a.day.compareTo(b.day));
+    return points;
+  }
+}
+
+class _DailyTrendPoint {
+  const _DailyTrendPoint({
+    required this.day,
+    this.total = 0,
+    this.regular = 0,
+    this.overtime = 0,
+    this.night = 0,
+    this.income = 0,
+    this.attendance = 1,
+  });
+
+  final DateTime day;
+  final double total;
+  final double regular;
+  final double overtime;
+  final double night;
+  final double income;
+  final double attendance;
+
+  _DailyTrendPoint add(EntryCalculation calculation) => _DailyTrendPoint(
+    day: day,
+    total: total + calculation.entry.netHours,
+    regular: regular + calculation.regularHours,
+    overtime: overtime + calculation.overtimeHours,
+    night: night + calculation.nightHours,
+    income: income + calculation.income,
+    attendance: 1,
+  );
+
+  double valueFor(_TrendSeries series) => switch (series) {
+    _TrendSeries.total => total,
+    _TrendSeries.regular => regular,
+    _TrendSeries.overtime => overtime,
+    _TrendSeries.night => night,
+    _TrendSeries.attendance => attendance,
+    _TrendSeries.income => income,
+  };
+}
+
+class _TrendChartPainter extends CustomPainter {
+  const _TrendChartPainter({required this.points, required this.selected});
+  final List<_DailyTrendPoint> points;
+  final Set<_TrendSeries> selected;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const leftAxis = 30.0;
+    const rightAxis = 42.0;
+    const top = 8.0;
+    const bottom = 26.0;
+    final chart = Rect.fromLTWH(
+      leftAxis,
+      top,
+      size.width - leftAxis - rightAxis,
+      size.height - top - bottom,
+    );
+    final gridPaint = Paint()
+      ..color = LedgerColors.hairline
+      ..strokeWidth = 1;
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    );
+    for (final tick in [0.0, .5, 1.0]) {
+      final y = chart.bottom - chart.height * tick;
+      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), gridPaint);
+    }
+    final hourSeries = selected.where((s) => s != _TrendSeries.income);
+    final hasHourSeries = hourSeries.isNotEmpty;
+    final maxHours = _maxFor(hourSeries);
+    final maxIncome = _maxFor([_TrendSeries.income]);
+    if (hasHourSeries) {
+      _drawLabel(
+        canvas,
+        textPainter,
+        '${maxHours.toStringAsFixed(0)}h',
+        0,
+        top,
+      );
+      _drawLabel(
+        canvas,
+        textPainter,
+        '${(maxHours / 2).toStringAsFixed(0)}h',
+        0,
+        chart.center.dy - 6,
+      );
+      _drawLabel(canvas, textPainter, '0h', 0, chart.bottom - 10);
+    }
+    if (selected.contains(_TrendSeries.income)) {
+      _drawLabel(
+        canvas,
+        textPainter,
+        moneyText(maxIncome),
+        chart.right + 6,
+        top,
+        alignRight: false,
+      );
+      _drawLabel(
+        canvas,
+        textPainter,
+        moneyText(maxIncome / 2),
+        chart.right + 6,
+        chart.center.dy - 6,
+        alignRight: false,
+      );
+      _drawLabel(
+        canvas,
+        textPainter,
+        '¥0',
+        chart.right + 6,
+        chart.bottom - 10,
+        alignRight: false,
+      );
+    }
+    for (final series in selected) {
+      _drawSeries(
+        canvas,
+        chart,
+        series,
+        series == _TrendSeries.income ? maxIncome : maxHours,
+      );
+    }
+    if (points.isNotEmpty) {
+      _drawLabel(
+        canvas,
+        textPainter,
+        '${points.first.day.month}/${points.first.day.day}',
+        chart.left,
+        chart.bottom + 8,
+      );
+      _drawLabel(
+        canvas,
+        textPainter,
+        '${points.last.day.month}/${points.last.day.day}',
+        chart.right - 34,
+        chart.bottom + 8,
+      );
+    }
+  }
+
+  double _maxFor(Iterable<_TrendSeries> series) {
+    var maxValue = 0.0;
+    for (final point in points) {
+      for (final item in series) {
+        final value = point.valueFor(item);
+        if (value > maxValue) maxValue = value;
+      }
+    }
+    return maxValue <= 0 ? 1 : maxValue;
+  }
+
+  void _drawSeries(
+    Canvas canvas,
+    Rect chart,
+    _TrendSeries series,
+    double maxValue,
+  ) {
+    if (points.isEmpty) return;
+    final paint = Paint()
+      ..color = series.color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = series == _TrendSeries.total ? 2.8 : 2.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path();
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+      final x = points.length == 1
+          ? chart.center.dx
+          : chart.left + chart.width * index / (points.length - 1);
+      final y =
+          chart.bottom -
+          chart.height * (point.valueFor(series) / maxValue).clamp(0, 1);
+      if (index == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawLabel(
+    Canvas canvas,
+    TextPainter painter,
+    String text,
+    double x,
+    double y, {
+    bool alignRight = false,
+  }) {
+    painter.text = TextSpan(
+      text: text,
+      style: const TextStyle(
+        color: LedgerColors.muted,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    painter.layout();
+    painter.paint(canvas, Offset(alignRight ? x - painter.width : x, y));
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrendChartPainter oldDelegate) =>
+      oldDelegate.points != points || oldDelegate.selected != selected;
+}
+
+class _WorkHoursTable extends StatelessWidget {
+  const _WorkHoursTable({required this.summary});
+  final LedgerSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _rows().take(5).toList();
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final maxHours = rows
+        .map((row) => row.total)
+        .fold<double>(
+          0,
+          (previous, value) => value > previous ? value : previous,
+        );
+    return LedgerCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('工时表', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          for (final row in rows) ...[
+            _WorkHoursRow(row: row, maxHours: maxHours),
+            if (row != rows.last) const SizedBox(height: 7),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<_DailyTrendPoint> _rows() {
+    final byDay = <String, _DailyTrendPoint>{};
+    for (final calculation in summary.calculations) {
+      final day = dateOnly(calculation.entry.workDate);
+      final key = ymd(day);
+      byDay[key] = (byDay[key] ?? _DailyTrendPoint(day: day)).add(calculation);
+    }
+    final rows = byDay.values.toList()..sort((a, b) => b.day.compareTo(a.day));
+    return rows;
+  }
+}
+
+class _WorkHoursRow extends StatelessWidget {
+  const _WorkHoursRow({required this.row, required this.maxHours});
+  final _DailyTrendPoint row;
+  final double maxHours;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = maxHours <= 0 ? 0.0 : row.total / maxHours;
+    return Row(
+      children: [
+        SizedBox(
+          width: 44,
+          child: Text(
+            '${row.day.month}/${row.day.day}',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: Container(
+              height: 10,
+              color: LedgerColors.surfaceSoft,
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: ratio.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: row.night > 0
+                        ? LedgerColors.nightIndigo
+                        : row.overtime > 0
+                        ? LedgerColors.successGreen
+                        : LedgerColors.primaryBlue,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 44,
+          child: Text(
+            hoursText(row.total),
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _IncomeCompositionCard extends StatelessWidget {
@@ -634,6 +1097,9 @@ class _PayrollBasisCard extends StatelessWidget {
     );
   }
 }
+
+String _compactCnDate(DateTime value) =>
+    '${value.year}年${value.month}月${value.day}日';
 
 String _factorText(double value) =>
     '${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)}x';

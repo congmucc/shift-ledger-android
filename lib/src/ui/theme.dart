@@ -64,28 +64,28 @@ ThemeData buildLedgerTheme() {
     fontFamilyFallback: ledgerFontFallback,
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: FontWeight.w800,
         letterSpacing: -0.4,
         color: LedgerColors.ink,
       ),
       headlineMedium: TextStyle(
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: FontWeight.w700,
         color: LedgerColors.ink,
       ),
       titleMedium: TextStyle(
-        fontSize: 17,
+        fontSize: 16,
         fontWeight: FontWeight.w700,
         color: LedgerColors.ink,
       ),
       bodyMedium: TextStyle(
-        fontSize: 15,
+        fontSize: 14,
         height: 1.45,
         color: LedgerColors.ink,
       ),
       labelMedium: TextStyle(
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         color: LedgerColors.muted,
       ),
@@ -93,7 +93,7 @@ ThemeData buildLedgerTheme() {
     cardTheme: CardThemeData(
       color: LedgerColors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: LedgerColors.hairline),
       ),
       elevation: 0,
@@ -102,7 +102,7 @@ ThemeData buildLedgerTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: LedgerColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       helperMaxLines: 2,
       labelStyle: const TextStyle(color: LedgerColors.muted),
       helperStyle: const TextStyle(
@@ -135,11 +135,11 @@ ThemeData buildLedgerTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: LedgerColors.primaryBlue,
         foregroundColor: Colors.white,
-        minimumSize: const Size(0, 46),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        minimumSize: const Size(0, 42),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w700,
           fontFamily: ledgerFontFamily,
           fontFamilyFallback: ledgerFontFallback,
@@ -149,12 +149,12 @@ ThemeData buildLedgerTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: LedgerColors.primaryBlue,
-        minimumSize: const Size(0, 46),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        minimumSize: const Size(0, 42),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         side: const BorderSide(color: LedgerColors.hairlineStrong),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           fontFamily: ledgerFontFamily,
           fontFamilyFallback: ledgerFontFallback,
@@ -164,10 +164,10 @@ ThemeData buildLedgerTheme() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: LedgerColors.primaryBlue,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
           fontFamily: ledgerFontFamily,
           fontFamilyFallback: ledgerFontFallback,
@@ -181,10 +181,10 @@ ThemeData buildLedgerTheme() {
         backgroundColor: LedgerColors.surfaceRaised,
         selectedBackgroundColor: LedgerColors.primaryBlueSoft,
         side: const BorderSide(color: LedgerColors.hairlineStrong),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
           fontFamily: ledgerFontFamily,
           fontFamilyFallback: ledgerFontFallback,
