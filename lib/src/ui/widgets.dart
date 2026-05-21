@@ -348,7 +348,6 @@ class LedgerPill extends StatelessWidget {
             horizontal: dense ? 8 : 9,
             vertical: dense ? 4 : 5,
           ),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(999),
@@ -356,15 +355,20 @@ class LedgerPill extends StatelessWidget {
               color: selected ? color : color.withValues(alpha: .22),
             ),
           ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textScaler: cappedTextScaler(context, maxScale: 1.08),
-            style: TextStyle(
-              color: fg,
-              fontSize: dense ? 11 : 11.5,
-              fontWeight: FontWeight.w800,
+          child: Align(
+            widthFactor: 1,
+            heightFactor: 1,
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textScaler: cappedTextScaler(context, maxScale: 1.08),
+              style: TextStyle(
+                color: fg,
+                fontSize: dense ? 11 : 11.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ),

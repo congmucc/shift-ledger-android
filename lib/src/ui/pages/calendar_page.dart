@@ -663,7 +663,9 @@ class _MonthGrid extends StatelessWidget {
                   runSpacing: 1,
                   children: [
                     if (showMarkers && hasWork)
-                      const _Dot(color: LedgerColors.primaryBlue),
+                      const _CalendarStatusMark.dot(
+                        color: LedgerColors.primaryBlue,
+                      ),
                     if (showMarkers && hasOvertime)
                       const _CalendarStatusMark.plus(
                         color: LedgerColors.successGreen,
@@ -683,7 +685,9 @@ class _MonthGrid extends StatelessWidget {
                         color: LedgerColors.warningOrange,
                       ),
                     if (showEmptyMarker)
-                      const _Dot(color: LedgerColors.hairlineStrong),
+                      const _CalendarStatusMark.dot(
+                        color: LedgerColors.hairlineStrong,
+                      ),
                   ],
                 ),
               ),
@@ -937,53 +941,66 @@ class _Dot extends StatelessWidget {
   );
 }
 
+enum _CalendarStatusMarkKind { dot, text, note }
+
 class _CalendarStatusMark extends StatelessWidget {
+  const _CalendarStatusMark.dot({required this.color})
+    : text = '',
+      kind = _CalendarStatusMarkKind.dot;
+
   const _CalendarStatusMark.text(this.text, {required this.color})
-    : width = 8,
-      height = 8,
-      radius = 4,
-      isNote = false;
+    : kind = _CalendarStatusMarkKind.text;
 
   const _CalendarStatusMark.plus({required Color color})
     : this.text('+', color: color);
 
   const _CalendarStatusMark.note({required this.color})
     : text = '',
-      width = 8,
-      height = 3,
-      radius = 99,
-      isNote = true;
+      kind = _CalendarStatusMarkKind.note;
 
   final String text;
   final Color color;
-  final double width;
-  final double height;
-  final double radius;
-  final bool isNote;
+  final _CalendarStatusMarkKind kind;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: width,
-    height: height,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: isNote ? color : color.withValues(alpha: .13),
-      borderRadius: BorderRadius.circular(radius),
-      border: isNote ? null : Border.all(color: color, width: .8),
+  Widget build(BuildContext context) =>
+      SizedBox(width: 8, height: 8, child: Center(child: _inner()));
+
+  Widget _inner() => switch (kind) {
+    _CalendarStatusMarkKind.dot => Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     ),
-    child: isNote
-        ? null
-        : Text(
-            text,
-            textScaler: TextScaler.noScaling,
-            style: TextStyle(
-              color: color,
-              fontSize: text == '夜' ? 5.4 : 6.2,
-              height: 1,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-  );
+    _CalendarStatusMarkKind.note => Container(
+      width: 8,
+      height: 3,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(99),
+      ),
+    ),
+    _CalendarStatusMarkKind.text => Container(
+      width: 8,
+      height: 8,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .13),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color, width: .8),
+      ),
+      child: Text(
+        text,
+        textScaler: TextScaler.noScaling,
+        style: TextStyle(
+          color: color,
+          fontSize: text == '夜' ? 5.4 : 6.2,
+          height: 1,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    ),
+  };
 }
 
 enum _CalendarFilter { all, overtime, night, note, longDuration }
@@ -1581,7 +1598,8 @@ class _MonthListDateBlock extends StatelessWidget {
           spacing: 3,
           runSpacing: 2,
           children: [
-            if (hasWork) const _Dot(color: LedgerColors.primaryBlue),
+            if (hasWork)
+              const _CalendarStatusMark.dot(color: LedgerColors.primaryBlue),
             if (hasOvertime)
               const _CalendarStatusMark.plus(color: LedgerColors.successGreen),
             if (hasNight)
