@@ -1,24 +1,26 @@
 # Shift Ledger TODOs
 
-## Design closure backlog
+## Release readiness
 
-- [ ] Verify three real Android walkthroughs before calling the design loop complete: record today's shift, find overtime/night-shift day, and export or back up data.
-  - Why: these are the trust paths for a personal work ledger; text-level widget tests do not prove the app feels safe on device.
-  - Depends on: Android emulator or physical-device QA pass.
+- [ ] Verify three real Android walkthroughs before calling the design loop fully device-proven:
+  - record today's shift;
+  - find an overtime/night-shift day from the calendar;
+  - export or back up data.
+  - Why: widget tests and Web preview prove structure and regressions, but final Android confidence still needs one emulator or physical-device pass.
 
-- [x] Add an undo or recent-deleted recovery path after deleting a full day.
-  - Why: hiding the destructive action reduces mis-taps, but recovery is what protects wage evidence if deletion still happens.
-  - Done: whole-day delete now creates a recent-deleted restore point, shows snackbar undo, and exposes a Settings recovery sheet.
+## Completed product decisions
 
-- [x] Replace WebDAV copy-only status with a small backup status model: unconnected, connected, auto-backup on, needs reauthorization, latest failure.
-  - Why: backup confidence depends on knowing the current state, not only opening the configuration sheet.
-  - Done: Settings and the WebDAV sheet now derive visible status from WebDAV config plus auto-backup status fields.
+- [x] Whole-day delete has an undo/recent-deleted recovery path.
+  - Done: deleting a full day creates a recent-deleted restore point, shows snackbar undo, and exposes a Settings recovery sheet.
 
-- [x] Re-evaluate whether Home needs a low-emphasis “more actions” path for export, templates, or non-today entry.
-  - Why: the first screen should stay quiet, but ledger users may still need discoverable secondary actions.
-  - Done: Home keeps only three primary chips and adds a low-emphasis “更多” bottom sheet for export, templates/settings, and non-today entry.
+- [x] WebDAV status is modeled as unconnected, connected, auto-backup on, needs reauthorization, latest failure.
+  - Done: Settings and the WebDAV sheet derive visible status from WebDAV config plus auto-backup status fields.
 
-## Design review 2026-05-14 deferred
+- [x] Home keeps only the three primary quick actions.
+  - Done: Home exposes `补今天 / 查日历 / 看汇总`; export, templates, backups, and rules stay in their owning pages.
 
-- [ ] Medium / Color: Avoid using `workAmber` as body text on light surfaces; measured contrast is about 4.15:1, below WCAG AA body text target.
-- [ ] Polish / Interaction: Calendar page top-right icon-only `+` is acceptable but could be clearer with a text action or stronger semantic affordance.
+- [x] Compact UI palette replaced the old warm-paper prototype palette.
+  - Done: `DESIGN.md`, `.design-preview/compact-ledger-ui.html`, Flutter theme, and widget tests now use the compact color semantics.
+
+- [x] Calendar header action is text-labeled.
+  - Done: the calendar header uses `补一段` with a stable key instead of an icon-only `+`.

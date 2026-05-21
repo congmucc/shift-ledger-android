@@ -25,12 +25,13 @@ class SettingsPage extends StatelessWidget {
     return PageFrame(
       title: '设置',
       children: [
-        const Text('个人工时账本', style: TextStyle(color: LedgerColors.muted)),
-        const SectionHeader(title: '常用规则'),
+        const _SettingsGroupLabel('规则'),
         LedgerCard(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Column(
             children: [
               SettingTile(
+                iconLabel: '班',
                 title: '班次模板',
                 subtitle:
                     '默认 ${defaultTemplate.name} ${_time(defaultTemplate.startMinute)}-${_time(defaultTemplate.endMinute)} · 共 ${state.templates.length} 套模板',
@@ -38,6 +39,7 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _showTemplateInfo(context),
               ),
               SettingTile(
+                iconLabel: '薪',
                 title: '计薪规则',
                 subtitle:
                     '默认 ${rule.baseType.label} · ${rule.amountLabel} · ${ymd(rule.effectiveFrom)} 起',
@@ -45,6 +47,9 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => showPayRuleSheet(context, state, rule),
               ),
               SettingTile(
+                iconLabel: '史',
+                iconColor: LedgerColors.warningOrange,
+                iconBackgroundColor: LedgerColors.warningOrangeSoft,
                 title: '规则历史',
                 subtitle:
                     '共 ${state.payRules.length} 个版本 · 当前 ${rule.baseType.label} ${rule.amountLabel}',
@@ -52,12 +57,16 @@ class SettingsPage extends StatelessWidget {
                 onTap: () => _showRuleHistory(context),
               ),
               SettingTile(
+                iconLabel: '夜',
+                iconColor: LedgerColors.nightIndigo,
+                iconBackgroundColor: LedgerColors.nightIndigoSoft,
                 title: '夜班规则',
                 subtitle: state.nightRule.label,
                 trailing: '编辑',
                 onTap: () => _showNightRuleSheet(context),
               ),
               SettingTile(
+                iconLabel: '月',
                 title: '发薪周期',
                 subtitle: _payPeriodLabel(state.payPeriod),
                 trailing: '编辑',
@@ -66,27 +75,40 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
         ),
-        const SectionHeader(title: '导出与备份'),
+        const _SettingsGroupLabel('数据'),
         LedgerCard(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Column(
             children: [
               SettingTile(
+                iconLabel: 'CSV',
                 title: 'CSV 导出',
+                subtitle: '通过系统保存面板导出',
                 trailing: '导出',
                 onTap: () => _exportCsv(context),
               ),
               SettingTile(
+                iconLabel: '本',
+                iconColor: LedgerColors.successGreen,
+                iconBackgroundColor: LedgerColors.successGreenSoft,
                 title: '本地备份/恢复',
+                subtitle: '备份文件保留时间戳，恢复时从本地备份选择',
                 trailing: '备份',
                 onTap: () => _showLocalBackupSheet(context),
               ),
               SettingTile(
+                iconLabel: '云',
+                iconColor: LedgerColors.nightIndigo,
+                iconBackgroundColor: LedgerColors.nightIndigoSoft,
                 title: '坚果云 WebDAV',
                 subtitle: backupStatus.summary,
                 trailing: '连接',
                 onTap: () => showWebDavSheet(context, state),
               ),
               SettingTile(
+                iconLabel: '删',
+                iconColor: LedgerColors.errorRed,
+                iconBackgroundColor: LedgerColors.errorRedSoft,
                 title: '最近删除',
                 subtitle: _recentDeletedSubtitle(),
                 trailing: state.recentDeletedDays.isEmpty ? null : '恢复',
@@ -121,7 +143,7 @@ class SettingsPage extends StatelessWidget {
             maxHeight: MediaQuery.of(context).size.height * 0.82,
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +153,11 @@ class SettingsPage extends StatelessWidget {
                     Expanded(
                       child: Text(
                         '规则历史',
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
                       ),
                     ),
                     TextButton(
@@ -142,12 +168,16 @@ class SettingsPage extends StatelessWidget {
                 ),
                 const Text(
                   '历史记录沿用保存时快照。',
-                  style: TextStyle(color: LedgerColors.muted),
+                  style: TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 for (final rule in rules) ...[
                   LedgerCard(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -158,17 +188,25 @@ class SettingsPage extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           '${rule.baseType.label} · ${rule.amountLabel} · ${cnDateText(rule.effectiveFrom)} 起${rule.effectiveTo == null ? '' : '，至 ${cnDateText(rule.effectiveTo!)}'}',
-                          style: const TextStyle(color: LedgerColors.muted),
+                          style: const TextStyle(
+                            color: LedgerColors.muted,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '普通上限 ${rule.standardHoursPerDay.toStringAsFixed(0)}h/天 · 计薪加班 ${rule.overtimeMultiplier}x · 休息日 ${rule.restDayMultiplier}x',
-                          style: const TextStyle(color: LedgerColors.muted),
+                          style: const TextStyle(
+                            color: LedgerColors.muted,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                 ],
               ],
             ),
@@ -191,10 +229,10 @@ class SettingsPage extends StatelessWidget {
           return SafeArea(
             child: Padding(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                left: 12,
+                right: 12,
+                top: 10,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -205,10 +243,10 @@ class SettingsPage extends StatelessWidget {
                       title: '夜班规则',
                       onClose: () => Navigator.pop(context),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     LedgerCard(
                       color: LedgerColors.surfaceRaised,
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -225,7 +263,7 @@ class SettingsPage extends StatelessWidget {
                               height: 1.35,
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 7),
                           Row(
                             children: [
                               Expanded(
@@ -268,7 +306,7 @@ class SettingsPage extends StatelessWidget {
                             ],
                           ),
                           if (invalidTimeOrder) ...[
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             const Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -297,7 +335,7 @@ class SettingsPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -350,10 +388,10 @@ class SettingsPage extends StatelessWidget {
         builder: (context, setSheetState) => SafeArea(
           child: Padding(
             padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              left: 12,
+              right: 12,
+              top: 10,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 12,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -365,10 +403,10 @@ class SettingsPage extends StatelessWidget {
                     onClose: () => Navigator.pop(context),
                     closeLabel: '取消',
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   LedgerCard(
                     color: LedgerColors.surfaceRaised,
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -387,7 +425,7 @@ class SettingsPage extends StatelessWidget {
                             height: 1.35,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 7),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: SegmentedButton<PayPeriodMode>(
@@ -407,7 +445,7 @@ class SettingsPage extends StatelessWidget {
                           ),
                         ),
                         if (mode == PayPeriodMode.monthlyStartDay) ...[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 7),
                           LedgerPickerButtonField(
                             label: '每月起始日',
                             value: '$monthStartDay 日',
@@ -427,7 +465,7 @@ class SettingsPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -507,7 +545,7 @@ class SettingsPage extends StatelessWidget {
         final deletedDays = state.recentDeletedDays;
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,7 +554,7 @@ class SettingsPage extends StatelessWidget {
                   title: '最近删除',
                   onClose: () => Navigator.pop(context),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 if (deletedDays.isEmpty)
                   const NoticeCard(
                     icon: Icons.delete_sweep_outlined,
@@ -528,12 +566,12 @@ class SettingsPage extends StatelessWidget {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: deletedDays.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 6),
                       itemBuilder: (context, index) {
                         final item = deletedDays[index];
                         return LedgerCard(
                           color: LedgerColors.surfaceRaised,
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(10),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -548,7 +586,7 @@ class SettingsPage extends StatelessWidget {
                                   color: LedgerColors.muted,
                                 ),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 7),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: FilledButton(
@@ -676,10 +714,10 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 12,
+          right: 12,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -691,10 +729,10 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                 subtitle: '恢复会覆盖当前记录、模板和规则。',
                 onClose: () => Navigator.pop(context),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -711,9 +749,9 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                         height: 1.35,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     _buildBackupLocationCard(context),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -721,7 +759,7 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                         child: const Text('创建本地备份'),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -736,10 +774,10 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -756,7 +794,7 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                         height: 1.35,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -766,7 +804,7 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
                         child: const Text('从最近本地备份恢复'),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -803,7 +841,7 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
     }
     return LedgerCard(
       color: LedgerColors.surfaceSoft,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -933,6 +971,24 @@ class _LocalBackupSheetState extends State<_LocalBackupSheet> {
   }
 }
 
+class _SettingsGroupLabel extends StatelessWidget {
+  const _SettingsGroupLabel(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: LedgerColors.muted,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
+}
+
 class ShiftTemplateSheet extends StatefulWidget {
   const ShiftTemplateSheet({super.key, required this.state});
 
@@ -988,10 +1044,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 12,
+          right: 12,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -1003,10 +1059,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                 subtitle: '新增记录时会优先带出这里的班次。',
                 onClose: () => Navigator.pop(context),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1034,7 +1090,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       _template.name,
                       style: Theme.of(context).textTheme.headlineMedium,
@@ -1047,7 +1103,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         fontSize: 13,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     Row(
                       children: [
                         Expanded(
@@ -1071,10 +1127,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1082,26 +1138,26 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       '模板内容',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _name,
                       onChanged: (_) => _clearCopyLock(),
                       decoration: const InputDecoration(labelText: '模板名称'),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _location,
                       onChanged: (_) => _clearCopyLock(),
                       decoration: const InputDecoration(labelText: '地点 / 岗位'),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _break,
                       onChanged: (_) => _clearCopyLock(),
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: '休息分钟'),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     EntryTypeSegmentedField(
                       label: '班次类型',
                       value: _type,
@@ -1110,7 +1166,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         _clearCopyLock();
                       }),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildFieldPair(
                       compact: compact,
                       first: LedgerPickerButtonField(
@@ -1127,7 +1183,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                       ),
                     ),
                     if (invalidTimeOrder) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       const Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1153,7 +1209,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         ],
                       ),
                     ],
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildFieldPair(
                       compact: compact,
                       first: TextField(
@@ -1172,10 +1228,10 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1194,7 +1250,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         height: 1.35,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildFieldPair(
                       compact: compact,
                       first: OutlinedButton.icon(
@@ -1217,7 +1273,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                         label: const Text('删除模板'),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     if (_template.isBuiltIn)
                       _buildFieldPair(
                         compact: compact,
@@ -1239,7 +1295,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                           child: Text(isDefaultTemplate ? '当前已是默认' : '设为默认'),
                         ),
                       ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -1283,7 +1339,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
     if (compact) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [first, const SizedBox(height: 10), second],
+        children: [first, const SizedBox(height: 7), second],
       );
     }
     return Row(
@@ -1304,7 +1360,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
         final templates = widget.state.templates;
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(context).height * .75,
@@ -1317,12 +1373,12 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                     title: '选择模板',
                     onClose: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   Flexible(
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: templates.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 7),
                       itemBuilder: (context, index) {
                         final tpl = templates[index];
                         final isSelected = tpl.id == _template.id;
@@ -1335,7 +1391,7 @@ class _ShiftTemplateSheetState extends State<ShiftTemplateSheet> {
                               color: isSelected
                                   ? LedgerColors.primaryBlueSoft
                                   : LedgerColors.surfaceRaised,
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(10),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -1693,10 +1749,10 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 12,
+          right: 12,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -1708,7 +1764,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                 onClose: () => Navigator.pop(context),
                 closeLabel: '取消',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               NoticeCard(
                 icon: Icons.payments_outlined,
                 title: _name.text.trim().isEmpty
@@ -1716,10 +1772,10 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                     : _name.text.trim(),
                 body: '$basePreview · $effectiveLabel 起',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1727,7 +1783,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                       '版本信息',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildFieldPair(
                       compact: compact,
                       first: TextField(
@@ -1744,10 +1800,10 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1755,7 +1811,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                       '计薪基础',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SegmentedButton<PayBaseType>(
@@ -1778,7 +1834,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                             setState(() => _type = values.first),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     if (_type == PayBaseType.hourly)
                       TextField(
                         controller: _hourly,
@@ -1795,7 +1851,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                           labelText: '每日工资 ¥/天',
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 7),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: SegmentedButton<DailyPayMode>(
@@ -1824,10 +1880,10 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1835,7 +1891,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                       '补充规则',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildFieldPair(
                       compact: compact,
                       first: TextField(
@@ -1851,7 +1907,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                         decoration: const InputDecoration(labelText: '计薪加班倍率'),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildFieldPair(
                       compact: compact,
                       first: TextField(
@@ -1870,12 +1926,12 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               const NoticeCard(
                 icon: Icons.history_toggle_off_rounded,
                 title: '保存后会生成新版本',
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(onPressed: _save, child: const Text('保存')),
@@ -1895,7 +1951,7 @@ class _PayRuleSheetState extends State<PayRuleSheet> {
     if (compact) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [first, const SizedBox(height: 10), second],
+        children: [first, const SizedBox(height: 7), second],
       );
     }
     return Row(

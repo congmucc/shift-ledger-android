@@ -53,8 +53,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     );
     final dayRecordSummary = summarizeRecordEntries(_segments);
     final deleteTargetDay = _day;
-    final canDeleteDay =
-        widget.state.entriesForDay(deleteTargetDay).isNotEmpty;
+    final canDeleteDay = widget.state.entriesForDay(deleteTargetDay).isNotEmpty;
     final deleteTargetEntries = widget.state.entriesForDay(deleteTargetDay);
     final deleteTargetSummary = widget.state.summaryFor(
       DateRange.custom(deleteTargetDay, deleteTargetDay),
@@ -62,10 +61,10 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 12,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 18,
+          left: 12,
+          right: 12,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -95,9 +94,9 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
               ] else
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
                 child: Column(
@@ -124,7 +123,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 8,
@@ -149,7 +148,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     Text('计薪', style: Theme.of(context).textTheme.labelMedium),
                     const SizedBox(height: 4),
                     Text(
@@ -170,7 +169,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Expanded(
@@ -196,19 +195,19 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   ],
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               for (final entry in _segments) ...[
                 WorkEntryTile(
                   entry: entry,
                   onEdit: () => _editSegment(entry),
                   onDelete: () => _confirmDeleteSegment(entry),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 7),
               ],
               if (_segments.isEmpty) ...[
                 LedgerCard(
                   color: LedgerColors.surfaceRaised,
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(10),
                   child: Text(
                     _openedWithExistingDay
                         ? '当前没有分段了。点击保存后不会新增记录，也可以继续新增分段。'
@@ -220,16 +219,16 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 7),
               ],
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('操作', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     _buildActionButtons(
                       compact: compactActions,
                       primary: FilledButton(
@@ -246,7 +245,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                 ),
               ),
               if (canDeleteDay) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -269,7 +268,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   const SizedBox(height: 6),
                   LedgerCard(
                     color: LedgerColors.surfaceRaised,
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -302,7 +301,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 7),
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
@@ -340,7 +339,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(width: double.infinity, child: primary),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           SizedBox(width: double.infinity, child: secondary),
         ],
       );
@@ -526,9 +525,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     Navigator.pop(context);
     showLedgerSnackBar(
       rootContext,
-      _segments.isEmpty
-          ? '已清空 ${ymd(savedDay)} 记录'
-          : '已保存 ${ymd(savedDay)} 记录',
+      _segments.isEmpty ? '已清空 ${ymd(savedDay)} 记录' : '已保存 ${ymd(savedDay)} 记录',
     );
   }
 
@@ -628,7 +625,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               style: const TextStyle(color: LedgerColors.muted, fontSize: 13),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           _buildFieldPair(
             stacked: stackedFields,
             first: LedgerPickerButtonField(
@@ -645,7 +642,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
             ),
           ),
           if (draftHasEqualTime) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -671,7 +668,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               ],
             ),
           ] else if (draftCrossesMidnight) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -697,18 +694,18 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               ],
             ),
           ],
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           TextField(
             controller: _break,
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(labelText: '休息分钟'),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           EntryTypeSegmentedField(
             value: _type,
             onChanged: (value) => setState(() => _type = value),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           DropdownButtonFormField<PayRule>(
             initialValue: _rule,
             isExpanded: true,
@@ -739,12 +736,12 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
                 .toList(),
             onChanged: (value) => setState(() => _rule = value ?? _rule),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           TextField(
             controller: _location,
             decoration: const InputDecoration(labelText: '地点/岗位'),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           _buildFieldPair(
             stacked: stackedFields,
             first: TextField(
@@ -758,7 +755,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
               decoration: const InputDecoration(labelText: '扣款'),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           TextField(
             controller: _note,
             decoration: const InputDecoration(labelText: '备注'),
@@ -786,7 +783,7 @@ class _SegmentEditorDialogState extends State<SegmentEditorDialog> {
     if (stacked) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [first, const SizedBox(height: 10), second],
+        children: [first, const SizedBox(height: 7), second],
       );
     }
     return Row(

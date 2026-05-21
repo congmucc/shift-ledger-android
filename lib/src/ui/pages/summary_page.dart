@@ -30,7 +30,7 @@ class _SummaryPageState extends State<SummaryPage> {
     final defaultRule = widget.state.defaultRule;
     final empty = summary.calculations.isEmpty;
     return PageFrame(
-      title: '工时汇总',
+      title: '汇总',
       trailing: FilledButton.tonal(
         onPressed: _exporting ? null : () => _exportCsv(range),
         child: Text(_exporting ? '导出中' : '导出'),
@@ -47,10 +47,10 @@ class _SummaryPageState extends State<SummaryPage> {
           onPickStart: _mode == '自定义' ? _pickCustomStart : null,
           onPickEnd: _mode == '自定义' ? _pickCustomEnd : null,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
         if (empty) ...[
           _SummaryEmptyState(mode: _mode),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           _PayrollBasisCard(
             range: range,
             rule: defaultRule,
@@ -63,13 +63,13 @@ class _SummaryPageState extends State<SummaryPage> {
             payrollBasisSummary:
                 '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
           ),
-          const SizedBox(height: 10),
-          _IncomeCompositionCard(summary: summary),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           _SummaryTrendCard(summary: summary),
-          const SizedBox(height: 10),
+          const SizedBox(height: 7),
           _WorkHoursTable(summary: summary),
-          const SizedBox(height: 12),
+          const SizedBox(height: 7),
+          _IncomeCompositionCard(summary: summary),
+          const SizedBox(height: 6),
           _PayrollBasisCard(
             range: range,
             rule: defaultRule,
@@ -163,13 +163,13 @@ class _SummaryPageState extends State<SummaryPage> {
       backgroundColor: LedgerColors.paper,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('收入组成', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               _Line('基础收入', moneyText(summary.baseIncome)),
               _Line('计薪加班收入', moneyText(summary.overtimeIncome)),
               _Line('夜班收入', moneyText(summary.nightIncome)),
@@ -235,10 +235,15 @@ class _RangeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final custom = onPickStart != null || onPickEnd != null;
     final rangeText =
-        '${_compactCnDate(range.start)} — ${_compactCnDate(range.endInclusive)}';
-    final rangeContext = range.label == null || range.label == rangeText
-        ? rangeText
-        : '${range.label} · $rangeText';
+        '${_compactCnDate(range.start)}—${_compactCnDate(range.endInclusive)}';
+    final rangeName = switch (mode) {
+      '本月' => '本月自然月',
+      '本周' => '本周',
+      '年度' => '年度',
+      '发薪周期' => range.label ?? '发薪周期',
+      '自定义' => '自定义范围',
+      _ => mode,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -263,23 +268,26 @@ class _RangeSelector extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Row(
             children: [
               Expanded(
                 child: Text(
-                  '$mode · $rangeContext',
-                  maxLines: 2,
+                  '$rangeName · $rangeText',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: LedgerColors.muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 11.5,
+                    height: 1.25,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              _ScopeBadge(text: '$mode · ${summary.range.dayCount}天'),
+              const SizedBox(width: 8),
+              _ScopeBadge(text: '${summary.range.dayCount}天 · 范围 ›'),
             ],
           ),
         ),
@@ -298,7 +306,7 @@ class _RangeSelector extends StatelessWidget {
           ),
         ],
         if (custom) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
@@ -429,77 +437,93 @@ class _SummaryOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final incomeFlex = constraints.maxWidth < 360 ? 7 : 6;
-              return Row(
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: _CoreMetricBox(
-                      label: '总工时',
-                      value: hoursText(summary.totalHours),
-                      dotColor: LedgerColors.primaryBlue,
+      child: Semantics(
+        label:
+            '汇总概览，总工时 ${hoursText(summary.totalHours)}，预计收入 ${moneyText(summary.income)}，出勤 ${summary.attendanceDays} 天，加班 ${hoursText(summary.overtimeHours)}，夜班 ${summary.nightShiftCount} 次',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final incomeFlex = constraints.maxWidth < 360 ? 7 : 6;
+                return Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: _CoreMetricBox(
+                        label: '总工时',
+                        value: hoursText(summary.totalHours),
+                        dotColor: LedgerColors.primaryBlue,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    flex: incomeFlex,
-                    child: _CoreMetricBox(
-                      label: '收入估算',
-                      value: moneyText(summary.income),
-                      dotColor: LedgerColors.hairlineStrong,
-                      emphasizeValue: true,
+                    const SizedBox(width: 7),
+                    Expanded(
+                      flex: incomeFlex,
+                      child: _CoreMetricBox(
+                        label: '收入估算',
+                        value: moneyText(summary.income),
+                        dotColor: LedgerColors.hairlineStrong,
+                        emphasizeValue: true,
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 7),
-          Row(
-            children: [
-              Expanded(
-                child: _SmallMetricBox('出勤', '${summary.attendanceDays}天'),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _SmallMetricBox('加班', hoursText(summary.overtimeHours)),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _SmallMetricBox('夜班', '${summary.nightShiftCount}次'),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _SmallMetricBox('补贴', moneyText(summary.allowance)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Text(
-            '计薪加班 ${summary.overtimeDays}天 / ${hoursText(summary.overtimeHours)}',
-            style: const TextStyle(
-              color: LedgerColors.ink,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+                  ],
+                );
+              },
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '扣款 ${moneyText(summary.deduction)} · 偏长 ${summary.longDurationDays}天 · 共 ${summary.calculations.length}段',
-            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-          ),
-          const SizedBox(height: 2),
-          Text('计薪依据', style: Theme.of(context).textTheme.labelMedium),
-          Text(
-            payrollBasisSummary,
-            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-          ),
-        ],
+            const SizedBox(height: 7),
+            Row(
+              children: [
+                Expanded(
+                  child: _SmallMetricBox('出勤', '${summary.attendanceDays}天'),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _SmallMetricBox(
+                    '加班',
+                    hoursText(summary.overtimeHours),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _SmallMetricBox('夜班', '${summary.nightShiftCount}次'),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _SmallMetricBox('补贴', moneyText(summary.allowance)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                LedgerPill(
+                  '计薪 $payrollBasisSummary',
+                  color: LedgerColors.muted,
+                  dense: true,
+                ),
+                if (summary.deduction > 0)
+                  LedgerPill(
+                    '扣款 ${moneyText(summary.deduction)}',
+                    color: LedgerColors.errorRed,
+                    dense: true,
+                  ),
+                if (summary.longDurationDays > 0)
+                  LedgerPill(
+                    '超长 ${summary.longDurationDays}天',
+                    color: LedgerColors.errorRed,
+                    dense: true,
+                  ),
+                LedgerPill(
+                  '${summary.calculations.length}段',
+                  color: LedgerColors.muted,
+                  dense: true,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -644,44 +668,89 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
   Widget build(BuildContext context) {
     final points = _dailyPoints(widget.summary);
     if (points.isEmpty) return const SizedBox.shrink();
+    final chartLabel = _trendSemanticLabel(points);
     return LedgerCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('工时趋势', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 154,
-            child: CustomPaint(
-              painter: _TrendChartPainter(points: points, selected: _selected),
-              child: const SizedBox.expand(),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '工时趋势',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const Text(
+                '最近记录日',
+                style: TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Semantics(
+            label: chartLabel,
+            image: true,
+            child: Container(
+              height: 142,
+              decoration: BoxDecoration(
+                color: LedgerColors.surfaceRaised,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: LedgerColors.hairline),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(13),
+                child: CustomPaint(
+                  painter: _TrendChartPainter(
+                    points: points,
+                    selected: _selected,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
               for (final series in _TrendSeries.values)
-                FilterChip(
-                  visualDensity: VisualDensity.compact,
-                  label: Text(series.label),
+                _TrendToggle(
+                  label: series.label,
+                  color: series.color,
                   selected: _selected.contains(series),
-                  onSelected: (selected) => setState(() {
-                    if (selected) {
+                  onTap: () => setState(() {
+                    if (_selected.contains(series)) {
+                      if (_selected.length > 1) _selected.remove(series);
+                    } else {
                       _selected.add(series);
-                    } else if (_selected.length > 1) {
-                      _selected.remove(series);
                     }
                   }),
-                  avatar: _MetricDot(color: series.color),
                 ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  String _trendSemanticLabel(List<_DailyTrendPoint> points) {
+    final days = points.length;
+    final total = points.fold<double>(0, (sum, point) => sum + point.total);
+    final overtime = points.fold<double>(
+      0,
+      (sum, point) => sum + point.overtime,
+    );
+    final night = points.fold<double>(0, (sum, point) => sum + point.night);
+    final income = points.fold<double>(0, (sum, point) => sum + point.income);
+    final peak = points.reduce((a, b) => a.total >= b.total ? a : b);
+    return '工时趋势图，$days 个记录日，总工时 ${hoursText(total)}，加班 ${hoursText(overtime)}，夜班 ${hoursText(night)}，收入 ${moneyText(income)}，最高日 ${peak.day.month}月${peak.day.day}日 ${hoursText(peak.total)}';
   }
 
   List<_DailyTrendPoint> _dailyPoints(LedgerSummary summary) {
@@ -696,6 +765,33 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
       ..sort((a, b) => a.day.compareTo(b.day));
     return points;
   }
+}
+
+class _TrendToggle extends StatelessWidget {
+  const _TrendToggle({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: selected ? 1 : .42,
+    child: LedgerPill(
+      label,
+      color: color,
+      background: selected ? null : LedgerColors.surfaceRaised,
+      dense: true,
+      selected: selected,
+      onTap: onTap,
+    ),
+  );
 }
 
 class _DailyTrendPoint {
@@ -785,6 +881,7 @@ class _TrendChartPainter extends CustomPainter {
         chart.center.dy - 6,
       );
       _drawLabel(canvas, textPainter, '0h', 0, chart.bottom - 10);
+      _drawLabel(canvas, textPainter, '小时', 0, chart.bottom + 8);
     }
     if (selected.contains(_TrendSeries.income)) {
       _drawLabel(
@@ -809,6 +906,14 @@ class _TrendChartPainter extends CustomPainter {
         '¥0',
         chart.right + 6,
         chart.bottom - 10,
+        alignRight: false,
+      );
+      _drawLabel(
+        canvas,
+        textPainter,
+        '收入',
+        chart.right + 6,
+        chart.bottom + 8,
         alignRight: false,
       );
     }
@@ -878,6 +983,65 @@ class _TrendChartPainter extends CustomPainter {
       }
     }
     canvas.drawPath(path, paint);
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+      final x = points.length == 1
+          ? chart.center.dx
+          : chart.left + chart.width * index / (points.length - 1);
+      final y =
+          chart.bottom -
+          chart.height * (point.valueFor(series) / maxValue).clamp(0, 1);
+      _drawPointMarker(canvas, Offset(x, y), series, paint.color);
+    }
+  }
+
+  void _drawPointMarker(
+    Canvas canvas,
+    Offset center,
+    _TrendSeries series,
+    Color color,
+  ) {
+    final fill = Paint()
+      ..color = LedgerColors.surfaceRaised
+      ..style = PaintingStyle.fill;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    const radius = 2.8;
+    switch (series) {
+      case _TrendSeries.total:
+        canvas.drawCircle(center, radius, fill);
+        canvas.drawCircle(center, radius, stroke);
+      case _TrendSeries.regular:
+        final rect = Rect.fromCenter(
+          center: center,
+          width: radius * 2,
+          height: radius * 2,
+        );
+        canvas.drawRect(rect, fill);
+        canvas.drawRect(rect, stroke);
+      case _TrendSeries.overtime:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - radius)
+          ..lineTo(center.dx + radius, center.dy + radius)
+          ..lineTo(center.dx - radius, center.dy + radius)
+          ..close();
+        canvas.drawPath(path, fill);
+        canvas.drawPath(path, stroke);
+      case _TrendSeries.night:
+      case _TrendSeries.income:
+        final path = Path()
+          ..moveTo(center.dx, center.dy - radius)
+          ..lineTo(center.dx + radius, center.dy)
+          ..lineTo(center.dx, center.dy + radius)
+          ..lineTo(center.dx - radius, center.dy)
+          ..close();
+        canvas.drawPath(path, fill);
+        canvas.drawPath(path, stroke);
+      case _TrendSeries.attendance:
+        canvas.drawCircle(center, 2.1, Paint()..color = color);
+    }
   }
 
   void _drawLabel(
@@ -911,7 +1075,8 @@ class _WorkHoursTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = _rows().take(5).toList();
+    final allRows = _rows();
+    final rows = allRows.take(4).toList();
     if (rows.isEmpty) return const SizedBox.shrink();
     final maxHours = rows
         .map((row) => row.total)
@@ -919,18 +1084,45 @@ class _WorkHoursTable extends StatelessWidget {
           0,
           (previous, value) => value > previous ? value : previous,
         );
+    final shownCount = rows.length;
+    final totalCount = allRows.length;
     return LedgerCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('工时表', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          for (final row in rows) ...[
-            _WorkHoursRow(row: row, maxHours: maxHours),
-            if (row != rows.last) const SizedBox(height: 7),
+      child: Semantics(
+        label:
+            '工时构成，总工时 ${hoursText(summary.totalHours)}，普通 ${hoursText(summary.regularHours)}，加班 ${hoursText(summary.overtimeHours)}，夜班 ${hoursText(summary.nightHours)}',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '工时构成',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  totalCount > shownCount
+                      ? '最近 $shownCount / $totalCount 天'
+                      : '最近记录日',
+                  style: const TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            _WorkHoursCompositionBar(summary: summary),
+            const SizedBox(height: 7),
+            for (final row in rows) ...[
+              _WorkHoursRow(row: row, maxHours: maxHours),
+              if (row != rows.last) const SizedBox(height: 6),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -947,6 +1139,114 @@ class _WorkHoursTable extends StatelessWidget {
   }
 }
 
+class _WorkHoursCompositionBar extends StatelessWidget {
+  const _WorkHoursCompositionBar({required this.summary});
+
+  final LedgerSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final regular = summary.regularHours.clamp(0, double.infinity).toDouble();
+    final overtime = summary.overtimeHours.clamp(0, double.infinity).toDouble();
+    final night = summary.nightHours.clamp(0, double.infinity).toDouble();
+    final accounted = regular + overtime + night;
+    final other = (summary.totalHours - accounted)
+        .clamp(0, double.infinity)
+        .toDouble();
+    final parts = [
+      _HoursPart('普通', regular, LedgerColors.primaryBlue),
+      _HoursPart('加班', overtime, LedgerColors.successGreen),
+      _HoursPart('夜班', night, LedgerColors.nightIndigo),
+      if (other > 0) _HoursPart('其他', other, LedgerColors.hairlineStrong),
+    ].where((part) => part.value > 0).toList();
+    if (parts.isEmpty) return const SizedBox.shrink();
+    final total = parts.fold<double>(0, (sum, part) => sum + part.value);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: SizedBox(
+            height: 13,
+            child: Row(
+              children: [
+                for (final part in parts)
+                  Expanded(
+                    flex: (part.value / total * 1000).round().clamp(1, 1000),
+                    child: ColoredBox(color: part.color),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 7),
+        Wrap(
+          spacing: 6,
+          runSpacing: 5,
+          children: [
+            for (final part in parts)
+              _HoursLegendPill(
+                label: part.label,
+                value: part.value,
+                total: total,
+                color: part.color,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HoursPart {
+  const _HoursPart(this.label, this.value, this.color);
+
+  final String label;
+  final double value;
+  final Color color;
+}
+
+class _HoursLegendPill extends StatelessWidget {
+  const _HoursLegendPill({
+    required this.label,
+    required this.value,
+    required this.total,
+    required this.color,
+  });
+
+  final String label;
+  final double value;
+  final double total;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = total <= 0 ? 0 : (value / total * 100).round();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: LedgerColors.surfaceSoft.withValues(alpha: .72),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _MetricDot(color: color),
+          const SizedBox(width: 5),
+          Text(
+            '$label ${hoursText(value)} · $percent%',
+            style: const TextStyle(
+              color: LedgerColors.ink,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WorkHoursRow extends StatelessWidget {
   const _WorkHoursRow({required this.row, required this.maxHours});
   final _DailyTrendPoint row;
@@ -955,49 +1255,102 @@ class _WorkHoursRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ratio = maxHours <= 0 ? 0.0 : row.total / maxHours;
+    final percent = (ratio.clamp(0.0, 1.0) * 100).round();
+    final parts = [
+      _HoursPart('普通', row.regular, LedgerColors.primaryBlue),
+      _HoursPart('加班', row.overtime, LedgerColors.successGreen),
+      _HoursPart('夜班', row.night, LedgerColors.nightIndigo),
+    ].where((part) => part.value > 0).toList();
     return Row(
       children: [
         SizedBox(
           width: 44,
-          child: Text(
-            '${row.day.month}/${row.day.day}',
-            style: const TextStyle(fontWeight: FontWeight.w800),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${row.day.month}/${row.day.day}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                row.day.weekdayCn,
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: Container(
-              height: 10,
-              color: LedgerColors.surfaceSoft,
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: ratio.clamp(0.0, 1.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: row.night > 0
-                        ? LedgerColors.nightIndigo
-                        : row.overtime > 0
-                        ? LedgerColors.successGreen
-                        : LedgerColors.primaryBlue,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 11,
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  color: LedgerColors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: const Color(0xFFECEFF4)),
+                ),
+                child: FractionallySizedBox(
+                  widthFactor: ratio.clamp(0.0, 1.0),
+                  alignment: Alignment.centerLeft,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: Row(
+                      children: [
+                        if (parts.isEmpty)
+                          const Expanded(
+                            child: ColoredBox(color: LedgerColors.primaryBlue),
+                          )
+                        else
+                          for (final part in parts)
+                            Expanded(
+                              flex: (part.value / row.total * 1000)
+                                  .round()
+                                  .clamp(1, 1000),
+                              child: ColoredBox(color: part.color),
+                            ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 2),
+              Text(
+                '占最高日 $percent%',
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 8),
         SizedBox(
-          width: 44,
+          width: 42,
           child: Text(
             hoursText(row.total),
             textAlign: TextAlign.right,
-            style: const TextStyle(fontWeight: FontWeight.w900),
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900),
           ),
         ),
       ],
     );
   }
+}
+
+extension on DateTime {
+  String get weekdayCn =>
+      const ['一', '二', '三', '四', '五', '六', '日'][weekday - 1];
 }
 
 class _IncomeCompositionCard extends StatelessWidget {
@@ -1007,8 +1360,15 @@ class _IncomeCompositionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final maxValue = [
+      summary.baseIncome,
+      summary.overtimeIncome,
+      summary.nightIncome,
+      summary.allowance,
+      summary.deduction,
+    ].fold<double>(0, (max, value) => value > max ? value : max);
     return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1033,13 +1393,109 @@ class _IncomeCompositionCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 8),
-          _Line('基础收入', moneyText(summary.baseIncome)),
-          _Line('计薪加班收入', moneyText(summary.overtimeIncome)),
-          _Line('夜班收入', moneyText(summary.nightIncome)),
-          _Line('补贴', moneyText(summary.allowance)),
-          _Line('扣款', '-${moneyText(summary.deduction)}'),
-          _Line('预计到手', moneyText(summary.income)),
+          const SizedBox(height: 6),
+          _CompositionRow(
+            label: '基础',
+            value: summary.baseIncome,
+            maxValue: maxValue,
+            color: LedgerColors.primaryBlue,
+          ),
+          _CompositionRow(
+            label: '加班',
+            value: summary.overtimeIncome,
+            maxValue: maxValue,
+            color: LedgerColors.successGreen,
+          ),
+          _CompositionRow(
+            label: '夜班',
+            value: summary.nightIncome,
+            maxValue: maxValue,
+            color: LedgerColors.nightIndigo,
+          ),
+          _CompositionRow(
+            label: '补贴',
+            value: summary.allowance,
+            maxValue: maxValue,
+            color: LedgerColors.warningOrange,
+          ),
+          if (summary.deduction > 0)
+            _CompositionRow(
+              label: '扣款',
+              value: summary.deduction,
+              maxValue: maxValue,
+              color: LedgerColors.errorRed,
+              prefix: '-',
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompositionRow extends StatelessWidget {
+  const _CompositionRow({
+    required this.label,
+    required this.value,
+    required this.maxValue,
+    required this.color,
+    this.prefix = '',
+  });
+
+  final String label;
+  final double value;
+  final double maxValue;
+  final Color color;
+  final String prefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = maxValue <= 0 ? 0.0 : (value / maxValue).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 52,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              height: 8,
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: LedgerColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: const Color(0xFFECEFF4)),
+              ),
+              child: FractionallySizedBox(
+                widthFactor: ratio,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 64,
+            child: FittedValueText(
+              '$prefix${moneyText(value)}',
+              alignment: Alignment.centerRight,
+              textAlign: TextAlign.right,
+              maxScale: 1.04,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: LedgerColors.ink,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1070,21 +1526,28 @@ class _PayrollBasisCard extends StatelessWidget {
           Text('计薪依据', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
           SettingTile(
+            iconLabel: '薪',
             title: '默认规则',
             subtitle:
                 '${rule.name} · ${rule.baseType.label} · ${rule.amountLabel}',
           ),
           SettingTile(
+            iconLabel: '加',
+            iconColor: LedgerColors.successGreen,
+            iconBackgroundColor: LedgerColors.successGreenSoft,
             title: '计薪加班计算',
             subtitle:
                 '超过 ${hoursText(rule.overtimeThresholdHours)} 后按 ${_factorText(rule.overtimeMultiplier)} · 基数 $overtimeBase/h',
           ),
           SettingTile(
+            iconLabel: '夜',
+            iconColor: LedgerColors.nightIndigo,
+            iconBackgroundColor: LedgerColors.nightIndigoSoft,
             title: '夜班规则',
             subtitle:
                 '${nightRule.label} · ${nightRule.mode.label} · ${_nightRuleValueText(nightRule)}',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(

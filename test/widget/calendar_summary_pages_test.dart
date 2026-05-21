@@ -103,6 +103,26 @@ void main() {
     );
   }
 
+  LedgerState buildDenseMonthListState() {
+    final rule = PayRule.defaultHourly(hourlyRate: 35);
+    return LedgerState(
+      now: DateTime(2026, 5, 15),
+      payRules: [rule],
+      entries: [
+        for (var day = 1; day <= 12; day++)
+          WorkEntry.create(
+            id: 'dense_may_$day',
+            workDate: DateTime(2026, 5, day),
+            startDateTime: DateTime(2026, 5, day, 9),
+            endDateTime: DateTime(2026, 5, day, 17),
+            type: day.isEven ? EntryType.overtime : EntryType.regular,
+            payRule: rule,
+            note: day == 7 ? '培训' : '',
+          ),
+      ],
+    );
+  }
+
   testWidgets('calendar list mode locks the approved monthly chronology', (
     tester,
   ) async {
@@ -118,8 +138,8 @@ void main() {
     expect(find.text('05'), findsOneWidget);
     expect(find.text('09:00—17:30'), findsOneWidget);
     expect(find.text('08:00—12:00'), findsOneWidget);
-    expect(find.text('13:00—18:00'), findsOneWidget);
-    expect(find.text('+2段'), findsOneWidget);
+    expect(find.text('13:00—18:00'), findsNothing);
+    expect(find.text('+3段'), findsOneWidget);
     expect(find.text('19:00—21:00'), findsNothing);
     expect(find.text('22:00—23:00'), findsNothing);
 
@@ -137,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('列表'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.sticky_note_2_outlined).last);
+      await tester.tap(find.byKey(const Key('calendar-filter-note')));
       await tester.pumpAndSettle();
 
       expect(find.text('1日 → 31日'), findsOneWidget);
@@ -161,21 +181,46 @@ void main() {
     await tester.tap(find.text('列表'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.bolt_rounded));
+    await tester.tap(find.byKey(const Key('calendar-filter-overtime')));
     await tester.pumpAndSettle();
     expect(find.text('22:00—23:30'), findsOneWidget);
     expect(find.text('19:00—21:00'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.nightlight_round));
+    await tester.tap(find.byKey(const Key('calendar-filter-night')));
     await tester.pumpAndSettle();
     expect(find.text('22:00—23:30'), findsOneWidget);
     expect(find.text('19:00—21:00'), findsNothing);
     expect(find.text('08:00—21:30'), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.nightlight_round));
+    await tester.tap(find.byKey(const Key('calendar-filter-night')));
     await tester.pumpAndSettle();
     expect(find.text('22:00—23:30'), findsOneWidget);
     expect(find.text('19:00—21:00'), findsOneWidget);
+  });
+
+  testWidgets('calendar dense list keeps details reachable after row tap', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(ShiftLedgerApp(state: buildDenseMonthListState()));
+
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('列表'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('按周排列'), findsOneWidget);
+    expect(find.text('点日期看详情'), findsOneWidget);
+    expect(find.text('已记录 12 天'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('calendar-list-day-2026-05-01')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已选'), findsOneWidget);
+    final detailTitle = find.text('5 月 1 日详情');
+    expect(detailTitle, findsOneWidget);
+    expect(tester.getTopLeft(detailTitle).dy, inInclusiveRange(0, 844));
   });
 
   testWidgets('summary page keeps the approved aggregate boundary', (
@@ -191,9 +236,19 @@ void main() {
       matching: find.widgetWithText(FilledButton, '导出'),
     );
 
-    expect(find.text('收入组成'), findsOneWidget);
-    expect(find.text('计薪依据'), findsOneWidget);
     expect(summaryExportAction, findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('收入组成'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('收入组成'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('计薪依据'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('计薪依据'), findsOneWidget);
     expect(find.text('导出 CSV'), findsNothing);
     expect(find.text('按天查看'), findsNothing);
     expect(find.text('查看明细'), findsNothing);

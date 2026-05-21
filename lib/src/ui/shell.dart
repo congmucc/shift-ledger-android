@@ -50,28 +50,25 @@ class _LedgerShellState extends State<LedgerShell> {
         child: pages[pageIndex],
       ),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        minimum: const EdgeInsets.fromLTRB(10, 0, 10, 10),
         child: SizedBox(
-          height: 78,
+          height: 58,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: ledgerContentMaxWidth,
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
                 decoration: BoxDecoration(
-                  color: LedgerColors.surfaceRaised,
-                  borderRadius: BorderRadius.circular(22),
+                  color: LedgerColors.surfaceRaised.withValues(alpha: .96),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: LedgerColors.hairline),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x140F172A),
-                      blurRadius: 24,
-                      offset: Offset(0, 12),
+                      blurRadius: 30,
+                      offset: Offset(0, 10),
                     ),
                   ],
                 ),
@@ -104,8 +101,8 @@ class _LedgerShellState extends State<LedgerShell> {
                             ),
                             borderRadius: BorderRadius.circular(99),
                             child: Container(
-                              width: 50,
-                              height: 50,
+                              width: 48,
+                              height: 48,
                               decoration: const BoxDecoration(
                                 color: LedgerColors.primaryBlue,
                                 shape: BoxShape.circle,
@@ -115,8 +112,8 @@ class _LedgerShellState extends State<LedgerShell> {
                                   '＋',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 27,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
@@ -166,7 +163,12 @@ class _NavButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        child: Padding(
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          decoration: BoxDecoration(
+            color: selected ? LedgerColors.primaryBlueSoft : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -174,9 +176,9 @@ class _NavButton extends StatelessWidget {
               Icon(
                 icon,
                 color: selected ? LedgerColors.primaryBlue : LedgerColors.muted,
-                size: 21,
+                size: 17,
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Flexible(
                 child: Text(
                   label,
@@ -188,7 +190,7 @@ class _NavButton extends StatelessWidget {
                         ? LedgerColors.primaryBlue
                         : LedgerColors.muted,
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),

@@ -14,26 +14,26 @@ const List<String> ledgerFontFallback = [
 ];
 
 class LedgerColors {
-  static const background = Color(0xFFF9FAFB);
-  static const canvas = Color(0xFFF9FAFB);
+  static const background = Color(0xFFFCFDFF);
+  static const canvas = Color(0xFFEEF2F6);
   static const surface = Color(0xFFFAFAFA);
-  static const surfaceSoft = Color(0xFFF3F4F6);
+  static const surfaceSoft = Color(0xFFF7F9FC);
   static const surfaceRaised = Color(0xFFFFFFFF);
-  static const hairline = Color(0xFFE5E7EB);
-  static const hairlineStrong = Color(0xFFD1D5DB);
-  static const ink = Color(0xFF111827);
-  static const charcoal = Color(0xFF111827);
-  static const muted = Color(0xFF6B7280);
-  static const stone = Color(0xFF9CA3AF);
-  static const primaryBlue = Color(0xFF0066CC);
+  static const hairline = Color(0xFFE5E8EE);
+  static const hairlineStrong = Color(0xFFD2D8E2);
+  static const ink = Color(0xFF0F172A);
+  static const charcoal = Color(0xFF0F172A);
+  static const muted = Color(0xFF667085);
+  static const stone = Color(0xFF98A2B3);
+  static const primaryBlue = Color(0xFF0B66D0);
   static const primaryBlueSoft = Color(0xFFE5F1FF);
-  static const successGreen = Color(0xFF34C759);
-  static const successGreenSoft = Color(0xFFDCFCE7);
-  static const nightIndigo = Color(0xFF5856D6);
-  static const nightIndigoSoft = Color(0xFFEDE9FE);
-  static const warningOrange = Color(0xFFFF9500);
-  static const warningOrangeSoft = Color(0xFFFFF7ED);
-  static const errorRed = Color(0xFFFF3B30);
+  static const successGreen = Color(0xFF22A65A);
+  static const successGreenSoft = Color(0xFFE6F8EC);
+  static const nightIndigo = Color(0xFF5B57D6);
+  static const nightIndigoSoft = Color(0xFFEEEAFF);
+  static const warningOrange = Color(0xFFF79009);
+  static const warningOrangeSoft = Color(0xFFFFF4DF);
+  static const errorRed = Color(0xFFE5484D);
   static const errorRedSoft = Color(0xFFFEE2E2);
   static const paper = background;
   static const workAmber = primaryBlue;
@@ -64,9 +64,9 @@ ThemeData buildLedgerTheme() {
     fontFamilyFallback: ledgerFontFallback,
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.4,
+        fontSize: 23,
+        fontWeight: FontWeight.w900,
+        letterSpacing: -0.8,
         color: LedgerColors.ink,
       ),
       headlineMedium: TextStyle(
@@ -75,8 +75,8 @@ ThemeData buildLedgerTheme() {
         color: LedgerColors.ink,
       ),
       titleMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
+        fontSize: 15,
+        fontWeight: FontWeight.w800,
         color: LedgerColors.ink,
       ),
       bodyMedium: TextStyle(
@@ -86,7 +86,7 @@ ThemeData buildLedgerTheme() {
       ),
       labelMedium: TextStyle(
         fontSize: 12,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w800,
         color: LedgerColors.muted,
       ),
     ),
@@ -135,12 +135,12 @@ ThemeData buildLedgerTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: LedgerColors.primaryBlue,
         foregroundColor: Colors.white,
-        minimumSize: const Size(0, 42),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         textStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
           fontFamily: ledgerFontFamily,
           fontFamilyFallback: ledgerFontFallback,
         ),
@@ -149,10 +149,10 @@ ThemeData buildLedgerTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: LedgerColors.primaryBlue,
-        minimumSize: const Size(0, 42),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         side: const BorderSide(color: LedgerColors.hairlineStrong),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         textStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,

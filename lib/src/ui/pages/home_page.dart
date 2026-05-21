@@ -30,22 +30,30 @@ class HomePage extends StatelessWidget {
     );
     final period = state.summaryFor(state.currentPayPeriod);
     return PageFrame(
-      title: '今日记录',
+      title: '今日',
+      trailing: FilledButton(
+        onPressed: () => showEditWorkEntrySheet(context, state, day: state.now),
+        child: const Text('补一段'),
+      ),
       children: [
         _TodayOverviewCard(
+          day: state.now,
           entries: todayEntries,
           summary: todaySummary,
           onTap: () => showEditWorkEntrySheet(context, state, day: state.now),
         ),
         if (todayEntries.isNotEmpty) ...[
-          const SectionHeader(title: '今天分段'),
-          for (final entry in todayEntries) ...[
+          const SectionHeader(title: '今天分段', actionLabel: '管理'),
+          for (var index = 0; index < todayEntries.length; index++) ...[
             WorkEntryTile(
-              entry: entry,
-              onEdit: () =>
-                  showEditWorkEntrySheet(context, state, day: entry.workDate),
+              entry: todayEntries[index],
+              onEdit: () => showEditWorkEntrySheet(
+                context,
+                state,
+                day: todayEntries[index].workDate,
+              ),
             ),
-            const SizedBox(height: 10),
+            if (index != todayEntries.length - 1) const SizedBox(height: 7),
           ],
         ],
         SectionHeader(
@@ -59,207 +67,204 @@ class HomePage extends StatelessWidget {
             children: [
               Text(
                 '${ymd(state.currentPayPeriod.start)} — ${ymd(state.currentPayPeriod.endInclusive)}',
-                style: const TextStyle(color: LedgerColors.muted),
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 9),
               Row(
                 children: [
-                  _MiniStat(label: '总工时', value: hoursText(period.totalHours)),
-                  _MiniStat(label: '出勤', value: '${period.attendanceDays}天'),
-                  _MiniStat(
-                    label: '计薪加班',
-                    value: hoursText(period.overtimeHours),
+                  Expanded(
+                    child: CompactMetric(
+                      label: '总工时',
+                      value: hoursText(period.totalHours),
+                    ),
                   ),
-                  _MiniStat(label: '夜班', value: '${period.nightShiftCount}次'),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: CompactMetric(
+                      label: '出勤',
+                      value: '${period.attendanceDays}天',
+                      color: LedgerColors.hairlineStrong,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: CompactMetric(
+                      label: '加班',
+                      value: hoursText(period.overtimeHours),
+                      color: LedgerColors.successGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: CompactMetric(
+                      label: '夜班',
+                      value: '${period.nightShiftCount}次',
+                      color: LedgerColors.nightIndigo,
+                    ),
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        SectionHeader(
-          title: '快捷操作',
-          actionLabel: '更多',
-          onAction: () => _showMoreActions(context),
-        ),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            ActionChip(label: const Text('查日历'), onPressed: openCalendar),
-            ActionChip(
-              label: const Text('补今天'),
-              onPressed: () =>
-                  showEditWorkEntrySheet(context, state, day: state.now),
-            ),
-            ActionChip(label: const Text('看汇总'), onPressed: openSummary),
-          ],
-        ),
-      ],
-    );
-  }
-
-  void _showMoreActions(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: LedgerColors.paper,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('更多操作', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 12),
-              LedgerCard(
-                color: LedgerColors.surfaceRaised,
-                child: Column(
-                  children: [
-                    SettingTile(
-                      title: '补其他日期',
-                      trailing: '日历',
-                      onTap: () {
-                        Navigator.pop(context);
-                        openCalendar();
-                      },
-                    ),
-                    SettingTile(
-                      title: '导出 CSV',
-                      trailing: '汇总',
-                      onTap: () {
-                        Navigator.pop(context);
-                        openSummary();
-                      },
-                    ),
-                    SettingTile(
-                      title: '模板、备份和规则',
-                      trailing: '设置',
-                      onTap: () {
-                        Navigator.pop(context);
-                        openSettings();
-                      },
-                    ),
-                  ],
+              const SizedBox(height: 9),
+              Text(
+                '出勤 ${period.attendanceDays}天 · 加班 ${hoursText(period.overtimeHours)} · 夜班 ${period.nightShiftCount}次',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
         ),
-      ),
+        const SectionHeader(title: '快捷操作'),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            LedgerPill(
+              '补今天',
+              selected: true,
+              onTap: () =>
+                  showEditWorkEntrySheet(context, state, day: state.now),
+            ),
+            LedgerPill('查日历', color: LedgerColors.muted, onTap: openCalendar),
+            LedgerPill('看汇总', color: LedgerColors.muted, onTap: openSummary),
+          ],
+        ),
+      ],
     );
   }
 }
 
 class _TodayOverviewCard extends StatelessWidget {
   const _TodayOverviewCard({
+    required this.day,
     required this.entries,
     required this.summary,
     required this.onTap,
   });
 
+  final DateTime day;
   final List<WorkEntry> entries;
   final LedgerSummary summary;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isEmpty = entries.isEmpty;
     final recordSummary = summarizeRecordEntries(entries);
     final extraPayrollOvertime = math.max(
       0.0,
       summary.overtimeHours - recordSummary.manualOvertimeHours,
     );
-    final chips = <_SummaryChipData>[
-      if (recordSummary.regularHours > 0)
-        _SummaryChipData(
-          label: '普通 ${hoursText(recordSummary.regularHours)}',
-          background: LedgerColors.primaryBlueSoft,
-          foreground: const Color(0xFF1D4ED8),
-          border: const Color(0xFFBFDBFE),
-        ),
-      if (recordSummary.manualOvertimeHours > 0)
-        _SummaryChipData(
-          label: '加班段 ${hoursText(recordSummary.manualOvertimeHours)}',
-          background: LedgerColors.successGreenSoft,
-          foreground: const Color(0xFF166534),
-          border: const Color(0xFFBBF7D0),
-        ),
-      if (recordSummary.nightDays > 0)
-        _SummaryChipData(
-          label: '夜班 ${recordSummary.nightDays}次',
-          background: LedgerColors.nightIndigoSoft,
-          foreground: LedgerColors.nightIndigo,
-          border: const Color(0xFFDDD6FE),
-        ),
-      if (summary.allowance > 0)
-        _SummaryChipData(
-          label: '补贴 ${moneyText(summary.allowance)}',
-          background: LedgerColors.successGreenSoft,
-          foreground: const Color(0xFF166534),
-          border: const Color(0xFFBBF7D0),
-        ),
-      if (summary.deduction > 0)
-        _SummaryChipData(
-          label: '扣款 ${moneyText(summary.deduction)}',
-          background: LedgerColors.warningOrangeSoft,
-          foreground: const Color(0xFF9A3412),
-          border: const Color(0xFFFED7AA),
-        ),
-      _SummaryChipData(
-        label: '${entries.length}段',
-        background: LedgerColors.surfaceSoft,
-        foreground: LedgerColors.muted,
-        border: LedgerColors.hairline,
-      ),
-    ];
-
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: LedgerCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Text(
-                    isEmpty ? '今天还没有记录' : '今日已记录',
-                    style: Theme.of(context).textTheme.labelMedium,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${day.month}月${day.day}日 · 周${_weekdayText(day.weekday)}',
+                        style: const TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      FittedValueText(
+                        hoursText(summary.totalHours),
+                        style: const TextStyle(
+                          color: LedgerColors.ink,
+                          fontSize: 39,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -2,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                        maxScale: 1.04,
+                      ),
+                      Text(
+                        entries.isEmpty
+                            ? '今天还没有记录'
+                            : '${entries.length}段 · 净工时${entries.any((entry) => entry.hasNote) ? ' · 有备注' : ''}',
+                        style: const TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    FittedValueText(
+                      moneyText(summary.income),
+                      alignment: Alignment.centerRight,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: LedgerColors.ink,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.8,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      '预计收入',
+                      style: TextStyle(color: LedgerColors.muted, fontSize: 12),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            FittedValueText(
-              hoursText(summary.totalHours),
-              style: const TextStyle(
-                color: LedgerColors.ink,
-                fontSize: 48,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -2.4,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-              maxScale: 1.04,
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 9),
             Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [for (final chip in chips) _SummaryChip(data: chip)],
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                if (recordSummary.regularHours > 0)
+                  LedgerPill('普通 ${hoursText(recordSummary.regularHours)}'),
+                if (recordSummary.manualOvertimeHours > 0)
+                  LedgerPill(
+                    '加班 ${hoursText(recordSummary.manualOvertimeHours)}',
+                    color: LedgerColors.successGreen,
+                  ),
+                if (recordSummary.nightDays > 0)
+                  LedgerPill(
+                    '夜班 ${recordSummary.nightDays}次',
+                    color: LedgerColors.nightIndigo,
+                  ),
+                if (summary.allowance > 0)
+                  LedgerPill(
+                    '补贴 ${moneyText(summary.allowance)}',
+                    color: LedgerColors.warningOrange,
+                  ),
+                LedgerPill('${entries.length}段', color: LedgerColors.muted),
+              ],
             ),
-            if (isEmpty) ...[
-              const SizedBox(height: 10),
+            if (entries.isEmpty) ...[
+              const SizedBox(height: 9),
               FilledButton.tonal(onPressed: onTap, child: const Text('补今天')),
             ] else if (extraPayrollOvertime > 0) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 9),
               Text(
-                '工资估算里另有 ${hoursText(extraPayrollOvertime)} 会按“计薪加班”计算，但记录类型仍保持普通班次。',
-                style: const TextStyle(
-                  color: LedgerColors.muted,
-                  fontSize: 12,
-                  height: 1.35,
-                ),
+                '另有 ${hoursText(extraPayrollOvertime)} 按“计薪加班”结算。',
+                style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
               ),
             ],
           ],
@@ -269,69 +274,5 @@ class _TodayOverviewCard extends StatelessWidget {
   }
 }
 
-class _SummaryChipData {
-  const _SummaryChipData({
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-  final Color border;
-}
-
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({required this.data});
-
-  final _SummaryChipData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: data.background,
-        border: Border.all(color: data.border),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        data.label,
-        style: TextStyle(
-          color: data.foreground,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FittedValueText(
-            value,
-            style: Theme.of(context).textTheme.titleMedium!,
-            maxScale: 1.08,
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
+String _weekdayText(int weekday) =>
+    const ['一', '二', '三', '四', '五', '六', '日'][weekday - 1];

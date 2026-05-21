@@ -190,19 +190,22 @@ class FittedValueText extends StatelessWidget {
   final double maxScale;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: alignment,
-      child: Text(
-        text,
-        maxLines: 1,
-        textAlign: textAlign,
-        textScaler: cappedTextScaler(context, maxScale: maxScale),
-        style: style,
-      ),
-    ),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final fitted = FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: alignment,
+        child: Text(
+          text,
+          maxLines: 1,
+          textAlign: textAlign,
+          textScaler: cappedTextScaler(context, maxScale: maxScale),
+          style: style,
+        ),
+      );
+      if (!constraints.maxWidth.isFinite) return fitted;
+      return SizedBox(width: double.infinity, child: fitted);
+    },
   );
 }
 
@@ -210,11 +213,15 @@ class PageFrame extends StatelessWidget {
   const PageFrame({
     super.key,
     required this.title,
+    this.eyebrow,
     this.trailing,
+    this.controller,
     required this.children,
   });
   final String title;
+  final String? eyebrow;
   final Widget? trailing;
+  final ScrollController? controller;
   final List<Widget> children;
 
   @override
@@ -224,17 +231,37 @@ class PageFrame extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final sidePadding = constraints.maxWidth > ledgerContentMaxWidth
-              ? (constraints.maxWidth - ledgerContentMaxWidth) / 2 + 16
-              : 16.0;
+              ? (constraints.maxWidth - ledgerContentMaxWidth) / 2 + 12
+              : 12.0;
           return ListView(
-            padding: EdgeInsets.fromLTRB(sidePadding, 14, sidePadding, 104),
+            controller: controller,
+            padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 92),
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (eyebrow != null && eyebrow!.trim().isNotEmpty) ...[
+                          Text(
+                            eyebrow!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: LedgerColors.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                        ],
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.headlineLarge,
+                        ),
+                      ],
                     ),
                   ),
                   ?trailing,
@@ -254,7 +281,7 @@ class LedgerCard extends StatelessWidget {
   const LedgerCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(14),
+    this.padding = const EdgeInsets.all(12),
     this.color,
   });
   final Widget child;
@@ -272,13 +299,8 @@ class LedgerCard extends StatelessWidget {
         border: Border.all(color: LedgerColors.hairline),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 14,
-            offset: Offset(0, 6),
-          ),
-          BoxShadow(
             color: Color(0x050F172A),
-            blurRadius: 2,
+            blurRadius: 1,
             offset: Offset(0, 1),
           ),
         ],
@@ -286,6 +308,152 @@ class LedgerCard extends StatelessWidget {
       child: child,
     );
   }
+}
+
+class LedgerPill extends StatelessWidget {
+  const LedgerPill(
+    this.label, {
+    super.key,
+    this.color = LedgerColors.primaryBlue,
+    this.background,
+    this.onTap,
+    this.dense = false,
+    this.selected = false,
+  });
+
+  final String label;
+  final Color color;
+  final Color? background;
+  final VoidCallback? onTap;
+  final bool dense;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected
+        ? color
+        : background ??
+              Color.alphaBlend(color.withValues(alpha: .10), Colors.white);
+    final fg = selected ? Colors.white : color;
+    final pill = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          constraints: BoxConstraints(
+            minHeight: onTap == null ? (dense ? 25 : 26) : 44,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: dense ? 8 : 9,
+            vertical: dense ? 4 : 5,
+          ),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? color : color.withValues(alpha: .22),
+            ),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textScaler: cappedTextScaler(context, maxScale: 1.08),
+            style: TextStyle(
+              color: fg,
+              fontSize: dense ? 11 : 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
+    );
+    return onTap == null
+        ? pill
+        : Semantics(
+            button: true,
+            selected: selected,
+            label: label,
+            child: pill,
+          );
+  }
+}
+
+class CompactMetric extends StatelessWidget {
+  const CompactMetric({
+    super.key,
+    required this.label,
+    required this.value,
+    this.color = LedgerColors.primaryBlue,
+    this.flexValue = false,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final bool flexValue;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 44),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceSoft,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: LedgerColors.hairline),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          children: [
+            LedgerDot(color: color, size: 6),
+            const SizedBox(width: 4),
+            Expanded(
+              child: FittedValueText(
+                value,
+                maxScale: 1.04,
+                style: TextStyle(
+                  color: LedgerColors.ink,
+                  fontSize: flexValue ? 16 : 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 9.5,
+            height: 1,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class LedgerDot extends StatelessWidget {
+  const LedgerDot({super.key, required this.color, this.size = 6});
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
 
 class MetricCard extends StatelessWidget {
@@ -511,12 +679,26 @@ class SectionHeader extends StatelessWidget {
       fontWeight: FontWeight.w800,
     );
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 7),
+      padding: const EdgeInsets.fromLTRB(1, 11, 1, 7),
       child: Row(
         children: [
           Expanded(child: Text(title, style: titleStyle)),
           if (actionLabel != null)
-            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+            InkWell(
+              onTap: onAction,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Text(
+                  actionLabel!,
+                  style: const TextStyle(
+                    color: LedgerColors.primaryBlue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -558,8 +740,8 @@ class SheetHeaderBlock extends StatelessWidget {
             subtitle!,
             style: const TextStyle(
               color: LedgerColors.muted,
-              fontSize: 13,
-              height: 1.35,
+              fontSize: 12,
+              height: 1.25,
             ),
           ),
       ],
@@ -652,7 +834,7 @@ class LedgerPickerButtonField extends StatelessWidget {
             style: TextStyle(color: muted, fontSize: 12, height: 1.35),
           ),
         ],
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
@@ -705,20 +887,20 @@ class NoticeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       color: backgroundColor,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 30,
+            height: 30,
             decoration: BoxDecoration(
               color: iconBackgroundColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 18),
+            child: Icon(icon, color: iconColor, size: 16),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -730,8 +912,8 @@ class NoticeCard extends StatelessWidget {
                     body!,
                     style: const TextStyle(
                       color: LedgerColors.muted,
-                      fontSize: 13,
-                      height: 1.35,
+                      fontSize: 12,
+                      height: 1.28,
                     ),
                   ),
                 ],
@@ -814,15 +996,15 @@ class LedgerDialogShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.sizeOf(context).height * maxHeightFactor;
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
       backgroundColor: Colors.transparent,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: LedgerColors.paper,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(color: LedgerColors.hairline),
             boxShadow: const [
               BoxShadow(
@@ -840,32 +1022,36 @@ class LedgerDialogShell extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: iconBackgroundColor,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(11),
                     ),
-                    child: Icon(icon, color: iconColor, size: 20),
+                    child: Icon(icon, color: iconColor, size: 18),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         title,
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
                       ),
                     ),
                   ),
                 ],
               ),
               if (body != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 9),
                 Flexible(child: SingleChildScrollView(child: body!)),
               ],
               if (actions.isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Wrap(
@@ -945,8 +1131,8 @@ class _ConfirmDialogBody extends StatelessWidget {
       message,
       style: const TextStyle(
         color: LedgerColors.muted,
-        fontSize: 14,
-        height: 1.45,
+        fontSize: 13,
+        height: 1.35,
       ),
     );
   }
@@ -992,11 +1178,19 @@ class SettingTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.icon,
+    this.iconLabel,
+    this.iconColor,
+    this.iconBackgroundColor,
   });
   final String title;
   final String? subtitle;
   final String? trailing;
   final VoidCallback? onTap;
+  final IconData? icon;
+  final String? iconLabel;
+  final Color? iconColor;
+  final Color? iconBackgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1007,24 +1201,60 @@ class SettingTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(
           crossAxisAlignment: hasSubtitle
               ? CrossAxisAlignment.start
               : CrossAxisAlignment.center,
           children: [
+            if (icon != null || iconLabel != null) ...[
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: iconBackgroundColor ?? LedgerColors.primaryBlueSoft,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: icon != null
+                    ? Icon(
+                        icon,
+                        size: 15,
+                        color: iconColor ?? LedgerColors.primaryBlue,
+                      )
+                    : Text(
+                        iconLabel!,
+                        style: TextStyle(
+                          color: iconColor ?? LedgerColors.primaryBlue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 9),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   if (hasSubtitle) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: LedgerColors.muted),
+                      style: const TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 11.3,
+                        height: 1.25,
+                      ),
                     ),
                   ],
                 ],
@@ -1037,16 +1267,13 @@ class SettingTile extends StatelessWidget {
                   horizontal: 10,
                   vertical: 6,
                 ),
-                decoration: BoxDecoration(
-                  color: LedgerColors.primaryBlueSoft,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+                decoration: const BoxDecoration(),
                 child: Text(
-                  trailing!,
+                  hasAction ? '$trailing ›' : trailing!,
                   style: const TextStyle(
-                    color: LedgerColors.primaryBlue,
+                    color: LedgerColors.muted,
                     fontWeight: FontWeight.w800,
-                    fontSize: 12,
+                    fontSize: 11.5,
                   ),
                 ),
               ),

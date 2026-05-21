@@ -28,6 +28,8 @@ class _CalendarPageState extends State<CalendarPage> {
   late DateTime _selectedDay;
   bool _listMode = false;
   final Set<_CalendarFilter> _selectedFilters = <_CalendarFilter>{};
+  final _scrollController = ScrollController();
+  final _detailKey = GlobalKey();
 
   @override
   void initState() {
@@ -35,6 +37,12 @@ class _CalendarPageState extends State<CalendarPage> {
     final initialDay = dateOnly(widget.initialSelectedDay ?? widget.state.now);
     _month = DateTime(initialDay.year, initialDay.month);
     _selectedDay = initialDay;
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -62,8 +70,10 @@ class _CalendarPageState extends State<CalendarPage> {
             : _countMatchingDays(range, filter),
     };
     return PageFrame(
-      title: '工时日历',
-      trailing: TextButton.icon(
+      controller: _scrollController,
+      title: '日历',
+      eyebrow: '${_month.year}年${_month.month}月',
+      trailing: FilledButton.tonalIcon(
         key: const Key('calendar-add-entry-action'),
         onPressed: () =>
             showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
@@ -73,46 +83,44 @@ class _CalendarPageState extends State<CalendarPage> {
       children: [
         Row(
           children: [
-            IconButton(
+            _ToolButton(
               tooltip: '上个月',
               onPressed: () =>
                   _selectMonth(DateTime(_month.year, _month.month - 1)),
-              icon: const Icon(Icons.chevron_left),
+              child: const Icon(Icons.chevron_left, size: 18),
             ),
+            const SizedBox(width: 5),
             Expanded(
-              child: TextButton(
+              child: _ToolButton(
                 onPressed: _showMonthPicker,
                 child: Text(
-                  '${_month.year} 年 ${_month.month} 月',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  '${_month.year}年${_month.month}月',
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
-            TextButton.icon(
-              onPressed: _jumpToToday,
-              icon: const Icon(Icons.today_outlined, size: 18),
-              label: const Text('今天'),
-            ),
-            IconButton(
+            const SizedBox(width: 5),
+            _ToolButton(onPressed: _jumpToToday, child: const Text('今天')),
+            const SizedBox(width: 5),
+            _ToolButton(
               tooltip: '下个月',
               onPressed: () =>
                   _selectMonth(DateTime(_month.year, _month.month + 1)),
-              icon: const Icon(Icons.chevron_right),
+              child: const Icon(Icons.chevron_right, size: 18),
             ),
           ],
         ),
+        const SizedBox(height: 7),
         _MonthSummaryGrid(summary: summary, recordSummary: recordSummary),
-        const SizedBox(height: 8),
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(value: false, label: Text('日历')),
-            ButtonSegment(value: true, label: Text('列表')),
-          ],
-          selected: {_listMode},
-          onSelectionChanged: (values) =>
-              setState(() => _listMode = values.first),
+        const SizedBox(height: 7),
+        _ModeSwitch(
+          listMode: _listMode,
+          onChanged: (value) => setState(() => _listMode = value),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 7),
         LayoutBuilder(
           builder: (context, constraints) {
             final useWrappedFilters = constraints.maxWidth < 420;
@@ -120,6 +128,7 @@ class _CalendarPageState extends State<CalendarPage> {
             final chips = [
               for (final filter in _CalendarFilter.values)
                 _CalendarFilterChip(
+                  key: Key('calendar-filter-${filter.name}'),
                   icon: filter.icon,
                   label: useCompactFilterLabels
                       ? filter.compactLabel
@@ -135,26 +144,8 @@ class _CalendarPageState extends State<CalendarPage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.tune_rounded,
-                      size: 16,
-                      color: LedgerColors.primaryBlue,
-                    ),
-                    const SizedBox(width: 6),
-                    Text('筛选', style: Theme.of(context).textTheme.labelMedium),
-                    const Spacer(),
-                    if (hasActiveFilters)
-                      TextButton(
-                        onPressed: _clearFilters,
-                        child: const Text('清除'),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 6),
                 if (useWrappedFilters)
-                  Wrap(spacing: 8, runSpacing: 8, children: chips)
+                  Wrap(spacing: 5, runSpacing: 5, children: chips)
                 else
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -163,7 +154,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         for (var index = 0; index < chips.length; index++) ...[
                           chips[index],
                           if (index != chips.length - 1)
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 5),
                         ],
                       ],
                     ),
@@ -172,11 +163,12 @@ class _CalendarPageState extends State<CalendarPage> {
             );
           },
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         if (_listMode)
           _MonthList(
             state: widget.state,
             range: range,
+            selectedDay: _selectedDay,
             onSelect: _selectDay,
             filters: _selectedFilters,
             activeFilterLabel: activeFilterLabel,
@@ -193,61 +185,90 @@ class _CalendarPageState extends State<CalendarPage> {
             filters: _selectedFilters,
             matchesDay: _matchesActiveFilters,
           ),
-        SectionHeader(
-          title: hasActiveFilters && !monthHasFilterMatch
-              ? '${_month.month} 月暂无$activeFilterLabel记录'
-              : selectedEntries.isEmpty
-              ? ymd(_selectedDay) == ymd(widget.state.now)
-                    ? '今日 · 暂无记录'
-                    : '${_selectedDay.month} 月 ${_selectedDay.day} 日 · 暂无记录'
-              : '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情${selectedMatchesFilter ? '' : '（未命中$activeFilterLabel）'}',
-          actionLabel: '补一段',
-          onAction: () =>
-              showEditWorkEntrySheet(context, widget.state, day: _selectedDay),
-        ),
-        if (hasActiveFilters && !selectedMatchesFilter) ...[
-          LedgerCard(
-            padding: const EdgeInsets.all(12),
-            color: LedgerColors.warningOrangeSoft,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 1),
-                  child: Icon(
-                    Icons.filter_alt_outlined,
-                    size: 18,
-                    color: LedgerColors.warningOrange,
+        KeyedSubtree(
+          key: _detailKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionHeader(
+                title: hasActiveFilters && !monthHasFilterMatch
+                    ? '${_month.month} 月暂无$activeFilterLabel记录'
+                    : selectedEntries.isEmpty
+                    ? ymd(_selectedDay) == ymd(widget.state.now)
+                          ? '今日 · 暂无记录'
+                          : '${_selectedDay.month} 月 ${_selectedDay.day} 日 · 暂无记录'
+                    : '${ymd(_selectedDay) == ymd(widget.state.now) ? '今日 · ' : ''}${_selectedDay.month} 月 ${_selectedDay.day} 日详情${selectedMatchesFilter ? '' : '（未命中$activeFilterLabel）'}',
+                actionLabel: '补一段',
+                onAction: () => showEditWorkEntrySheet(
+                  context,
+                  widget.state,
+                  day: _selectedDay,
+                ),
+              ),
+              if (hasActiveFilters && !selectedMatchesFilter) ...[
+                LedgerCard(
+                  padding: const EdgeInsets.all(10),
+                  color: LedgerColors.warningOrangeSoft,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(
+                          Icons.filter_alt_outlined,
+                          size: 18,
+                          color: LedgerColors.warningOrange,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          monthHasFilterMatch
+                              ? '当前筛选为“$activeFilterLabel”，这一天不在筛选结果中；下面仍保留原始详情，方便继续查看或补录。'
+                              : '当前月份暂无“$activeFilterLabel”记录；下面仍保留所选日期的原始详情，避免筛选上下文混淆。',
+                          style: const TextStyle(
+                            color: LedgerColors.ink,
+                            fontSize: 13,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    monthHasFilterMatch
-                        ? '当前筛选为“$activeFilterLabel”，这一天不在筛选结果中；下面仍保留原始详情，方便继续查看或补录。'
-                        : '当前月份暂无“$activeFilterLabel”记录；下面仍保留所选日期的原始详情，避免筛选上下文混淆。',
-                    style: const TextStyle(
-                      color: LedgerColors.ink,
-                      fontSize: 13,
-                      height: 1.35,
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 6),
               ],
-            ),
+              _DayDetails(state: widget.state, day: _selectedDay),
+            ],
           ),
-          const SizedBox(height: 8),
-        ],
-        _DayDetails(state: widget.state, day: _selectedDay),
+        ),
       ],
     );
   }
 
-  void _selectDay(DateTime day) => setState(() {
-    _selectedDay = dateOnly(day);
-    _month = DateTime(day.year, day.month);
-    widget.onSelectedDayChanged?.call(_selectedDay);
-  });
+  void _selectDay(DateTime day) {
+    final shouldRevealDetails = _listMode;
+    setState(() {
+      _selectedDay = dateOnly(day);
+      _month = DateTime(day.year, day.month);
+      widget.onSelectedDayChanged?.call(_selectedDay);
+    });
+    if (shouldRevealDetails) _revealSelectedDayDetails();
+  }
+
+  void _revealSelectedDayDetails() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final detailContext = _detailKey.currentContext;
+      if (detailContext == null) return;
+      Scrollable.ensureVisible(
+        detailContext,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+    });
+  }
 
   void _jumpToToday() => setState(() {
     _month = DateTime(widget.state.now.year, widget.state.now.month);
@@ -286,8 +307,6 @@ class _CalendarPageState extends State<CalendarPage> {
       if (firstMatch != null) _selectedDay = firstMatch;
     }
   });
-
-  void _clearFilters() => setState(() => _selectedFilters.clear());
 
   bool _matchesActiveFilters(DateTime day) =>
       _selectedFilters.every((filter) => _matchesFilter(day, filter: filter));
@@ -371,7 +390,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 maxHeight: mediaQuery.size.height * 0.82,
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,7 +409,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         IconButton(
@@ -411,7 +430,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Flexible(
                       child: SingleChildScrollView(
                         child: GridView.builder(
@@ -486,6 +505,7 @@ class _MonthGrid extends StatelessWidget {
             lastDay: DateTime(2100, 12, 31),
             focusedDay: month,
             currentDay: state.now,
+            startingDayOfWeek: StartingDayOfWeek.monday,
             headerVisible: false,
             sixWeekMonthsEnforced: true,
             availableGestures: AvailableGestures.horizontalSwipe,
@@ -553,7 +573,7 @@ class _MonthGrid extends StatelessWidget {
         ? LedgerColors.surfaceSoft.withValues(alpha: .76)
         : Colors.transparent;
     final dateTextColor = selected
-        ? Colors.white
+        ? LedgerColors.primaryBlue
         : isQuietDay
         ? (today ? LedgerColors.primaryBlue : LedgerColors.muted)
         : inMonth
@@ -595,7 +615,7 @@ class _MonthGrid extends StatelessWidget {
                       : null,
                 ),
                 child: Text(
-                  today ? '${day.day}今' : '${day.day}',
+                  '${day.day}',
                   maxLines: 1,
                   overflow: TextOverflow.clip,
                   textScaler: cappedTextScaler(context, maxScale: 1.18),
@@ -608,7 +628,7 @@ class _MonthGrid extends StatelessWidget {
                         : visibleByFilter && hasWork
                         ? FontWeight.w800
                         : FontWeight.w700,
-                    fontSize: today ? 11 : 13,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -636,22 +656,32 @@ class _MonthGrid extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: 6,
+                height: 9,
                 child: Wrap(
                   alignment: WrapAlignment.center,
-                  spacing: 3,
-                  runSpacing: 2,
+                  spacing: 2.5,
+                  runSpacing: 1,
                   children: [
                     if (showMarkers && hasWork)
                       const _Dot(color: LedgerColors.primaryBlue),
                     if (showMarkers && hasOvertime)
-                      const _Dot(color: LedgerColors.successGreen),
+                      const _CalendarStatusMark.plus(
+                        color: LedgerColors.successGreen,
+                      ),
                     if (showMarkers && hasNight)
-                      const _Dot(color: LedgerColors.nightIndigo),
+                      const _CalendarStatusMark.text(
+                        '夜',
+                        color: LedgerColors.nightIndigo,
+                      ),
                     if (showMarkers && hasLongDuration)
-                      const _Dot(color: LedgerColors.errorRed),
+                      const _CalendarStatusMark.text(
+                        '!',
+                        color: LedgerColors.errorRed,
+                      ),
                     if (showMarkers && hasNote)
-                      const _NoteMarker(color: LedgerColors.warningOrange),
+                      const _CalendarStatusMark.note(
+                        color: LedgerColors.warningOrange,
+                      ),
                     if (showEmptyMarker)
                       const _Dot(color: LedgerColors.hairlineStrong),
                   ],
@@ -665,6 +695,122 @@ class _MonthGrid extends StatelessWidget {
   }
 }
 
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.onPressed,
+    required this.child,
+    this.tooltip,
+  });
+
+  final VoidCallback onPressed;
+  final Widget child;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: LedgerColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: LedgerColors.hairline),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x080F172A),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(
+            color: LedgerColors.ink,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+          child: child,
+        ),
+      ),
+    );
+    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+  }
+}
+
+class _ModeSwitch extends StatelessWidget {
+  const _ModeSwitch({required this.listMode, required this.onChanged});
+  final bool listMode;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceSoft,
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: LedgerColors.hairline),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: _ModeChoice(
+            label: '月历',
+            selected: !listMode,
+            onTap: () => onChanged(false),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: _ModeChoice(
+            label: '列表',
+            selected: listMode,
+            onTap: () => onChanged(true),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ModeChoice extends StatelessWidget {
+  const _ModeChoice({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Container(
+      height: 29,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected ? LedgerColors.surfaceRaised : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: selected ? Border.all(color: const Color(0xFFD6E9FF)) : null,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected ? LedgerColors.primaryBlue : LedgerColors.muted,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    ),
+  );
+}
+
 class _MonthSummaryGrid extends StatelessWidget {
   const _MonthSummaryGrid({required this.summary, required this.recordSummary});
   final LedgerSummary summary;
@@ -674,7 +820,8 @@ class _MonthSummaryGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       key: const Key('calendar-month-summary-card'),
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+      padding: EdgeInsets.zero,
+      color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final statWidth = constraints.maxWidth >= 360
@@ -701,71 +848,12 @@ class _MonthSummaryGrid extends StatelessWidget {
               value: '${recordSummary.segmentCount}段',
               accent: LedgerColors.hairlineStrong,
             ),
-            if (summary.nightShiftCount > 0)
-              _MonthStatPill(
-                label: '夜班',
-                value:
-                    '${summary.nightShiftCount}次/${hoursText(summary.nightHours)}',
-                accent: LedgerColors.nightIndigo,
-              ),
-            if (summary.noteDays > 0)
-              _MonthStatPill(
-                label: '备注',
-                value: '${summary.noteDays}天',
-                accent: LedgerColors.warningOrange,
-              ),
           ];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 26,
-                    height: 26,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: LedgerColors.primaryBlueSoft.withValues(alpha: .8),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.summarize_outlined,
-                      size: 16,
-                      color: LedgerColors.primaryBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '本月',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium!.copyWith(fontSize: 15),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: FittedValueText(
-                      '月计 ${hoursText(summary.totalHours)} · 出勤 ${summary.attendanceDays}天 · ${recordSummary.segmentCount}段',
-                      key: const Key('calendar-month-compact-summary'),
-                      textAlign: TextAlign.end,
-                      alignment: Alignment.centerRight,
-                      maxScale: 1.08,
-                      style: const TextStyle(
-                        color: LedgerColors.muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 5,
-                children: [
-                  for (final chip in chips)
-                    SizedBox(width: statWidth, child: chip),
-                ],
-              ),
+              for (final chip in chips) SizedBox(width: statWidth, child: chip),
             ],
           );
         },
@@ -787,11 +875,12 @@ class _MonthStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+    constraints: const BoxConstraints(minHeight: 44),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
     decoration: BoxDecoration(
-      color: LedgerColors.surfaceRaised,
-      borderRadius: BorderRadius.circular(13),
-      border: Border.all(color: LedgerColors.hairline),
+      color: LedgerColors.surfaceSoft,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFE7EBF0)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -815,7 +904,7 @@ class _MonthStatPill extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 6),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
@@ -848,30 +937,52 @@ class _Dot extends StatelessWidget {
   );
 }
 
-class _NoteMarker extends StatelessWidget {
-  const _NoteMarker({required this.color});
+class _CalendarStatusMark extends StatelessWidget {
+  const _CalendarStatusMark.text(this.text, {required this.color})
+    : width = 8,
+      height = 8,
+      radius = 4,
+      isNote = false;
+
+  const _CalendarStatusMark.plus({required Color color})
+    : this.text('+', color: color);
+
+  const _CalendarStatusMark.note({required this.color})
+    : text = '',
+      width = 8,
+      height = 3,
+      radius = 99,
+      isNote = true;
+
+  final String text;
   final Color color;
+  final double width;
+  final double height;
+  final double radius;
+  final bool isNote;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 11,
-    height: 8,
+    width: width,
+    height: height,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .14),
-      borderRadius: BorderRadius.circular(3),
-      border: Border.all(color: color.withValues(alpha: .55), width: .8),
+      color: isNote ? color : color.withValues(alpha: .13),
+      borderRadius: BorderRadius.circular(radius),
+      border: isNote ? null : Border.all(color: color, width: .8),
     ),
-    child: Text(
-      '备',
-      textScaler: TextScaler.noScaling,
-      style: TextStyle(
-        color: color,
-        fontSize: 6,
-        height: 1,
-        fontWeight: FontWeight.w900,
-      ),
-    ),
+    child: isNote
+        ? null
+        : Text(
+            text,
+            textScaler: TextScaler.noScaling,
+            style: TextStyle(
+              color: color,
+              fontSize: text == '夜' ? 5.4 : 6.2,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
   );
 }
 
@@ -918,6 +1029,7 @@ IconData _calendarFilterSelectionIcon(Set<_CalendarFilter> filters) {
 
 class _CalendarFilterChip extends StatelessWidget {
   const _CalendarFilterChip({
+    super.key,
     required this.icon,
     required this.label,
     required this.count,
@@ -933,72 +1045,102 @@ class _CalendarFilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onSelected;
 
+  Color get _filterColor => switch (icon) {
+    Icons.bolt_rounded => LedgerColors.successGreen,
+    Icons.nightlight_round => LedgerColors.nightIndigo,
+    Icons.sticky_note_2_outlined => LedgerColors.warningOrange,
+    Icons.schedule_outlined => LedgerColors.errorRed,
+    _ => LedgerColors.primaryBlue,
+  };
+
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onSelected,
-    borderRadius: BorderRadius.circular(18),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOutCubic,
-      constraints: const BoxConstraints(minHeight: 44),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? LedgerColors.primaryBlue : LedgerColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: showCount ? '$label，$count 天' : label,
+    child: InkWell(
+      onTap: onSelected,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
           color: selected
-              ? LedgerColors.primaryBlue
-              : LedgerColors.hairlineStrong,
+              ? Color.alphaBlend(
+                  _filterColor.withValues(alpha: .11),
+                  Colors.white,
+                )
+              : LedgerColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? _filterColor.withValues(alpha: .35)
+                : LedgerColors.hairlineStrong,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: _filterColor.withValues(alpha: .08),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : const [
+                  BoxShadow(
+                    color: Color(0x080F172A),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 15,
-            color: selected ? Colors.white : LedgerColors.primaryBlue,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            textScaler: cappedTextScaler(context, maxScale: 1.08),
-            style: TextStyle(
-              color: selected ? Colors.white : LedgerColors.ink,
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-            ),
-          ),
-          if (showCount && count > 0) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: selected
-                    ? Colors.white.withValues(alpha: .18)
-                    : LedgerColors.surfaceSoft,
-                borderRadius: BorderRadius.circular(999),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: _filterColor),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              textScaler: cappedTextScaler(context, maxScale: 1.08),
+              style: TextStyle(
+                color: selected ? _filterColor : LedgerColors.ink,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
               ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  color: selected ? Colors.white : LedgerColors.muted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
+            ),
+            if (showCount && count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? _filterColor.withValues(alpha: .10)
+                      : LedgerColors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    color: selected ? _filterColor : LedgerColors.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     ),
   );
 }
 
-class _MonthList extends StatefulWidget {
+class _MonthList extends StatelessWidget {
   const _MonthList({
     required this.state,
     required this.range,
+    required this.selectedDay,
     required this.onSelect,
     required this.filters,
     required this.activeFilterLabel,
@@ -1007,6 +1149,7 @@ class _MonthList extends StatefulWidget {
   });
   final LedgerState state;
   final DateRange range;
+  final DateTime selectedDay;
   final ValueChanged<DateTime> onSelect;
   final Set<_CalendarFilter> filters;
   final String activeFilterLabel;
@@ -1014,36 +1157,19 @@ class _MonthList extends StatefulWidget {
   final bool Function(DateTime day) matchesDay;
 
   @override
-  State<_MonthList> createState() => _MonthListState();
-}
-
-class _MonthListState extends State<_MonthList> {
-  int _visibleCount = 20;
-
-  @override
-  void didUpdateWidget(covariant _MonthList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.range.start != widget.range.start ||
-        oldWidget.filters.length != widget.filters.length ||
-        !oldWidget.filters.containsAll(widget.filters)) {
-      _visibleCount = 20;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final days = [
       for (
-        var day = widget.range.start;
-        day.isBefore(widget.range.endExclusive);
+        var day = range.start;
+        day.isBefore(range.endExclusive);
         day = day.add(const Duration(days: 1))
       )
-        if (widget.filters.isEmpty
-            ? widget.state.entriesForDay(day).isNotEmpty
-            : widget.matchesDay(day))
+        if (filters.isEmpty
+            ? state.entriesForDay(day).isNotEmpty
+            : matchesDay(day))
           day,
     ]..sort((a, b) => a.compareTo(b));
-    final visibleDays = days.take(_visibleCount).toList();
+    final lastDay = range.endExclusive.subtract(const Duration(days: 1)).day;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1058,95 +1184,234 @@ class _MonthListState extends State<_MonthList> {
               ),
               const SizedBox(width: 8),
               Text(
-                '1日 → 31日',
+                '1日 → $lastDay日',
                 style: Theme.of(
                   context,
                 ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
+              const Spacer(),
+              Text(
+                days.isEmpty ? '无记录' : '已记录 ${days.length} 天',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         if (days.isEmpty)
-          LedgerCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: LedgerColors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        widget.filters.isEmpty
-                            ? Icons.event_busy_outlined
-                            : widget.activeFilterIcon,
-                        color: LedgerColors.primaryBlue,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.filters.isEmpty
-                            ? '这个月还没有记录'
-                            : '这个月还没有${widget.activeFilterLabel}',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.filters.isEmpty ? '列表只显示已记录日期。' : '切回“全部”或直接补一段。',
-                  style: const TextStyle(
-                    color: LedgerColors.muted,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () => showEditWorkEntrySheet(
-                    context,
-                    widget.state,
-                    day: widget.range.start,
-                  ),
-                  child: const Text('新增第一段'),
-                ),
-              ],
-            ),
+          _MonthListEmptyState(
+            state: state,
+            range: range,
+            filters: filters,
+            activeFilterLabel: activeFilterLabel,
+            activeFilterIcon: activeFilterIcon,
           )
-        else ...[
-          for (final day in visibleDays)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                onTap: () => widget.onSelect(day),
-                borderRadius: BorderRadius.circular(18),
-                child: _MonthListRow(day: day, state: widget.state),
-              ),
-            ),
-          if (_visibleCount < days.length)
-            OutlinedButton(
-              onPressed: () => setState(() => _visibleCount += 10),
-              child: Text('继续加载 ${days.length - _visibleCount} 天记录'),
-            ),
-        ],
+        else
+          _MonthListBody(
+            state: state,
+            days: days,
+            selectedDay: selectedDay,
+            onSelect: onSelect,
+          ),
       ],
     );
   }
 }
 
+class _MonthListEmptyState extends StatelessWidget {
+  const _MonthListEmptyState({
+    required this.state,
+    required this.range,
+    required this.filters,
+    required this.activeFilterLabel,
+    required this.activeFilterIcon,
+  });
+
+  final LedgerState state;
+  final DateRange range;
+  final Set<_CalendarFilter> filters;
+  final String activeFilterLabel;
+  final IconData activeFilterIcon;
+
+  @override
+  Widget build(BuildContext context) => LedgerCard(
+    padding: const EdgeInsets.all(10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: LedgerColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                filters.isEmpty ? Icons.event_busy_outlined : activeFilterIcon,
+                color: LedgerColors.primaryBlue,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                filters.isEmpty ? '这个月还没有记录' : '这个月还没有$activeFilterLabel',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          filters.isEmpty ? '列表只显示已记录日期。' : '切回“全部”或直接补一段。',
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 6),
+        FilledButton(
+          onPressed: () =>
+              showEditWorkEntrySheet(context, state, day: range.start),
+          child: const Text('新增第一段'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _MonthListBody extends StatelessWidget {
+  const _MonthListBody({
+    required this.state,
+    required this.days,
+    required this.selectedDay,
+    required this.onSelect,
+  });
+
+  final LedgerState state;
+  final List<DateTime> days;
+  final DateTime selectedDay;
+  final ValueChanged<DateTime> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final needsBoundedScroll = days.length > 3;
+    final viewportHeight = MediaQuery.sizeOf(context).height;
+    final maxListHeight = (viewportHeight * 0.40).clamp(318.0, 380.0);
+    final rows = _buildRows(context);
+    final body = Column(children: rows);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 5),
+          child: Row(
+            children: [
+              Text('按周排列', style: Theme.of(context).textTheme.labelMedium),
+              const Spacer(),
+              Text('点日期看详情', style: Theme.of(context).textTheme.labelMedium),
+            ],
+          ),
+        ),
+        LedgerCard(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+          child: needsBoundedScroll
+              ? SizedBox(
+                  height: maxListHeight,
+                  child: SingleChildScrollView(
+                    primary: false,
+                    physics: const ClampingScrollPhysics(),
+                    child: body,
+                  ),
+                )
+              : body,
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildRows(BuildContext context) {
+    final widgets = <Widget>[];
+    for (var index = 0; index < days.length; index++) {
+      final day = days[index];
+      final previousDay = index == 0 ? null : days[index - 1];
+      final showWeekHeader = index == 0 || !_isSameWeek(previousDay!, day);
+      if (showWeekHeader) {
+        if (widgets.isNotEmpty) {
+          widgets.add(const Divider(height: 8, color: LedgerColors.hairline));
+        }
+        widgets.add(_MonthListWeekHeader(day: day));
+      } else {
+        widgets.add(const Divider(height: 1, color: LedgerColors.hairline));
+      }
+      final selected = ymd(day) == ymd(selectedDay);
+      widgets.add(
+        InkWell(
+          key: Key('calendar-list-day-${ymd(day)}'),
+          onTap: () => onSelect(day),
+          borderRadius: BorderRadius.circular(13),
+          child: _MonthListRow(day: day, state: state, selected: selected),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  bool _isSameWeek(DateTime a, DateTime b) {
+    final startA = dateOnly(a).subtract(Duration(days: a.weekday - 1));
+    final startB = dateOnly(b).subtract(Duration(days: b.weekday - 1));
+    return ymd(startA) == ymd(startB);
+  }
+}
+
+class _MonthListWeekHeader extends StatelessWidget {
+  const _MonthListWeekHeader({required this.day});
+
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context) {
+    final weekStart = dateOnly(day).subtract(Duration(days: day.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 3, 4, 2),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            decoration: const BoxDecoration(
+              color: LedgerColors.hairlineStrong,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${weekStart.month}.${weekStart.day} - ${weekEnd.month}.${weekEnd.day}',
+            style: const TextStyle(
+              color: LedgerColors.muted,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MonthListRow extends StatelessWidget {
-  const _MonthListRow({required this.day, required this.state});
+  const _MonthListRow({
+    required this.day,
+    required this.state,
+    required this.selected,
+  });
   final DateTime day;
   final LedgerState state;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -1157,21 +1422,37 @@ class _MonthListRow extends StatelessWidget {
     final hasOvertime = recordSummary.manualOvertimeHours > 0;
     final hasNight = summary.nightHours > 0;
     final hasLongDuration = summary.totalHours > 12;
+    final previewEntries = entries.take(1).toList();
+    final hiddenCount = entries.length - previewEntries.length;
+    final previewText = previewEntries.map(_entryPreviewLabel).join(' · ');
     final metaParts = [
+      if (previewText.isNotEmpty) previewText,
+      if (hiddenCount > 0) '+$hiddenCount段',
       if (recordSummary.regularHours > 0)
         '普通 ${hoursText(recordSummary.regularHours)}',
       if (recordSummary.manualOvertimeHours > 0)
-        '加班段 ${hoursText(recordSummary.manualOvertimeHours)}',
+        '加班 ${hoursText(recordSummary.manualOvertimeHours)}',
+      if (hasNight) '夜班',
+      if (hasNote) '备注',
       if (summary.allowance > 0) '补贴 ${moneyText(summary.allowance)}',
       if (summary.deduction > 0) '扣款 ${moneyText(summary.deduction)}',
     ];
-    final previewEntries = entries.take(2).toList();
-    final hiddenCount = entries.length - previewEntries.length;
 
-    return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      margin: const EdgeInsets.symmetric(vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+      constraints: const BoxConstraints(minHeight: 54),
+      decoration: BoxDecoration(
+        color: selected ? LedgerColors.primaryBlueSoft : Colors.transparent,
+        borderRadius: BorderRadius.circular(13),
+        border: selected
+            ? Border.all(color: LedgerColors.primaryBlue.withValues(alpha: .32))
+            : null,
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _MonthListDateBlock(
             day: day,
@@ -1181,75 +1462,37 @@ class _MonthListRow extends StatelessWidget {
             hasLongDuration: hasLongDuration,
             hasNote: hasNote,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  '${entries.length}段 · 合计 ${hoursText(summary.totalHours)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontSize: 12.5),
+                ),
+                const SizedBox(height: 3),
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
+                  runSpacing: 0,
                   children: [
-                    Text(
-                      '${entries.length} 段',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    _SmallPill('合计 ${hoursText(summary.totalHours)}'),
-                    if (hasOvertime)
-                      const _SmallPill(
-                        '加班段',
-                        backgroundColor: LedgerColors.successGreenSoft,
-                        foregroundColor: LedgerColors.successGreen,
-                      ),
-                    if (hasNight)
-                      const _SmallPill(
-                        '夜班',
-                        backgroundColor: LedgerColors.nightIndigoSoft,
-                        foregroundColor: LedgerColors.nightIndigo,
-                      ),
-                    if (hasNote)
-                      const _SmallPill(
-                        '有备注',
-                        backgroundColor: LedgerColors.warningOrangeSoft,
-                        foregroundColor: LedgerColors.warningOrange,
-                      ),
-                    if (hasLongDuration)
-                      const _SmallPill(
-                        '超长',
-                        backgroundColor: Color(0xFFFCE8E6),
-                        foregroundColor: LedgerColors.errorRed,
+                    for (final part in metaParts)
+                      Text(
+                        part,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 11,
+                          height: 1.18,
+                        ),
                       ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final entry in previewEntries)
-                      _SmallPill(_entryPreviewLabel(entry), maxWidth: 138),
-                    if (hiddenCount > 0)
-                      _SmallPill(
-                        '+$hiddenCount段',
-                        backgroundColor: LedgerColors.primaryBlueSoft,
-                        foregroundColor: LedgerColors.primaryBlue,
-                      ),
-                  ],
-                ),
-                if (metaParts.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    metaParts.join(' · '),
-                    style: const TextStyle(
-                      color: LedgerColors.muted,
-                      fontSize: 12,
-                      height: 1.25,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1257,31 +1500,30 @@ class _MonthListRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (summary.income > 0)
+              if (selected)
+                const Text(
+                  '已选',
+                  style: TextStyle(
+                    color: LedgerColors.primaryBlue,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                )
+              else if (summary.income > 0)
                 Text(
                   moneyText(summary.income),
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w900,
                     color: LedgerColors.successGreen,
                   ),
                 ),
-              if (summary.income > 0) const SizedBox(height: 2),
-              Text(
-                '编辑',
-                style: const TextStyle(
-                  color: LedgerColors.muted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              IconButton(
-                tooltip: '编辑',
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: () =>
-                    showEditWorkEntrySheet(context, state, day: day),
-                icon: const Icon(Icons.edit_outlined, size: 20),
+              Icon(
+                selected
+                    ? Icons.keyboard_arrow_down_rounded
+                    : Icons.chevron_right_rounded,
+                size: 17,
+                color: selected ? LedgerColors.primaryBlue : LedgerColors.stone,
               ),
             ],
           ),
@@ -1313,38 +1555,44 @@ class _MonthListDateBlock extends StatelessWidget {
   final bool hasNote;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 60,
-    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-    decoration: BoxDecoration(
-      color: LedgerColors.primaryBlueSoft.withValues(alpha: .8),
-      borderRadius: BorderRadius.circular(18),
-    ),
+  Widget build(BuildContext context) => SizedBox(
+    width: 42,
     child: Column(
       children: [
         Text(
           day.day.toString().padLeft(2, '0'),
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
+            letterSpacing: -0.6,
           ),
         ),
         Text(
           _weekdayText(day.weekday),
-          style: const TextStyle(color: LedgerColors.muted, fontSize: 11),
+          style: const TextStyle(
+            color: LedgerColors.muted,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Wrap(
           alignment: WrapAlignment.center,
           spacing: 3,
           runSpacing: 2,
           children: [
             if (hasWork) const _Dot(color: LedgerColors.primaryBlue),
-            if (hasOvertime) const _Dot(color: LedgerColors.successGreen),
-            if (hasNight) const _Dot(color: LedgerColors.nightIndigo),
-            if (hasLongDuration) const _Dot(color: LedgerColors.errorRed),
-            if (hasNote) const _NoteMarker(color: LedgerColors.warningOrange),
+            if (hasOvertime)
+              const _CalendarStatusMark.plus(color: LedgerColors.successGreen),
+            if (hasNight)
+              const _CalendarStatusMark.text(
+                '夜',
+                color: LedgerColors.nightIndigo,
+              ),
+            if (hasLongDuration)
+              const _CalendarStatusMark.text('!', color: LedgerColors.errorRed),
+            if (hasNote)
+              const _CalendarStatusMark.note(color: LedgerColors.warningOrange),
           ],
         ),
       ],
@@ -1356,23 +1604,15 @@ class _MonthListDateBlock extends StatelessWidget {
 }
 
 class _SmallPill extends StatelessWidget {
-  const _SmallPill(
-    this.text, {
-    this.backgroundColor,
-    this.foregroundColor,
-    this.maxWidth = 118,
-  });
+  const _SmallPill(this.text);
   final String text;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-  final double maxWidth;
 
   @override
   Widget build(BuildContext context) => Container(
-    constraints: BoxConstraints(maxWidth: maxWidth),
+    constraints: const BoxConstraints(maxWidth: 118),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
-      color: backgroundColor ?? LedgerColors.surfaceSoft.withValues(alpha: .7),
+      color: LedgerColors.surfaceSoft.withValues(alpha: .7),
       borderRadius: BorderRadius.circular(99),
     ),
     child: FittedBox(
@@ -1380,10 +1620,10 @@ class _SmallPill extends StatelessWidget {
       child: Text(
         text,
         maxLines: 1,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w800,
-          color: foregroundColor ?? LedgerColors.ink,
+          color: LedgerColors.ink,
         ),
       ),
     ),
@@ -1402,7 +1642,7 @@ class _DayDetails extends StatelessWidget {
     final recordSummary = summarizeRecordEntries(entries);
     if (entries.isEmpty) {
       return LedgerCard(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1430,7 +1670,7 @@ class _DayDetails extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             const Text(
               '休息日可留空，需要时再补录。',
               style: TextStyle(
@@ -1439,7 +1679,7 @@ class _DayDetails extends StatelessWidget {
                 height: 1.35,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             FilledButton(
               onPressed: () => showEditWorkEntrySheet(context, state, day: day),
               child: const Text('新增分段'),
@@ -1475,7 +1715,7 @@ class _DayDetails extends StatelessWidget {
           ),
         ),
         if (summary.overtimeHours > recordSummary.manualOvertimeHours) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             '这一天有 ${hoursText(summary.overtimeHours - recordSummary.manualOvertimeHours)} 会按“计薪加班”结算，但记录类型仍保持普通班次。',
             style: const TextStyle(
@@ -1485,13 +1725,13 @@ class _DayDetails extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         for (final entry in entries) ...[
           WorkEntryTile(
             entry: entry,
             onEdit: () => showEditWorkEntrySheet(context, state, day: day),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
         OutlinedButton(
           onPressed: () => showEditWorkEntrySheet(context, state, day: day),

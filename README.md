@@ -37,7 +37,7 @@ Shift Ledger 是一个本地优先的个人工时账本 Flutter App，当前首�
 - 使用 `table_calendar` 承载日历网格。
 - 今日跳转、年月选择、日历标记和无障碍语义。
 - 汇总范围：本月、本周、年度、发薪周期、自定义。
-- 汇总下钻：出勤、偏长、备注、补贴、扣款、加班、明细展开。
+- 汇总页：完整统计范围、总工时、预计收入、出勤、加班、夜班、补贴、趋势图、工时表、收入组成和计薪依据。
 
 ### 导出与备份
 
@@ -46,7 +46,7 @@ Shift Ledger 是一个本地优先的个人工时账本 Flutter App，当前首�
 - 外部保存：CSV/JSON 导出通过系统保存面板，不硬写公共 Downloads 作为唯一方案。
 - App 私有恢复副本：创建备份时同时保留 App 私有备份，用于“从最近本地备份恢复”。
 - 坚果云 WebDAV：支持配置、手动备份、手动恢复、远端列表查看。
-- 自动云备份：可选开启；最小间隔 1 小时、每天最多 6 次、同内容跳过；WebDAV 应用授权密码不进入普通备份。
+- 自动云备份：可选开启；打开 App 或账本变化后自动检查，1 小时内不重复上传，同内容跳过；WebDAV 应用授权密码不进入普通备份。
 
 ## 当前技术实现
 
@@ -59,6 +59,15 @@ Shift Ledger 是一个本地优先的个人工时账本 Flutter App，当前首�
 - 文件保存：`flutter_file_dialog` 系统保存面板。
 - WebDAV：Dart `HttpClient`，Basic Auth，PUT/GET/PROPFIND。
 - 自动备份 hash：`crypto` SHA-256。
+
+
+## 当前 UI 基准
+
+- 设计规范：`DESIGN.md`
+- 最终 HTML 设计稿：`.design-preview/compact-ledger-ui.html`
+- 旧 `PROTOTYPE.html` 已废弃并删除，不再作为参考。
+
+本项目当前采用 compact mobile utility 风格：白/浅灰底、紧凑卡片、短标题、底部 5 位导航、颜色语义固定为蓝=普通/主操作、绿=加班、紫=夜班、橙=备注、红=超长/危险。
 
 ## 项目结构
 
@@ -80,7 +89,7 @@ test/
 ```bash
 flutter pub get
 flutter analyze
-flutter test
+flutter test --reporter compact
 ```
 
 构建 Android APK：
@@ -95,11 +104,11 @@ flutter build apk --release
 flutter build apk --release --split-per-abi
 ```
 
-当前完成任何行为变更前，至少需要通过：
+当前完成任何行为或 UI 变更前，至少需要通过：
 
 ```bash
 flutter analyze
-flutter test
+flutter test --reporter compact
 ```
 
 涉及 Android 安装包时再运行对应 `flutter build apk` 命令。

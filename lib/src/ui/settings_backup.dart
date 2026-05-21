@@ -139,10 +139,10 @@ class _WebDavSheetState extends State<WebDavSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 12,
+          right: 12,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -154,7 +154,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                 subtitle: '应用授权密码不会写入普通备份。',
                 onClose: () => Navigator.pop(context),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               NoticeCard(
                 icon: _config().isConfigured
                     ? Icons.cloud_done_outlined
@@ -168,10 +168,10 @@ class _WebDavSheetState extends State<WebDavSheet> {
                     ? LedgerColors.successGreen
                     : LedgerColors.warningOrange,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -179,7 +179,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       '连接信息',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _url,
                       decoration: const InputDecoration(
@@ -187,7 +187,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                         hintText: 'https://dav.jianguoyun.com/dav/',
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _username,
                       decoration: const InputDecoration(
@@ -195,7 +195,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                         hintText: '登录邮箱或用户名',
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _password,
                       obscureText: !_showPassword,
@@ -214,7 +214,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     TextField(
                       controller: _remotePath,
                       decoration: const InputDecoration(
@@ -225,7 +225,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -233,12 +233,12 @@ class _WebDavSheetState extends State<WebDavSheet> {
                   child: const Text('保存配置'),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               _buildAutoBackupSection(context),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -246,7 +246,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                       '手动操作',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 7),
                     Column(
                       children: [
                         SizedBox(
@@ -257,7 +257,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
                             label: const Text('备份到坚果云'),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 7),
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
@@ -335,7 +335,7 @@ class _WebDavSheetState extends State<WebDavSheet> {
             },
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

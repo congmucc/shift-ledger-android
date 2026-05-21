@@ -19,7 +19,7 @@ Future<DateTime?> showLedgerDatePicker(
         title: '选择日期',
         onConfirm: () => Navigator.pop(context, selected),
         child: SizedBox(
-          height: 216,
+          height: 180,
           child: CupertinoDatePicker(
             mode: CupertinoDatePickerMode.date,
             dateOrder: DatePickerDateOrder.ymd,
@@ -49,7 +49,7 @@ Future<int?> showLedgerTimePicker(
       onConfirm: () =>
           Navigator.pop(context, selected.hour * 60 + selected.minute),
       child: SizedBox(
-        height: 216,
+        height: 180,
         child: CupertinoDatePicker(
           mode: CupertinoDatePickerMode.time,
           use24hFormat: true,
@@ -75,7 +75,7 @@ Future<int?> showLedgerMonthDayPicker(
       helper: '29、30、31 遇到短月时自动按当月最后一天计算。',
       onConfirm: () => Navigator.pop(context, selected),
       child: SizedBox(
-        height: 216,
+        height: 180,
         child: CupertinoPicker(
           scrollController: FixedExtentScrollController(
             initialItem: selected - 1,
@@ -108,7 +108,7 @@ class _PickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,7 +118,10 @@ class _PickerSheet extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 TextButton(
@@ -129,8 +132,15 @@ class _PickerSheet extends StatelessWidget {
               ],
             ),
             if (helper != null) ...[
-              const SizedBox(height: 4),
-              Text(helper!, style: const TextStyle(color: LedgerColors.muted)),
+              const SizedBox(height: 3),
+              Text(
+                helper!,
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 12,
+                  height: 1.25,
+                ),
+              ),
             ],
             child,
           ],

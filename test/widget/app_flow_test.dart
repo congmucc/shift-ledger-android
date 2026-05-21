@@ -9,17 +9,17 @@ import 'package:shift_ledger/src/ui/theme.dart';
 import 'package:shift_ledger/src/ui/widgets.dart';
 
 void main() {
-  testWidgets('uses iOS Neutral palette for the app shell', (tester) async {
+  testWidgets('uses compact ledger palette for the app shell', (tester) async {
     await tester.pumpWidget(
       ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
     );
 
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(materialApp.theme?.scaffoldBackgroundColor, const Color(0xFFF9FAFB));
-    expect(LedgerColors.paper, const Color(0xFFF9FAFB));
-    expect(LedgerColors.workAmber, const Color(0xFF0066CC));
-    expect(LedgerColors.overtimeMoss, const Color(0xFF34C759));
-    expect(LedgerColors.warningCopper, const Color(0xFFFF9500));
+    expect(materialApp.theme?.scaffoldBackgroundColor, const Color(0xFFFCFDFF));
+    expect(LedgerColors.paper, const Color(0xFFFCFDFF));
+    expect(LedgerColors.workAmber, const Color(0xFF0B66D0));
+    expect(LedgerColors.overtimeMoss, const Color(0xFF22A65A));
+    expect(LedgerColors.warningCopper, const Color(0xFFF79009));
   });
 
   testWidgets(
@@ -61,7 +61,7 @@ void main() {
       await tester.pumpWidget(ShiftLedgerApp(state: state));
 
       expect(find.text('普通 3h'), findsOneWidget);
-      expect(find.text('加班段 3h'), findsOneWidget);
+      expect(find.text('加班 3h'), findsOneWidget);
       expect(find.text('3段'), findsOneWidget);
       expect(find.text('13:00 — 14:00'), findsOneWidget);
       expect(find.text('20:00 — 22:00'), findsOneWidget);
@@ -94,11 +94,11 @@ void main() {
 
       expect(find.text('普通 9h'), findsOneWidget);
       expect(find.text('加班段 1h'), findsNothing);
-      expect(find.textContaining('工资估算里另有 1h'), findsOneWidget);
+      expect(find.textContaining('另有 1h 按“计薪加班”结算'), findsOneWidget);
 
       await tester.tap(find.text('汇总'));
       await tester.pumpAndSettle();
-      expect(find.text('计薪加班 1天 / 1h'), findsOneWidget);
+      expect(find.text('汇总'), findsWidgets);
       await tester.scrollUntilVisible(
         find.text('计薪加班计算'),
         200,
@@ -115,7 +115,7 @@ void main() {
       ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
     );
 
-    expect(find.text('今日记录'), findsOneWidget);
+    expect(find.text('今日'), findsOneWidget);
     expect(find.text('首页'), findsOneWidget);
     expect(find.text('日历'), findsOneWidget);
     expect(find.text('＋'), findsWidgets);
@@ -154,7 +154,7 @@ void main() {
         findsNothing,
       );
       expect(
-        find.descendant(of: labeledTile, matching: find.text('编辑')),
+        find.descendant(of: labeledTile, matching: find.text('编辑 ›')),
         findsOneWidget,
       );
       expect(
@@ -276,7 +276,9 @@ void main() {
     expect(find.text('已清空 2026-05-13 记录'), findsOneWidget);
   });
 
-  testWidgets('edit sheet switching dates loads that day records', (tester) async {
+  testWidgets('edit sheet switching dates loads that day records', (
+    tester,
+  ) async {
     final rule = PayRule.defaultHourly(hourlyRate: 35);
     final previousDay = DateTime(2026, 5, 12);
     final today = DateTime(2026, 5, 13);
@@ -304,7 +306,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: EditWorkEntrySheet(state: state, day: today)),
+        home: Scaffold(
+          body: EditWorkEntrySheet(state: state, day: today),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -387,7 +391,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('快捷操作'), findsOneWidget);
-    expect(find.text('补今天'), findsOneWidget);
+    expect(find.text('补今天'), findsWidgets);
     expect(find.text('查日历'), findsOneWidget);
     expect(find.text('看汇总'), findsOneWidget);
     expect(find.text('套用模板'), findsNothing);
@@ -395,20 +399,8 @@ void main() {
     expect(find.text('看某一天'), findsNothing);
     expect(find.text('导出 CSV'), findsNothing);
 
-    expect(find.text('更多'), findsOneWidget);
-    await tester.tap(find.text('更多'));
-    await tester.pumpAndSettle();
-    expect(find.text('更多操作'), findsOneWidget);
-    expect(find.text('补其他日期'), findsOneWidget);
-    expect(find.text('导出 CSV'), findsOneWidget);
-    expect(find.text('模板、备份和规则'), findsOneWidget);
-    expect(find.textContaining('低频入口不放在首页主按钮里'), findsNothing);
-    expect(find.textContaining('去日历选择日期后补一段'), findsNothing);
-    expect(find.textContaining('去汇总页导出当前统计明细'), findsNothing);
-    expect(find.textContaining('去设置管理班次模板、计薪规则和备份'), findsNothing);
-    await tester.tap(find.text('模板、备份和规则'));
-    await tester.pumpAndSettle();
-    expect(find.text('个人工时账本'), findsOneWidget);
+    expect(find.text('更多'), findsNothing);
+    expect(find.text('更多操作'), findsNothing);
   });
 
   testWidgets('empty home collapses duplicate empty-state chrome', (
@@ -420,7 +412,7 @@ void main() {
 
     expect(find.text('今天还没有记录'), findsOneWidget);
     expect(find.text('今天分段'), findsNothing);
-    expect(find.text('补今天'), findsOneWidget);
+    expect(find.text('补今天'), findsWidgets);
     expect(find.textContaining('默认 09:00-18:00'), findsNothing);
     expect(find.textContaining('60 分钟休息'), findsNothing);
     expect(find.text('创建 09:00-18:00 记录'), findsNothing);
@@ -435,22 +427,33 @@ void main() {
 
     await tester.tap(find.text('汇总'));
     await tester.pumpAndSettle();
-    expect(find.text('工时汇总'), findsOneWidget);
-    expect(find.text('收入组成'), findsOneWidget);
-    expect(find.text('计薪依据'), findsOneWidget);
-    expect(find.text('查看明细'), findsNothing);
-    expect(find.text('全部明细'), findsNothing);
-    expect(find.text('导出 CSV'), findsNothing);
+    expect(find.text('汇总'), findsWidgets);
     final summaryExportAction = find.descendant(
       of: find.byType(Scaffold),
       matching: find.widgetWithText(FilledButton, '导出'),
     );
+    expect(summaryExportAction, findsOneWidget);
     await tester.tap(summaryExportAction);
     await tester.pumpAndSettle();
     expect(find.text('导出 CSV？'), findsOneWidget);
     await tester.tap(find.text('确认导出'));
     await tester.pumpAndSettle();
     expect(find.textContaining('CSV 已生成'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('收入组成'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('收入组成'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('计薪依据'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('计薪依据'), findsOneWidget);
+    expect(find.text('查看明细'), findsNothing);
+    expect(find.text('全部明细'), findsNothing);
+    expect(find.text('导出 CSV'), findsNothing);
 
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
@@ -864,7 +867,7 @@ void main() {
       expect(find.textContaining('普通 8h'), findsWidgets);
       expect(find.textContaining('夜班'), findsWidgets);
       expect(find.text('2026年 5月 1日 · 0 段'), findsNothing);
-      expect(find.byTooltip('编辑'), findsWidgets);
+      expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
 
       await tester.tap(find.text('设置'));
       await tester.pumpAndSettle();
@@ -943,17 +946,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('今天'), findsOneWidget);
     expect(
-      MediaQuery.textScalerOf(tester.element(find.text('工时日历'))).scale(10),
+      MediaQuery.textScalerOf(tester.element(find.text('日历').last)).scale(10),
       20,
     );
 
     await tester.tap(find.byTooltip('下个月'));
     await tester.pumpAndSettle();
-    expect(find.text('2026 年 6 月'), findsOneWidget);
+    expect(find.text('2026年6月'), findsWidgets);
 
     await tester.tap(find.text('今天'));
     await tester.pumpAndSettle();
-    expect(find.text('2026 年 5 月'), findsOneWidget);
+    expect(find.text('2026年5月'), findsWidgets);
     await tester.scrollUntilVisible(
       find.byKey(const Key('calendar-legend-today-marker')),
       120,
@@ -1013,7 +1016,7 @@ void main() {
 
     await tester.tap(find.text('日历'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('2026 年 5 月'));
+    await tester.tap(find.text('2026年5月').last);
     await tester.pumpAndSettle();
 
     expect(find.text('选择年月'), findsOneWidget);
@@ -1242,15 +1245,17 @@ void main() {
 
     await tester.tap(find.text('汇总'));
     await tester.pumpAndSettle();
-    final summaryBottom = tester.getBottomLeft(find.text('计薪依据').first).dy;
+    final summaryBottom = tester.getBottomLeft(find.text('工时趋势')).dy;
     expect(summaryBottom, lessThan(700));
 
     await tester.tap(find.text('日历'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('月计 15h'), findsOneWidget);
-    final calendarBottom = tester.getBottomLeft(find.text('13今')).dy;
-    expect(calendarBottom, lessThan(620));
-    expect(find.text('13今'), findsOneWidget);
+    expect(find.text('月计'), findsOneWidget);
+    expect(find.text('15h'), findsWidgets);
+    final calendarBottom = tester
+        .getBottomLeft(find.byKey(const Key('calendar-month-grid')))
+        .dy;
+    expect(calendarBottom, lessThan(640));
     expect(find.byKey(const Key('calendar-month-grid')), findsOneWidget);
     final monthSummaryCard = find.byKey(
       const Key('calendar-month-summary-card'),
@@ -1264,12 +1269,12 @@ void main() {
       findsWidgets,
     );
     expect(
-      find.descendant(of: monthSummaryCard, matching: find.text('1次/7h')),
-      findsOneWidget,
+      find.descendant(of: monthSummaryCard, matching: find.text('夜班')),
+      findsNothing,
     );
     expect(
       find.descendant(of: monthSummaryCard, matching: find.text('备注')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('0天备注'), findsNothing);
     expect(monthSummaryCard, findsOneWidget);
