@@ -628,10 +628,8 @@ class WorkEntryTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                LedgerInlineGroup(
                   spacing: 8,
-                  runSpacing: 4,
                   children: [
                     Text(entry.timeRangeLabel, style: _timeStyle(context)),
                     Container(
