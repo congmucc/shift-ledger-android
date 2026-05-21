@@ -1071,86 +1071,95 @@ class _CalendarFilterChip extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    selected: selected,
-    label: showCount ? '$label，$count 天' : label,
-    child: InkWell(
-      onTap: onSelected,
-      borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
+  Widget build(BuildContext context) {
+    final chip = AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      constraints: const BoxConstraints(minHeight: 34),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: selected
+            ? Color.alphaBlend(
+                _filterColor.withValues(alpha: .11),
+                Colors.white,
+              )
+            : LedgerColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
           color: selected
-              ? Color.alphaBlend(
-                  _filterColor.withValues(alpha: .11),
-                  Colors.white,
-                )
-              : LedgerColors.surfaceRaised,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected
-                ? _filterColor.withValues(alpha: .35)
-                : LedgerColors.hairlineStrong,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _filterColor.withValues(alpha: .08),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : const [
-                  BoxShadow(
-                    color: Color(0x080F172A),
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ],
+              ? _filterColor.withValues(alpha: .35)
+              : LedgerColors.hairlineStrong,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: _filterColor),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: _filterColor.withValues(alpha: .08),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : const [
+                BoxShadow(
+                  color: Color(0x080F172A),
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: _filterColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            textScaler: cappedTextScaler(context, maxScale: 1.06),
+            style: TextStyle(
+              color: selected ? _filterColor : LedgerColors.ink,
+              fontWeight: FontWeight.w800,
+              fontSize: 10.5,
+            ),
+          ),
+          if (showCount && count > 0) ...[
             const SizedBox(width: 5),
-            Text(
-              label,
-              textScaler: cappedTextScaler(context, maxScale: 1.08),
-              style: TextStyle(
-                color: selected ? _filterColor : LedgerColors.ink,
-                fontWeight: FontWeight.w800,
-                fontSize: 11,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: selected
+                    ? _filterColor.withValues(alpha: .10)
+                    : LedgerColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: selected ? _filterColor : LedgerColors.muted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-            if (showCount && count > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? _filterColor.withValues(alpha: .10)
-                      : LedgerColors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: selected ? _filterColor : LedgerColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
           ],
+        ],
+      ),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: showCount ? '$label，$count 天' : label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onSelected,
+          borderRadius: BorderRadius.circular(18),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Center(child: chip),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _MonthList extends StatelessWidget {

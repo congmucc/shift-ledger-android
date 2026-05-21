@@ -335,42 +335,45 @@ class LedgerPill extends StatelessWidget {
         : background ??
               Color.alphaBlend(color.withValues(alpha: .10), Colors.white);
     final fg = selected ? Colors.white : color;
-    final pill = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
+    final visualPill = Container(
+      constraints: BoxConstraints(minHeight: dense ? 25 : 26),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 8 : 9,
+        vertical: dense ? 4 : 5,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
         borderRadius: BorderRadius.circular(999),
-        child: Container(
-          constraints: BoxConstraints(
-            minHeight: onTap == null ? (dense ? 25 : 26) : 44,
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: dense ? 8 : 9,
-            vertical: dense ? 4 : 5,
-          ),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? color : color.withValues(alpha: .22),
-            ),
-          ),
-          child: Align(
-            widthFactor: 1,
-            heightFactor: 1,
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textScaler: cappedTextScaler(context, maxScale: 1.08),
-              style: TextStyle(
-                color: fg,
-                fontSize: dense ? 11 : 11.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
+        border: Border.all(
+          color: selected ? color : color.withValues(alpha: .22),
+        ),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textScaler: cappedTextScaler(context, maxScale: 1.08),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: fg,
+          fontSize: dense ? 11 : 11.5,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+    final child = onTap == null
+        ? visualPill
+        : ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Center(child: visualPill),
+          );
+    final pill = IntrinsicWidth(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: child,
         ),
       ),
     );
