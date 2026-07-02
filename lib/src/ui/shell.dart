@@ -52,17 +52,17 @@ class _LedgerShellState extends State<LedgerShell> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(10, 0, 10, 10),
         child: SizedBox(
-          height: 58,
+          height: 56,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: ledgerContentMaxWidth,
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 decoration: BoxDecoration(
                   color: LedgerColors.surfaceRaised.withValues(alpha: .96),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: LedgerColors.hairline),
                   boxShadow: const [
                     BoxShadow(
@@ -101,8 +101,8 @@ class _LedgerShellState extends State<LedgerShell> {
                             ),
                             borderRadius: BorderRadius.circular(99),
                             child: Container(
-                              width: 48,
-                              height: 48,
+                              width: 46,
+                              height: 46,
                               decoration: const BoxDecoration(
                                 color: LedgerColors.primaryBlue,
                                 shape: BoxShape.circle,
@@ -164,10 +164,10 @@ class _NavButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 46),
           decoration: BoxDecoration(
             color: selected ? LedgerColors.primaryBlueSoft : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(13),
           ),
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Column(
@@ -176,7 +176,7 @@ class _NavButton extends StatelessWidget {
               Icon(
                 icon,
                 color: selected ? LedgerColors.primaryBlue : LedgerColors.muted,
-                size: 17,
+                size: 16,
               ),
               const SizedBox(height: 1),
               Flexible(
@@ -189,7 +189,7 @@ class _NavButton extends StatelessWidget {
                     color: selected
                         ? LedgerColors.primaryBlue
                         : LedgerColors.muted,
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w800,
                   ),
                 ),

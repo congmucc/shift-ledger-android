@@ -113,14 +113,14 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
           ],
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         _MonthSummaryGrid(summary: summary, recordSummary: recordSummary),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         _ModeSwitch(
           listMode: _listMode,
           onChanged: (value) => setState(() => _listMode = value),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         LayoutBuilder(
           builder: (context, constraints) {
             final useCompactFilterLabels = constraints.maxWidth < 420;
@@ -143,7 +143,7 @@ class _CalendarPageState extends State<CalendarPage> {
             return LedgerInlineGroup(spacing: 5, children: chips);
           },
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         if (_listMode)
           _MonthList(
             state: widget.state,
@@ -187,7 +187,10 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
               if (hasActiveFilters && !selectedMatchesFilter) ...[
                 LedgerCard(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   color: LedgerColors.warningOrangeSoft,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,7 +479,7 @@ class _MonthGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       key: const Key('calendar-month-grid'),
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+      padding: const EdgeInsets.fromLTRB(8, 9, 8, 8),
       child: Column(
         children: [
           TableCalendar<void>(
@@ -491,8 +494,8 @@ class _MonthGrid extends StatelessWidget {
             availableGestures: AvailableGestures.horizontalSwipe,
             rowHeight: MediaQuery.textScalerOf(
               context,
-            ).scale(52).clamp(52.0, 64.0),
-            daysOfWeekHeight: 20,
+            ).scale(50).clamp(50.0, 61.0),
+            daysOfWeekHeight: 18,
             selectedDayPredicate: (day) => ymd(day) == ymd(selectedDay),
             onDaySelected: (selected, focused) => onSelect(selected),
             onPageChanged: (focused) =>
@@ -697,11 +700,11 @@ class _ToolButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: Container(
         constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: LedgerColors.surfaceRaised,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(11),
           border: Border.all(color: LedgerColors.hairline),
           boxShadow: const [
             BoxShadow(
@@ -732,10 +735,10 @@ class _ModeSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(3),
+    padding: const EdgeInsets.all(2),
     decoration: BoxDecoration(
       color: LedgerColors.surfaceSoft,
-      borderRadius: BorderRadius.circular(13),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: LedgerColors.hairline),
     ),
     child: Row(
@@ -776,11 +779,11 @@ class _ModeChoice extends StatelessWidget {
     onTap: onTap,
     borderRadius: BorderRadius.circular(12),
     child: Container(
-      height: 29,
+      height: 28,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? LedgerColors.surfaceRaised : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(11),
         border: selected ? Border.all(color: const Color(0xFFD6E9FF)) : null,
       ),
       child: Text(
@@ -802,10 +805,8 @@ class _MonthSummaryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LedgerCard(
+    return Container(
       key: const Key('calendar-month-summary-card'),
-      padding: EdgeInsets.zero,
-      color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final statWidth = constraints.maxWidth >= 360
@@ -859,8 +860,8 @@ class _MonthStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 44),
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    constraints: const BoxConstraints(minHeight: 42),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
     decoration: BoxDecoration(
       color: LedgerColors.surfaceSoft,
       borderRadius: BorderRadius.circular(14),
@@ -899,7 +900,7 @@ class _MonthStatPill extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              letterSpacing: -0.2,
+              letterSpacing: 0,
               color: LedgerColors.ink,
             ),
           ),
@@ -1570,7 +1571,7 @@ class _MonthListDateBlock extends StatelessWidget {
           style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w900,
-            letterSpacing: -0.6,
+            letterSpacing: 0,
           ),
         ),
         Text(

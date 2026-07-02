@@ -64,9 +64,9 @@ ThemeData buildLedgerTheme() {
     fontFamilyFallback: ledgerFontFallback,
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
-        fontSize: 23,
+        fontSize: 22,
         fontWeight: FontWeight.w900,
-        letterSpacing: -0.8,
+        letterSpacing: 0,
         color: LedgerColors.ink,
       ),
       headlineMedium: TextStyle(
@@ -102,7 +102,7 @@ ThemeData buildLedgerTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: LedgerColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
       helperMaxLines: 2,
       labelStyle: const TextStyle(color: LedgerColors.muted),
       helperStyle: const TextStyle(
@@ -137,7 +137,7 @@ ThemeData buildLedgerTheme() {
         foregroundColor: Colors.white,
         minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w800,
@@ -152,7 +152,7 @@ ThemeData buildLedgerTheme() {
         minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         side: const BorderSide(color: LedgerColors.hairlineStrong),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,

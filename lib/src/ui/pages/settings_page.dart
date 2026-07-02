@@ -27,7 +27,7 @@ class SettingsPage extends StatelessWidget {
       children: [
         const _SettingsGroupLabel('规则'),
         LedgerCard(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: Column(
             children: [
               SettingTile(
@@ -77,7 +77,7 @@ class SettingsPage extends StatelessWidget {
         ),
         const _SettingsGroupLabel('数据'),
         LedgerCard(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: Column(
             children: [
               SettingTile(
@@ -983,7 +983,7 @@ class _SettingsGroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+    padding: const EdgeInsets.fromLTRB(4, 10, 4, 5),
     child: Text(
       label,
       style: const TextStyle(

@@ -235,7 +235,7 @@ class PageFrame extends StatelessWidget {
               : 12.0;
           return ListView(
             controller: controller,
-            padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 92),
+            padding: EdgeInsets.fromLTRB(sidePadding, 6, sidePadding, 84),
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -267,7 +267,7 @@ class PageFrame extends StatelessWidget {
                   ?trailing,
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               ...children,
             ],
           );
@@ -281,7 +281,7 @@ class LedgerCard extends StatelessWidget {
   const LedgerCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(12),
+    this.padding = const EdgeInsets.all(10),
     this.color,
   });
   final Widget child;
@@ -295,7 +295,7 @@ class LedgerCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? LedgerColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: LedgerColors.hairline),
         boxShadow: const [
           BoxShadow(
@@ -470,8 +470,8 @@ class CompactMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 44),
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    constraints: const BoxConstraints(minHeight: 42),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
     decoration: BoxDecoration(
       color: LedgerColors.surfaceSoft,
       borderRadius: BorderRadius.circular(14),
@@ -493,13 +493,13 @@ class CompactMetric extends StatelessWidget {
                   color: LedgerColors.ink,
                   fontSize: flexValue ? 16 : 15,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -.4,
+                  letterSpacing: 0,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 4),
         Text(
           label,
           maxLines: 1,
@@ -611,7 +611,7 @@ class WorkEntryTile extends StatelessWidget {
         : LedgerColors.primaryBlueSoft;
     final chipText = isNight ? LedgerColors.nightIndigo : LedgerColors.ink;
     return LedgerCard(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -671,14 +671,14 @@ class WorkEntryTile extends StatelessWidget {
                   ],
                 ),
                 if (_metaText.isNotEmpty) ...[
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
                     _metaText,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: LedgerColors.muted,
-                      fontSize: 13,
+                      fontSize: 12.5,
                       height: 1.25,
                     ),
                   ),
@@ -746,11 +746,11 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleMedium!.copyWith(
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: FontWeight.w800,
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(1, 11, 1, 7),
+      padding: const EdgeInsets.fromLTRB(1, 9, 1, 5),
       child: Row(
         children: [
           Expanded(child: Text(title, style: titleStyle)),
@@ -759,7 +759,7 @@ class SectionHeader extends StatelessWidget {
               onTap: onAction,
               borderRadius: BorderRadius.circular(10),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: Text(
                   actionLabel!,
                   style: const TextStyle(
@@ -851,7 +851,7 @@ class EntryTypeSegmentedField extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SegmentedButton<EntryType>(
@@ -958,7 +958,7 @@ class NoticeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LedgerCard(
       color: backgroundColor,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1072,10 +1072,10 @@ class LedgerDialogShell extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: LedgerColors.paper,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: LedgerColors.hairline),
             boxShadow: const [
               BoxShadow(
@@ -1118,16 +1118,16 @@ class LedgerDialogShell extends StatelessWidget {
                 ],
               ),
               if (body != null) ...[
-                const SizedBox(height: 9),
+                const SizedBox(height: 7),
                 Flexible(child: SingleChildScrollView(child: body!)),
               ],
               if (actions.isNotEmpty) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Wrap(
                     spacing: 8,
-                    runSpacing: 8,
+                    runSpacing: 6,
                     alignment: WrapAlignment.end,
                     children: actions,
                   ),
@@ -1272,7 +1272,7 @@ class SettingTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           crossAxisAlignment: hasSubtitle
               ? CrossAxisAlignment.start
@@ -1280,12 +1280,12 @@ class SettingTile extends StatelessWidget {
           children: [
             if (icon != null || iconLabel != null) ...[
               Container(
-                width: 28,
-                height: 28,
+                width: 26,
+                height: 26,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: iconBackgroundColor ?? LedgerColors.primaryBlueSoft,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: icon != null
                     ? Icon(
@@ -1311,19 +1311,19 @@ class SettingTile extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      fontSize: 13.5,
+                      fontSize: 13.2,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   if (hasSubtitle) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       subtitle!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: LedgerColors.muted,
-                        fontSize: 11.3,
+                        fontSize: 11.2,
                         height: 1.25,
                       ),
                     ),

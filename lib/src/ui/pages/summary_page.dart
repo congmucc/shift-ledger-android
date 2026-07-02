@@ -63,11 +63,11 @@ class _SummaryPageState extends State<SummaryPage> {
             payrollBasisSummary:
                 '${defaultRule.baseType.label} · ${defaultRule.amountLabel}',
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 6),
           _SummaryTrendCard(summary: summary),
-          const SizedBox(height: 7),
+          const SizedBox(height: 6),
           _WorkHoursTable(summary: summary),
-          const SizedBox(height: 7),
+          const SizedBox(height: 6),
           _IncomeCompositionCard(summary: summary),
           const SizedBox(height: 6),
           _PayrollBasisCard(
@@ -564,9 +564,9 @@ class _CoreMetricBox extends StatelessWidget {
           value,
           maxScale: 1.06,
           style: TextStyle(
-            fontSize: emphasizeValue ? 20 : 18,
+            fontSize: emphasizeValue ? 19 : 17.5,
             fontWeight: FontWeight.w900,
-            letterSpacing: -0.7,
+            letterSpacing: 0,
             color: LedgerColors.ink,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),

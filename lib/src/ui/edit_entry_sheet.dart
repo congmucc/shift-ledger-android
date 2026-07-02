@@ -211,7 +211,7 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
                   child: Text(
                     _openedWithExistingDay
                         ? '当前没有分段了。点击保存后不会新增记录，也可以继续新增分段。'
-                        : '这一天还没有分段。先点“新增分段”再保存；如果只是查看，直接关闭即可。',
+                        : '这一天还没有分段。新增分段后保存；只是查看可直接关闭。',
                     style: TextStyle(
                       color: LedgerColors.muted,
                       fontSize: 13,
@@ -223,12 +223,13 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
               ],
               LedgerCard(
                 color: LedgerColors.surfaceRaised,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('操作', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 7),
                     _buildActionButtons(
                       compact: compactActions,
                       primary: FilledButton(
@@ -336,6 +337,12 @@ class _EditWorkEntrySheetState extends State<EditWorkEntrySheet> {
     required Widget primary,
     required Widget secondary,
   }) {
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [secondary, const SizedBox(height: 6), primary],
+      );
+    }
     return LedgerActionGroup(children: [secondary, primary]);
   }
 

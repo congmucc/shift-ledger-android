@@ -53,7 +53,7 @@ class HomePage extends StatelessWidget {
                 day: todayEntries[index].workDate,
               ),
             ),
-            if (index != todayEntries.length - 1) const SizedBox(height: 7),
+            if (index != todayEntries.length - 1) const SizedBox(height: 6),
           ],
         ],
         SectionHeader(
@@ -73,7 +73,7 @@ class HomePage extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 7),
               Row(
                 children: [
                   Expanded(
@@ -108,7 +108,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 7),
               Text(
                 '出勤 ${period.attendanceDays}天 · 加班 ${hoursText(period.overtimeHours)} · 夜班 ${period.nightShiftCount}次',
                 maxLines: 1,
@@ -188,9 +188,9 @@ class _TodayOverviewCard extends StatelessWidget {
                         hoursText(summary.totalHours),
                         style: const TextStyle(
                           color: LedgerColors.ink,
-                          fontSize: 39,
+                          fontSize: 37,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -2,
+                          letterSpacing: 0,
                           fontFeatures: [FontFeature.tabularFigures()],
                         ),
                         maxScale: 1.04,
@@ -219,7 +219,7 @@ class _TodayOverviewCard extends StatelessWidget {
                         color: LedgerColors.ink,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -.8,
+                        letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -231,7 +231,7 @@ class _TodayOverviewCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 7),
             LedgerInlineGroup(
               spacing: 6,
               children: [
@@ -256,10 +256,10 @@ class _TodayOverviewCard extends StatelessWidget {
               ],
             ),
             if (entries.isEmpty) ...[
-              const SizedBox(height: 9),
+              const SizedBox(height: 7),
               FilledButton.tonal(onPressed: onTap, child: const Text('补今天')),
             ] else if (extraPayrollOvertime > 0) ...[
-              const SizedBox(height: 9),
+              const SizedBox(height: 7),
               Text(
                 '另有 ${hoursText(extraPayrollOvertime)} 按“计薪加班”结算。',
                 style: const TextStyle(color: LedgerColors.muted, fontSize: 12),
