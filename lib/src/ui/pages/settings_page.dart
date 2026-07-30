@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/ledger_state.dart';
 import '../../domain/models.dart';
@@ -8,6 +9,8 @@ import '../pickers.dart';
 import '../settings_backup.dart';
 import '../theme.dart';
 import '../widgets.dart';
+
+const _contactEmail = '2562907972@qq.com';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, required this.state, this.repository});
@@ -117,7 +120,98 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
         ),
+        const _SettingsGroupLabel('其他'),
+        LedgerCard(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: SettingTile(
+            icon: Icons.info_outline_rounded,
+            title: '关于工时账本',
+            subtitle: '应用说明与联系邮箱',
+            onTap: () => _showAboutSheet(context),
+          ),
+        ),
       ],
+    );
+  }
+
+  void _showAboutSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: LedgerColors.paper,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SheetHeaderBlock(
+                  title: '关于工时账本',
+                  onClose: () => Navigator.pop(context),
+                ),
+                const SizedBox(height: 8),
+                const NoticeCard(
+                  icon: Icons.work_history_outlined,
+                  title: '工时账本',
+                  body: '本地优先的个人工时记录、统计与备份工具。',
+                ),
+                const SizedBox(height: 8),
+                LedgerCard(
+                  color: LedgerColors.surfaceRaised,
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '联系我',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 5),
+                      const Text(
+                        '有问题或建议，可以通过邮箱联系。',
+                        style: TextStyle(
+                          color: LedgerColors.muted,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const SelectableText(
+                        _contactEmail,
+                        style: TextStyle(
+                          color: LedgerColors.ink,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(44),
+                          ),
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              const ClipboardData(text: _contactEmail),
+                            );
+                            if (!context.mounted) return;
+                            showLedgerSnackBar(context, '邮箱已复制');
+                          },
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          label: const Text('复制邮箱'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

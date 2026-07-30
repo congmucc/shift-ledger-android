@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shift_ledger/main.dart';
 import 'package:shift_ledger/src/app/ledger_state.dart';
@@ -600,6 +601,47 @@ void main() {
     expect(find.text('当前状态'), findsOneWidget);
     expect(find.textContaining('自动备份正常；最近成功 2026-05-14 08:30'), findsWidgets);
     expect(find.text('连接状态'), findsOneWidget);
+  });
+
+  testWidgets('settings about sheet exposes the contact email', (tester) async {
+    String? copiedText;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copiedText =
+                (call.arguments as Map<Object?, Object?>)['text'] as String?;
+          }
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('关于工时账本'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('关于工时账本'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('关于工时账本'), findsWidgets);
+    expect(find.text('联系我'), findsOneWidget);
+    expect(find.text('2562907972@qq.com'), findsOneWidget);
+    expect(find.text('复制邮箱'), findsOneWidget);
+
+    await tester.tap(find.text('复制邮箱'));
+    await tester.pump();
+    expect(copiedText, '2562907972@qq.com');
+    expect(find.text('邮箱已复制'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('webdav sheet makes auto sync trigger timing explicit', (
