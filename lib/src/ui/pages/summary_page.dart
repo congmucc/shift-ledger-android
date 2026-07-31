@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../../app/ledger_state.dart';
 import '../../domain/models.dart';
@@ -647,6 +648,12 @@ extension on _TrendSeries {
     _TrendSeries.attendance => LedgerColors.hairlineStrong,
     _TrendSeries.income => LedgerColors.ink,
   };
+
+  String valueText(double value) => switch (this) {
+    _TrendSeries.attendance => '${value.round()}天',
+    _TrendSeries.income => moneyText(value),
+    _ => hoursText(value),
+  };
 }
 
 class _SummaryTrendCard extends StatefulWidget {
@@ -662,12 +669,19 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
     _TrendSeries.total,
     _TrendSeries.overtime,
   };
+  int? _selectedPointIndex;
 
   @override
   Widget build(BuildContext context) {
     final points = _dailyPoints(widget.summary);
     if (points.isEmpty) return const SizedBox.shrink();
-    final chartLabel = _trendSemanticLabel(points);
+    final selectedPointIndex = (_selectedPointIndex ?? points.length - 1).clamp(
+      0,
+      points.length - 1,
+    );
+    final selectedPoint = points[selectedPointIndex];
+    final chartLabel = _trendSemanticLabel(points, selectedPoint);
+    final activeSeries = _TrendSeries.values.where(_selected.contains).toList();
     return LedgerCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
@@ -692,6 +706,8 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
             ],
           ),
           const SizedBox(height: 6),
+          _TrendSelectionSummary(point: selectedPoint, selected: activeSeries),
+          const SizedBox(height: 7),
           Semantics(
             label: chartLabel,
             image: true,
@@ -704,12 +720,15 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(13),
-                child: CustomPaint(
-                  painter: _TrendChartPainter(
-                    points: points,
-                    selected: _selected,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 7, 6, 2),
+                  child: SizedBox(
+                    key: const Key('summary-trend-chart'),
+                    child: LineChart(
+                      _chartData(points: points, activeSeries: activeSeries),
+                      duration: const Duration(milliseconds: 180),
+                    ),
                   ),
-                  child: const SizedBox.expand(),
                 ),
               ),
             ),
@@ -738,7 +757,209 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
     );
   }
 
-  String _trendSemanticLabel(List<_DailyTrendPoint> points) {
+  LineChartData _chartData({
+    required List<_DailyTrendPoint> points,
+    required List<_TrendSeries> activeSeries,
+  }) {
+    final hourSeries = activeSeries.where(
+      (series) => series != _TrendSeries.income,
+    );
+    final maxHours = _maxFor(points, hourSeries);
+    final maxIncome = _maxFor(points, const [_TrendSeries.income]);
+    final xForSinglePoint = points.length == 1 ? .5 : 0.0;
+    final maxX = points.length == 1 ? 1.0 : (points.length - 1).toDouble();
+    return LineChartData(
+      minX: 0,
+      maxX: maxX,
+      minY: 0,
+      maxY: 1,
+      clipData: const FlClipData.all(),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        horizontalInterval: .5,
+        getDrawingHorizontalLine: (_) =>
+            const FlLine(color: LedgerColors.hairline, strokeWidth: 1),
+      ),
+      borderData: FlBorderData(show: false),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: hourSeries.isNotEmpty,
+            reservedSize: hourSeries.isNotEmpty ? 31 : 0,
+            interval: .5,
+            getTitlesWidget: (value, meta) => SideTitleWidget(
+              meta: meta,
+              space: 5,
+              child: Text(
+                hoursText(maxHours * value),
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+        rightTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: activeSeries.contains(_TrendSeries.income),
+            reservedSize: activeSeries.contains(_TrendSeries.income) ? 42 : 0,
+            interval: .5,
+            getTitlesWidget: (value, meta) => SideTitleWidget(
+              meta: meta,
+              space: 5,
+              child: Text(
+                moneyText(maxIncome * value),
+                style: const TextStyle(
+                  color: LedgerColors.muted,
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 23,
+            interval: points.length == 1 ? .5 : maxX,
+            getTitlesWidget: (value, meta) {
+              final isFirst = points.length == 1
+                  ? (value - .5).abs() < .01
+                  : value.abs() < .01;
+              final isLast = points.length > 1 && (value - maxX).abs() < .01;
+              if (!isFirst && !isLast) return const SizedBox.shrink();
+              final point = isLast ? points.last : points.first;
+              return SideTitleWidget(
+                meta: meta,
+                space: 5,
+                child: Text(
+                  '${point.day.month}/${point.day.day}',
+                  style: const TextStyle(
+                    color: LedgerColors.muted,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      lineTouchData: LineTouchData(
+        enabled: true,
+        handleBuiltInTouches: true,
+        touchSpotThreshold: 28,
+        touchCallback: (event, response) {
+          if (event is! FlTapUpEvent || response?.lineBarSpots == null) return;
+          final nextIndex = response!.lineBarSpots!.first.spotIndex;
+          if (nextIndex == _selectedPointIndex) return;
+          setState(() => _selectedPointIndex = nextIndex);
+        },
+        getTouchedSpotIndicator: (barData, spotIndexes) => [
+          for (final _ in spotIndexes)
+            TouchedSpotIndicatorData(
+              FlLine(
+                color: barData.color?.withValues(alpha: .55),
+                strokeWidth: 1.5,
+                dashArray: const [4, 3],
+              ),
+              FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, bar, index) =>
+                    FlDotCirclePainter(
+                      radius: 5,
+                      color: LedgerColors.surfaceRaised,
+                      strokeWidth: 2.4,
+                      strokeColor: bar.color ?? LedgerColors.primaryBlue,
+                    ),
+              ),
+            ),
+        ],
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (_) => LedgerColors.ink,
+          tooltipBorderRadius: BorderRadius.circular(10),
+          tooltipPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 7,
+          ),
+          tooltipMargin: 8,
+          maxContentWidth: 160,
+          fitInsideHorizontally: true,
+          fitInsideVertically: true,
+          getTooltipItems: (spots) => [
+            for (final spot in spots)
+              LineTooltipItem(
+                '${spot.barIndex == 0 ? '${points[spot.spotIndex].day.month}月${points[spot.spotIndex].day.day}日\n' : ''}'
+                '${activeSeries[spot.barIndex].label} '
+                '${activeSeries[spot.barIndex].valueText(points[spot.spotIndex].valueFor(activeSeries[spot.barIndex]))}',
+                const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
+        ),
+      ),
+      lineBarsData: [
+        for (final series in activeSeries)
+          LineChartBarData(
+            spots: [
+              for (var index = 0; index < points.length; index++)
+                FlSpot(
+                  points.length == 1 ? xForSinglePoint : index.toDouble(),
+                  (points[index].valueFor(series) /
+                          (series == _TrendSeries.income
+                              ? maxIncome
+                              : maxHours))
+                      .clamp(0, 1),
+                ),
+            ],
+            color: series.color,
+            barWidth: series == _TrendSeries.total ? 2.8 : 2,
+            isCurved: false,
+            dashArray: switch (series) {
+              _TrendSeries.night => const [5, 3],
+              _TrendSeries.income => const [2, 3],
+              _ => null,
+            },
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) =>
+                  FlDotCirclePainter(
+                    radius: series == _TrendSeries.total ? 3 : 2.5,
+                    color: LedgerColors.surfaceRaised,
+                    strokeWidth: 1.5,
+                    strokeColor: series.color,
+                  ),
+            ),
+            belowBarData: BarAreaData(show: false),
+          ),
+      ],
+    );
+  }
+
+  double _maxFor(List<_DailyTrendPoint> points, Iterable<_TrendSeries> series) {
+    var maxValue = 0.0;
+    for (final point in points) {
+      for (final item in series) {
+        final value = point.valueFor(item);
+        if (value > maxValue) maxValue = value;
+      }
+    }
+    return maxValue <= 0 ? 1 : maxValue;
+  }
+
+  String _trendSemanticLabel(
+    List<_DailyTrendPoint> points,
+    _DailyTrendPoint selectedPoint,
+  ) {
     final days = points.length;
     final total = points.fold<double>(0, (sum, point) => sum + point.total);
     final overtime = points.fold<double>(
@@ -748,7 +969,14 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
     final night = points.fold<double>(0, (sum, point) => sum + point.night);
     final income = points.fold<double>(0, (sum, point) => sum + point.income);
     final peak = points.reduce((a, b) => a.total >= b.total ? a : b);
-    return '工时趋势图，$days 个记录日，总工时 ${hoursText(total)}，加班 ${hoursText(overtime)}，夜班 ${hoursText(night)}，收入 ${moneyText(income)}，最高日 ${peak.day.month}月${peak.day.day}日 ${hoursText(peak.total)}';
+    final selectedValues = _TrendSeries.values
+        .where(_selected.contains)
+        .map(
+          (series) =>
+              '${series.label} ${series.valueText(selectedPoint.valueFor(series))}',
+        )
+        .join('，');
+    return '工时趋势图，$days 个记录日，总工时 ${hoursText(total)}，加班 ${hoursText(overtime)}，夜班 ${hoursText(night)}，收入 ${moneyText(income)}，最高日 ${peak.day.month}月${peak.day.day}日 ${hoursText(peak.total)}。当前选中 ${selectedPoint.day.month}月${selectedPoint.day.day}日，$selectedValues';
   }
 
   List<_DailyTrendPoint> _dailyPoints(LedgerSummary summary) {
@@ -763,6 +991,62 @@ class _SummaryTrendCardState extends State<_SummaryTrendCard> {
       ..sort((a, b) => a.day.compareTo(b.day));
     return points;
   }
+}
+
+class _TrendSelectionSummary extends StatelessWidget {
+  const _TrendSelectionSummary({required this.point, required this.selected});
+
+  final _DailyTrendPoint point;
+  final List<_TrendSeries> selected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: LedgerColors.surfaceSoft,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: LedgerColors.hairline),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${point.day.month}月${point.day.day}日',
+          style: const TextStyle(
+            color: LedgerColors.ink,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 5,
+            children: [
+              for (final series in selected)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _MetricDot(color: series.color),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${series.label} ${series.valueText(point.valueFor(series))}',
+                      style: const TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _TrendToggle extends StatelessWidget {
@@ -829,242 +1113,6 @@ class _DailyTrendPoint {
     _TrendSeries.attendance => attendance,
     _TrendSeries.income => income,
   };
-}
-
-class _TrendChartPainter extends CustomPainter {
-  const _TrendChartPainter({required this.points, required this.selected});
-  final List<_DailyTrendPoint> points;
-  final Set<_TrendSeries> selected;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const leftAxis = 30.0;
-    const rightAxis = 42.0;
-    const top = 8.0;
-    const bottom = 26.0;
-    final chart = Rect.fromLTWH(
-      leftAxis,
-      top,
-      size.width - leftAxis - rightAxis,
-      size.height - top - bottom,
-    );
-    final gridPaint = Paint()
-      ..color = LedgerColors.hairline
-      ..strokeWidth = 1;
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-    );
-    for (final tick in [0.0, .5, 1.0]) {
-      final y = chart.bottom - chart.height * tick;
-      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), gridPaint);
-    }
-    final hourSeries = selected.where((s) => s != _TrendSeries.income);
-    final hasHourSeries = hourSeries.isNotEmpty;
-    final maxHours = _maxFor(hourSeries);
-    final maxIncome = _maxFor([_TrendSeries.income]);
-    if (hasHourSeries) {
-      _drawLabel(
-        canvas,
-        textPainter,
-        '${maxHours.toStringAsFixed(0)}h',
-        0,
-        top,
-      );
-      _drawLabel(
-        canvas,
-        textPainter,
-        '${(maxHours / 2).toStringAsFixed(0)}h',
-        0,
-        chart.center.dy - 6,
-      );
-      _drawLabel(canvas, textPainter, '0h', 0, chart.bottom - 10);
-      _drawLabel(canvas, textPainter, '小时', 0, chart.bottom + 8);
-    }
-    if (selected.contains(_TrendSeries.income)) {
-      _drawLabel(
-        canvas,
-        textPainter,
-        moneyText(maxIncome),
-        chart.right + 6,
-        top,
-        alignRight: false,
-      );
-      _drawLabel(
-        canvas,
-        textPainter,
-        moneyText(maxIncome / 2),
-        chart.right + 6,
-        chart.center.dy - 6,
-        alignRight: false,
-      );
-      _drawLabel(
-        canvas,
-        textPainter,
-        '¥0',
-        chart.right + 6,
-        chart.bottom - 10,
-        alignRight: false,
-      );
-      _drawLabel(
-        canvas,
-        textPainter,
-        '收入',
-        chart.right + 6,
-        chart.bottom + 8,
-        alignRight: false,
-      );
-    }
-    for (final series in selected) {
-      _drawSeries(
-        canvas,
-        chart,
-        series,
-        series == _TrendSeries.income ? maxIncome : maxHours,
-      );
-    }
-    if (points.isNotEmpty) {
-      _drawLabel(
-        canvas,
-        textPainter,
-        '${points.first.day.month}/${points.first.day.day}',
-        chart.left,
-        chart.bottom + 8,
-      );
-      _drawLabel(
-        canvas,
-        textPainter,
-        '${points.last.day.month}/${points.last.day.day}',
-        chart.right - 34,
-        chart.bottom + 8,
-      );
-    }
-  }
-
-  double _maxFor(Iterable<_TrendSeries> series) {
-    var maxValue = 0.0;
-    for (final point in points) {
-      for (final item in series) {
-        final value = point.valueFor(item);
-        if (value > maxValue) maxValue = value;
-      }
-    }
-    return maxValue <= 0 ? 1 : maxValue;
-  }
-
-  void _drawSeries(
-    Canvas canvas,
-    Rect chart,
-    _TrendSeries series,
-    double maxValue,
-  ) {
-    if (points.isEmpty) return;
-    final paint = Paint()
-      ..color = series.color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = series == _TrendSeries.total ? 2.8 : 2.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final path = Path();
-    for (var index = 0; index < points.length; index++) {
-      final point = points[index];
-      final x = points.length == 1
-          ? chart.center.dx
-          : chart.left + chart.width * index / (points.length - 1);
-      final y =
-          chart.bottom -
-          chart.height * (point.valueFor(series) / maxValue).clamp(0, 1);
-      if (index == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(path, paint);
-    for (var index = 0; index < points.length; index++) {
-      final point = points[index];
-      final x = points.length == 1
-          ? chart.center.dx
-          : chart.left + chart.width * index / (points.length - 1);
-      final y =
-          chart.bottom -
-          chart.height * (point.valueFor(series) / maxValue).clamp(0, 1);
-      _drawPointMarker(canvas, Offset(x, y), series, paint.color);
-    }
-  }
-
-  void _drawPointMarker(
-    Canvas canvas,
-    Offset center,
-    _TrendSeries series,
-    Color color,
-  ) {
-    final fill = Paint()
-      ..color = LedgerColors.surfaceRaised
-      ..style = PaintingStyle.fill;
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    const radius = 2.8;
-    switch (series) {
-      case _TrendSeries.total:
-        canvas.drawCircle(center, radius, fill);
-        canvas.drawCircle(center, radius, stroke);
-      case _TrendSeries.regular:
-        final rect = Rect.fromCenter(
-          center: center,
-          width: radius * 2,
-          height: radius * 2,
-        );
-        canvas.drawRect(rect, fill);
-        canvas.drawRect(rect, stroke);
-      case _TrendSeries.overtime:
-        final path = Path()
-          ..moveTo(center.dx, center.dy - radius)
-          ..lineTo(center.dx + radius, center.dy + radius)
-          ..lineTo(center.dx - radius, center.dy + radius)
-          ..close();
-        canvas.drawPath(path, fill);
-        canvas.drawPath(path, stroke);
-      case _TrendSeries.night:
-      case _TrendSeries.income:
-        final path = Path()
-          ..moveTo(center.dx, center.dy - radius)
-          ..lineTo(center.dx + radius, center.dy)
-          ..lineTo(center.dx, center.dy + radius)
-          ..lineTo(center.dx - radius, center.dy)
-          ..close();
-        canvas.drawPath(path, fill);
-        canvas.drawPath(path, stroke);
-      case _TrendSeries.attendance:
-        canvas.drawCircle(center, 2.1, Paint()..color = color);
-    }
-  }
-
-  void _drawLabel(
-    Canvas canvas,
-    TextPainter painter,
-    String text,
-    double x,
-    double y, {
-    bool alignRight = false,
-  }) {
-    painter.text = TextSpan(
-      text: text,
-      style: const TextStyle(
-        color: LedgerColors.muted,
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-    painter.layout();
-    painter.paint(canvas, Offset(alignRight ? x - painter.width : x, y));
-  }
-
-  @override
-  bool shouldRepaint(covariant _TrendChartPainter oldDelegate) =>
-      oldDelegate.points != points || oldDelegate.selected != selected;
 }
 
 class _WorkHoursTable extends StatelessWidget {

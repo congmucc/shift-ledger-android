@@ -374,7 +374,7 @@ void main() {
     expect(find.textContaining('删除 2026-05-13 全部记录'), findsNothing);
   });
 
-  testWidgets('home keeps only the three primary quick actions', (
+  testWidgets('home keeps only the two non-duplicate quick actions', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -386,15 +386,10 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.scrollUntilVisible(
-      find.text('补今天'),
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
     expect(find.text('快捷操作'), findsOneWidget);
-    expect(find.text('补今天'), findsWidgets);
     expect(find.text('查日历'), findsOneWidget);
     expect(find.text('看汇总'), findsOneWidget);
+    expect(find.widgetWithText(LedgerPill, '补今天'), findsNothing);
     expect(find.text('套用模板'), findsNothing);
     expect(find.text('补一段'), findsNothing);
     expect(find.text('看某一天'), findsNothing);
@@ -433,16 +428,10 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      final addTodayPill = find.widgetWithText(LedgerPill, '补今天');
       final calendarPill = find.widgetWithText(LedgerPill, '查日历');
-      expect(addTodayPill, findsOneWidget);
       expect(calendarPill, findsOneWidget);
-      expect(tester.getSize(addTodayPill).width, lessThan(170));
       expect(tester.getSize(calendarPill).width, lessThan(170));
-      expect(
-        tester.getTopLeft(calendarPill).dy,
-        moreOrLessEquals(tester.getTopLeft(addTodayPill).dy, epsilon: 1),
-      );
+      expect(find.widgetWithText(LedgerPill, '看汇总'), findsOneWidget);
     },
   );
 
@@ -459,6 +448,16 @@ void main() {
     expect(find.textContaining('默认 09:00-18:00'), findsNothing);
     expect(find.textContaining('60 分钟休息'), findsNothing);
     expect(find.text('创建 09:00-18:00 记录'), findsNothing);
+  });
+
+  testWidgets('home explains the current day income calculation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ShiftLedgerApp(state: LedgerState.seeded(now: DateTime(2026, 5, 13))),
+    );
+
+    expect(find.text('8h × ¥35/h + 补贴 ¥20 = ¥300'), findsOneWidget);
   });
 
   testWidgets('summary and settings expose export backup and WebDAV actions', (

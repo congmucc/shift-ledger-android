@@ -59,6 +59,13 @@ void main() {
       payRules: [rule],
       entries: [
         WorkEntry.create(
+          id: 'summary_previous_day',
+          workDate: DateTime(2026, 5, 14),
+          startDateTime: DateTime(2026, 5, 14, 9),
+          endDateTime: DateTime(2026, 5, 14, 16),
+          payRule: rule,
+        ),
+        WorkEntry.create(
           id: 'summary_seed',
           workDate: DateTime(2026, 5, 15),
           startDateTime: DateTime(2026, 5, 15, 9),
@@ -253,6 +260,36 @@ void main() {
     expect(find.text('按天查看'), findsNothing);
     expect(find.text('查看明细'), findsNothing);
     expect(find.text('全部日期'), findsNothing);
+  });
+
+  testWidgets('summary trend exposes touched date and selected metric values', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(ShiftLedgerApp(state: buildSummaryState()));
+
+    await tester.tap(find.text('汇总'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('summary-trend-chart')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    final chart = find.byKey(const Key('summary-trend-chart'));
+    expect(chart, findsOneWidget);
+    final rect = tester.getRect(chart);
+    await tester.tapAt(Offset(rect.left + 54, rect.center.dy));
+    await tester.pumpAndSettle();
+
+    expect(find.text('5月14日'), findsOneWidget);
+    expect(find.text('总工时 7h'), findsOneWidget);
+    expect(find.text('加班 0h'), findsOneWidget);
+
+    await tester.tap(find.text('收入'));
+    await tester.pumpAndSettle();
+    expect(find.text('收入 ¥245'), findsOneWidget);
   });
 
   testWidgets(

@@ -40,6 +40,7 @@ class HomePage extends StatelessWidget {
           day: state.now,
           entries: todayEntries,
           summary: todaySummary,
+          rule: state.ruleForDate(state.now),
           onTap: () => showEditWorkEntrySheet(context, state, day: state.now),
         ),
         if (todayEntries.isNotEmpty) ...[
@@ -65,52 +66,45 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${ymd(state.currentPayPeriod.start)} — ${ymd(state.currentPayPeriod.endInclusive)}',
-                style: const TextStyle(
-                  color: LedgerColors.muted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 7),
               Row(
                 children: [
                   Expanded(
-                    child: CompactMetric(
-                      label: '总工时',
-                      value: hoursText(period.totalHours),
+                    child: Text(
+                      '${ymd(state.currentPayPeriod.start)} — ${ymd(state.currentPayPeriod.endInclusive)}',
+                      style: const TextStyle(
+                        color: LedgerColors.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: CompactMetric(
-                      label: '出勤',
-                      value: '${period.attendanceDays}天',
-                      color: LedgerColors.hairlineStrong,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: CompactMetric(
-                      label: '加班',
-                      value: hoursText(period.overtimeHours),
-                      color: LedgerColors.successGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: CompactMetric(
-                      label: '夜班',
-                      value: '${period.nightShiftCount}次',
-                      color: LedgerColors.nightIndigo,
+                  Text(
+                    '${state.currentPayPeriod.dayCount}天',
+                    style: const TextStyle(
+                      color: LedgerColors.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 7),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  minHeight: 5,
+                  value: _periodProgress(state.currentPayPeriod, state.now),
+                  color: LedgerColors.primaryBlue,
+                  backgroundColor: LedgerColors.hairline,
+                ),
+              ),
+              const SizedBox(height: 7),
+              _PeriodMetrics(summary: period),
+              const SizedBox(height: 7),
+              Container(height: 1, color: LedgerColors.hairline),
+              const SizedBox(height: 7),
               Text(
-                '出勤 ${period.attendanceDays}天 · 加班 ${hoursText(period.overtimeHours)} · 夜班 ${period.nightShiftCount}次',
+                '预计收入 ${moneyText(period.income)} · 共 ${period.calculations.length} 段记录',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -126,13 +120,7 @@ class HomePage extends StatelessWidget {
         LedgerInlineGroup(
           spacing: 6,
           children: [
-            LedgerPill(
-              '补今天',
-              selected: true,
-              onTap: () =>
-                  showEditWorkEntrySheet(context, state, day: state.now),
-            ),
-            LedgerPill('查日历', color: LedgerColors.muted, onTap: openCalendar),
+            LedgerPill('查日历', selected: true, onTap: openCalendar),
             LedgerPill('看汇总', color: LedgerColors.muted, onTap: openSummary),
           ],
         ),
@@ -146,12 +134,14 @@ class _TodayOverviewCard extends StatelessWidget {
     required this.day,
     required this.entries,
     required this.summary,
+    required this.rule,
     required this.onTap,
   });
 
   final DateTime day;
   final List<WorkEntry> entries;
   final LedgerSummary summary;
+  final PayRule rule;
   final VoidCallback onTap;
 
   @override
@@ -161,6 +151,27 @@ class _TodayOverviewCard extends StatelessWidget {
       0.0,
       summary.overtimeHours - recordSummary.manualOvertimeHours,
     );
+    final compact = useDenseTwoColumnLayout(
+      context,
+      widthBreakpoint: 340,
+      textScaleBreakpoint: 1.28,
+    );
+    final workMetric = _TodayMetricBlock(
+      label: '总工时',
+      color: LedgerColors.primaryBlue,
+      value: hoursText(summary.totalHours),
+      detail: entries.isEmpty
+          ? '今天还没有记录'
+          : '${entries.length}段 · 净工时${entries.any((entry) => entry.hasNote) ? ' · 有备注' : ''}',
+      alignment: CrossAxisAlignment.start,
+    );
+    final incomeMetric = _TodayMetricBlock(
+      label: '预计收入',
+      color: LedgerColors.successGreen,
+      value: moneyText(summary.income),
+      detail: _incomeExplanation(summary, rule),
+      alignment: compact ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+    );
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
@@ -168,69 +179,35 @@ class _TodayOverviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${day.month}月${day.day}日 · 周${_weekdayText(day.weekday)}',
-                        style: const TextStyle(
-                          color: LedgerColors.muted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      FittedValueText(
-                        hoursText(summary.totalHours),
-                        style: const TextStyle(
-                          color: LedgerColors.ink,
-                          fontSize: 37,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                        maxScale: 1.04,
-                      ),
-                      Text(
-                        entries.isEmpty
-                            ? '今天还没有记录'
-                            : '${entries.length}段 · 净工时${entries.any((entry) => entry.hasNote) ? ' · 有备注' : ''}',
-                        style: const TextStyle(
-                          color: LedgerColors.muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    FittedValueText(
-                      moneyText(summary.income),
-                      alignment: Alignment.centerRight,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: LedgerColors.ink,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '预计收入',
-                      style: TextStyle(color: LedgerColors.muted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ],
+            Text(
+              '${day.month}月${day.day}日 · 周${_weekdayText(day.weekday)}',
+              style: const TextStyle(
+                color: LedgerColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
             ),
+            const SizedBox(height: 8),
+            if (compact) ...[
+              workMetric,
+              const SizedBox(height: 10),
+              Container(height: 1, color: LedgerColors.hairline),
+              const SizedBox(height: 10),
+              incomeMetric,
+            ] else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: workMetric),
+                  Container(
+                    width: 1,
+                    height: 96,
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    color: LedgerColors.hairlineStrong,
+                  ),
+                  Expanded(child: incomeMetric),
+                ],
+              ),
             const SizedBox(height: 7),
             LedgerInlineGroup(
               spacing: 6,
@@ -270,6 +247,207 @@ class _TodayOverviewCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TodayMetricBlock extends StatelessWidget {
+  const _TodayMetricBlock({
+    required this.label,
+    required this.color,
+    required this.value,
+    required this.detail,
+    required this.alignment,
+  });
+
+  final String label;
+  final Color color;
+  final String value;
+  final String detail;
+  final CrossAxisAlignment alignment;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: alignment,
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Row(
+        mainAxisAlignment: alignment == CrossAxisAlignment.end
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        children: [
+          LedgerDot(color: color, size: 7),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: LedgerColors.muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 5),
+      FittedValueText(
+        value,
+        alignment: alignment == CrossAxisAlignment.end
+            ? Alignment.centerRight
+            : Alignment.centerLeft,
+        textAlign: alignment == CrossAxisAlignment.end
+            ? TextAlign.right
+            : TextAlign.left,
+        maxScale: 1.04,
+        style: const TextStyle(
+          color: LedgerColors.ink,
+          fontSize: 34,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+          fontFeatures: [FontFeature.tabularFigures()],
+        ),
+      ),
+      const SizedBox(height: 3),
+      Text(
+        detail,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: alignment == CrossAxisAlignment.end
+            ? TextAlign.right
+            : TextAlign.left,
+        style: const TextStyle(
+          color: LedgerColors.muted,
+          fontSize: 11.5,
+          height: 1.3,
+        ),
+      ),
+    ],
+  );
+}
+
+class _PeriodMetrics extends StatelessWidget {
+  const _PeriodMetrics({required this.summary});
+
+  final LedgerSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = [
+      ('总工时', hoursText(summary.totalHours), LedgerColors.primaryBlue),
+      ('出勤', '${summary.attendanceDays}天', LedgerColors.primaryBlue),
+      ('加班', hoursText(summary.overtimeHours), LedgerColors.successGreen),
+      ('夜班', '${summary.nightShiftCount}次', LedgerColors.nightIndigo),
+    ];
+    if (useDenseTwoColumnLayout(context)) {
+      return Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final metric in metrics)
+            SizedBox(
+              width: (MediaQuery.sizeOf(context).width - 54) / 2,
+              child: CompactMetric(
+                label: metric.$1,
+                value: metric.$2,
+                color: metric.$3,
+              ),
+            ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        for (var index = 0; index < metrics.length; index++) ...[
+          Expanded(
+            child: _PeriodMetric(
+              label: metrics[index].$1,
+              value: metrics[index].$2,
+              color: metrics[index].$3,
+            ),
+          ),
+          if (index != metrics.length - 1)
+            Container(
+              width: 1,
+              height: 38,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              color: LedgerColors.hairlineStrong,
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PeriodMetric extends StatelessWidget {
+  const _PeriodMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          LedgerDot(color: color, size: 6),
+          const SizedBox(width: 4),
+          Flexible(
+            child: FittedValueText(
+              value,
+              alignment: Alignment.center,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: LedgerColors.ink,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 3),
+      Text(
+        label,
+        style: const TextStyle(
+          color: LedgerColors.muted,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    ],
+  );
+}
+
+double _periodProgress(DateRange range, DateTime now) {
+  final elapsed = dateOnly(now).difference(range.start).inDays + 1;
+  return (elapsed / range.dayCount).clamp(0, 1);
+}
+
+String _incomeExplanation(LedgerSummary summary, PayRule rule) {
+  if (summary.calculations.isEmpty) {
+    return '${rule.baseType.label} · ${rule.amountLabel}';
+  }
+  if (rule.baseType != PayBaseType.hourly) {
+    return '${rule.baseType.label} · ${rule.amountLabel}';
+  }
+  final parts = <String>[];
+  if (summary.baseIncome > 0) {
+    parts.add('${hoursText(summary.regularHours)} × ${rule.amountLabel}');
+  }
+  if (summary.overtimeIncome > 0) {
+    parts.add('加班 ${moneyText(summary.overtimeIncome)}');
+  }
+  if (summary.nightIncome > 0) {
+    parts.add('夜班 ${moneyText(summary.nightIncome)}');
+  }
+  if (summary.allowance > 0) parts.add('补贴 ${moneyText(summary.allowance)}');
+  if (summary.deduction > 0) parts.add('扣款 −${moneyText(summary.deduction)}');
+  if (parts.isEmpty) return '${rule.baseType.label} · ${rule.amountLabel}';
+  return '${parts.join(' + ')} = ${moneyText(summary.income)}';
 }
 
 String _weekdayText(int weekday) =>
