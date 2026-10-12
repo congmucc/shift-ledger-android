@@ -113,6 +113,22 @@ flutter test --reporter compact
 
 涉及 Android 安装包时再运行对应 `flutter build apk` 命令。
 
+## 手动发布 Android 版本
+
+开发一段时间后，需要发布时再手动执行发布入口；项目不会为每次提交自动打 tag：
+
+```bash
+# 先检查版本、工作区、远端和测试，不创建 tag、不推送
+make release-dry-run VERSION=1.2.3
+
+# 确认无误后：运行检查、创建 annotated tag，并一次性推送 main 和 tag
+make release VERSION=1.2.3
+```
+
+`VERSION` 也可以写成 `v1.2.3`。发布脚本要求当前位于 `main`、工作区干净、
+本地没有落后于 `origin/main`，并会先执行 `flutter analyze` 和 `flutter test`。
+同一次 `git push` 同时包含分支和 tag，避免代码已经到远端但漏推 tag。
+
 ## 明确不做
 
 - 不做企业审批、员工管理、排班发布、团队后台。
